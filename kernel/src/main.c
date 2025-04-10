@@ -7,8 +7,8 @@ int main(int argc, char* argv[]) {
     t_config* config = iniciar_config();
     // char* clave = config_get_string_value(config, "CLAVE");
     char* ip = config_get_string_value(config, "IP_MEMORIA");
-    char* puerto = config_get_string_value(config, "PUERTO_ESCUCHA_DISPATCH");
-    printf("La clave es: %s", ip, "\n");
+    char* puerto = config_get_string_value(config, "PUERTO_MEMORIA");
+    printf("La ip es: %s", ip, "\n");
     iniciar_conexion();
     return 0;
 }
