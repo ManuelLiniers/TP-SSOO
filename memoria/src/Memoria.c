@@ -8,20 +8,25 @@ int main(int argc, char* argv[]) {
     memoria_config = config_create("/home/utnso/tp-2025-1c-queCompileALaPrimera/memoria/Memoria.config");
 
 	if (memoria_config == NULL) {
-    	// ¡No se pudo crear el config!
+// 		¡No se pudo crear el config!
 		log_error(memoria_logger, "No se pudo crear el config de la memoria");
-    	// Terminemos el programa
+// 		Terminemos el programa
 		exit(1);
 	}
 
 	leer_config(memoria_config);
 
-	leer_log(memoria_logger);
+//  leer_log(memoria_logger);  		(Para pruebas)
+
+	server_fd_memoria = iniciar_servidor(memoria_logger, IP_MEMORIA, PUERTO_ESCUCHA);
+
+	int cliente_fd = esperar_cliente(memoria_logger, "Memoria", server_fd_memoria);
 
     return EXIT_SUCCESS;
 }
 
 void leer_config(t_config* config){
+//	IP_MEMORIA = NULL;
 	PUERTO_ESCUCHA = config_get_string_value(config, "PUERTO_ESCUCHA");
 	TAM_MEMORIA = config_get_int_value(config, "TAM_MEMORIA");
 	TAM_PAGINA = config_get_int_value(config, "TAM_PAGINA");

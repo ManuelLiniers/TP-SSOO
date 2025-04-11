@@ -7,7 +7,9 @@
 #include<commons/string.h>
 #include<commons/config.h>
 #include<readline/readline.h>
+#include</home/utnso/tp-2025-1c-queCompileALaPrimera/utils/socket.h>
 
+char* IP_MEMORIA;
 char* PUERTO_ESCUCHA;
 int TAM_MEMORIA;
 int TAM_PAGINA;
@@ -18,6 +20,9 @@ char* PATH_SWAPFILE;
 int RETARDO_SWAP;
 char* LOG_LEVEL;
 char* DUMP_PATH;
+
+
+int server_fd_memoria;
 
 // LOGS Y CONFIG
 
