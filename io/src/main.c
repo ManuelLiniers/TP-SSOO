@@ -1,8 +1,28 @@
 #include "main.h"
 #include <utils/hello.h>
+#include <utils/commons.h>
+#include</home/utnso/tp-2025-1c-queCompileALaPrimera/utils/socket.h>
+
 
 int main(int argc, char* argv[]) {
     saludar("io");
+
+     if (argc < 2) {
+        printf("Debe indicarse el nombre del dispositivo IO como argumento\n");
+        return EXIT_FAILURE;
+    }
+
+    char* nombre_dispositivo = argv[1];
+
+    t_log* crear_log();
+
+    t_log* logger = log_create("io.log", "[IO]", 1, LOG_LEVEL_INFO);
+    if(logger == NULL){
+        perror("error al crear el logger");
+        abort();
+    } 
+
+
 
     char* ip;
     char* puerto;
@@ -18,6 +38,16 @@ int main(int argc, char* argv[]) {
     printf("\nEl valor del puerto es: %s", puerto);
     printf("\nEl valor del log level es: %s", log_level);
 
+     int conexion_kernel = crear_conexion(logger, ip, puerto);
+    if (conexion_kernel == -1) {
+        log_error(logger, "No se pudo conectar al Kernel");
+        return EXIT_FAILURE;
+    }
+
+    enviar_mensaje(nombre_dispositivo, conexion_kernel);
+    log_info(logger, "Me conecto al kernel como: %s", nombre_dispositivo);
+
+    terminar_programa(logger, config, conexion_kernel);
     return 0;
 }
 
@@ -27,6 +57,6 @@ t_config* iniciar_config(void) {
 		    perror("Error al intentar cargar el config");
 		    exit(EXIT_FAILURE);
 	    }
-    printf("Se creo exitosamente la config del io");
+    printf("Se creo exitosamente la config del io\n");
 	return nuevo_config;
 }
