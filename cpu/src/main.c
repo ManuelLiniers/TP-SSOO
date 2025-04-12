@@ -19,6 +19,7 @@ int main(int argc, char* argv[]) {
     int conexion_kernel_dispatch = crear_conexion(logger, ip_kernel, puerto_kernel_dispatch);
     int conexion_kernel_interrupt = crear_conexion(logger, ip_kernel, puerto_kernel_interrupt);
 
+    mensaje_inicial(conexion_memoria, conexion_kernel_dispatch, conexion_kernel_interrupt);
 
     return 0;
 }
@@ -41,4 +42,19 @@ t_config* crear_config(){
         abort();
     }
     return cpu_config;
+}
+
+void mensaje_inicial(int conexion_memoria, int conexion_kernel_dispatch, int conexion_kernel_interrupt){
+    enviar_mensaje("Conexion inicial de la CPU", conexion_memoria);
+    enviar_mensaje("Conexion inicial de la CPU", conexion_kernel_dispatch);
+    enviar_mensaje("Conexion inicial de la CPU", conexion_kernel_interrupt);
+}
+
+void terminar_programa(int conexion_memoria, int conexion_kernel_dispatch, int conexion_kernel_interrupt, t_log* logger, t_config* cpu_config)
+{
+	log_destroy(logger);
+    config_destroy(cpu_config);
+    close(conexion_memoria);
+    close(conexion_kernel_dispatch);
+    close(conexion_kernel_interrupt);
 }
