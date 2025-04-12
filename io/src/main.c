@@ -60,3 +60,9 @@ t_config* iniciar_config(void) {
     printf("Se creo exitosamente la config del io\n");
 	return nuevo_config;
 }
+
+void terminar_programa(t_log* logger, t_config* config, int conexion) {
+    log_destroy(logger);
+    config_destroy(config);
+    close(conexion);
+}
