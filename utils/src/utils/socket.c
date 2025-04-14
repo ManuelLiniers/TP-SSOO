@@ -80,6 +80,8 @@ int crear_conexion(t_log* logger, char *ip, char* puerto)
         return -1;
     }
 
+	log_info(logger, "Se conecto exitosamente \n");
+
 	freeaddrinfo(server_info);
 
 	return socket_cliente;

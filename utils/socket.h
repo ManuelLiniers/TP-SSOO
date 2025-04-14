@@ -11,6 +11,7 @@
 #include<commons/log.h>
 #include<commons/collections/list.h>
 #include<assert.h>
+#include</home/utnso/tp-2025-1c-queCompileALaPrimera/utils/src/utils/commons.h>
 
 typedef enum
 {
