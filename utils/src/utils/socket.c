@@ -80,6 +80,8 @@ int crear_conexion(t_log* logger, char *ip, char* puerto)
         return -1;
     }
 
+	log_info(logger, "Se conecto exitosamente \n");
+
 	freeaddrinfo(server_info);
 
 	return socket_cliente;
@@ -108,4 +110,26 @@ void enviar_mensaje(char* mensaje, int socket_cliente)
 
 	free(a_enviar);
 	eliminar_paquete(paquete);
+}
+
+void* serializar_paquete(t_paquete* paquete, int bytes)
+{
+	void * magic = malloc(bytes);
+	int desplazamiento = 0;
+
+	memcpy(magic + desplazamiento, &(paquete->codigo_operacion), sizeof(int));
+	desplazamiento+= sizeof(int);
+	memcpy(magic + desplazamiento, &(paquete->buffer->size), sizeof(int));
+	desplazamiento+= sizeof(int);
+	memcpy(magic + desplazamiento, paquete->buffer->stream, paquete->buffer->size);
+	desplazamiento+= paquete->buffer->size;
+
+	return magic;
+}
+
+void eliminar_paquete(t_paquete* paquete)
+{
+	free(paquete->buffer->stream);
+	free(paquete->buffer);
+	free(paquete);
 }
