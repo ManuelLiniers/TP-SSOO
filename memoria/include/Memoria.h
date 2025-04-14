@@ -31,5 +31,6 @@ t_config* memoria_config;
 t_config* iniciar_config(void);
 void leer_config();
 void leer_log();
+void recibir_mensaje(int socket_cliente);
 
 #endif /* MEMORIA_H_ */
