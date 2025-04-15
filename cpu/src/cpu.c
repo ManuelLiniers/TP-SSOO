@@ -1,6 +1,4 @@
-#include <utils/hello.h>
-#include <utils/commons.h>
-#include</home/utnso/tp-2025-1c-queCompileALaPrimera/utils/socket.h>
+#include <cpu.h>
 
 int main(int argc, char* argv[]) {
     saludar("cpu");
@@ -20,6 +18,8 @@ int main(int argc, char* argv[]) {
     int conexion_kernel_interrupt = crear_conexion(logger, ip_kernel, puerto_kernel_interrupt);
 
     mensaje_inicial(conexion_memoria, conexion_kernel_dispatch, conexion_kernel_interrupt);
+
+    terminar_programa(conexion_memoria, conexion_kernel_dispatch, conexion_kernel_interrupt, logger, cpu_config);
 
     return 0;
 }
@@ -52,6 +52,7 @@ void mensaje_inicial(int conexion_memoria, int conexion_kernel_dispatch, int con
 
 void terminar_programa(int conexion_memoria, int conexion_kernel_dispatch, int conexion_kernel_interrupt, t_log* logger, t_config* cpu_config)
 {
+    log_info(logger, "cliente cpu terminado");
 	log_destroy(logger);
     config_destroy(cpu_config);
     close(conexion_memoria);
