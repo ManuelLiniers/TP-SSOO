@@ -29,7 +29,7 @@ int main(int argc, char* argv[]) {
 			int cod_op = recibir_operacion(cliente_fd);
 			switch (cod_op) {
 				case MENSAJE:
-					recibir_mensaje(cliente_fd);
+					recibir_mensaje(memoria_logger, cliente_fd);
 					break;
 				// case PAQUETE:
 				// 	lista = recibir_paquete(cliente_fd);
@@ -74,12 +74,4 @@ void leer_log(t_log* logger){
 	log_info(memoria_logger, "RETARDO_SWAP: %d", RETARDO_SWAP);
 	log_info(memoria_logger, "LOG_LEVEL: %s", LOG_LEVEL);
 	log_info(memoria_logger, "DUMP_PATH: %s", DUMP_PATH);
-}
-
-void recibir_mensaje(int socket_cliente)
-{
-	int size;
-	char* buffer = recibir_buffer(&size, socket_cliente);
-	log_info(memoria_logger, "Me llego el mensaje %s", buffer);
-	free(buffer);
 }

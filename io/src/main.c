@@ -1,13 +1,13 @@
 #include "main.h"
 #include <utils/hello.h>
 #include <utils/commons.h>
-#include</home/utnso/tp-2025-1c-queCompileALaPrimera/utils/socket.h>
+#include</home/utnso/tp-2025-1c-queCompileALaPrimera/utils/src/utils/socket.h>
 
 
 int main(int argc, char* argv[]) {
     saludar("io");
 
-     if (argc < 2) {
+    if (argc < 2) {
         printf("Debe indicarse el nombre del dispositivo IO como argumento\n");
         return EXIT_FAILURE;
     }

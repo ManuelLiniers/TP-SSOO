@@ -7,7 +7,7 @@
 #include<commons/string.h>
 #include<commons/config.h>
 #include<readline/readline.h>
-#include</home/utnso/tp-2025-1c-queCompileALaPrimera/utils/socket.h>
+#include</home/utnso/tp-2025-1c-queCompileALaPrimera/utils/src/utils/socket.h>
 
 char* IP_MEMORIA;
 char* PUERTO_ESCUCHA;
@@ -31,6 +31,5 @@ t_config* memoria_config;
 t_config* iniciar_config(void);
 void leer_config();
 void leer_log();
-void recibir_mensaje(int socket_cliente);
 
 #endif /* MEMORIA_H_ */

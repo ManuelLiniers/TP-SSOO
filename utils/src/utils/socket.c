@@ -1,4 +1,5 @@
-#include "/home/utnso/tp-2025-1c-queCompileALaPrimera/utils/socket.h"
+//#include "/home/utnso/tp-2025-1c-queCompileALaPrimera/utils/socket.h"
+#include</home/utnso/tp-2025-1c-queCompileALaPrimera/utils/src/utils/socket.h>
 
 int iniciar_servidor(t_log* logger, char* ip, char* puerto)
 {
@@ -110,6 +111,14 @@ void enviar_mensaje(char* mensaje, int socket_cliente)
 
 	free(a_enviar);
 	eliminar_paquete(paquete);
+}
+
+void recibir_mensaje(t_log* logger, int socket_cliente)
+{
+	int size;
+	char* buffer = recibir_buffer(&size, socket_cliente);
+	log_info(logger, "Me llego el mensaje %s", buffer);
+	free(buffer);
 }
 
 int recibir_operacion(int socket_cliente)
