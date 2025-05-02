@@ -20,7 +20,12 @@ int main(int argc, char* argv[]) {
 
 	log_info(memoria_logger,"Iniciando servidor Memoria");
 
+	// inicializar_memoria();  (De momento no)
+
 	server_fd_memoria = iniciar_servidor(memoria_logger, IP_MEMORIA, PUERTO_ESCUCHA);
+
+//	while(servidor_escucha(server_fd_memoria));
+
 
 	// t_list* lista;
 	while(1){
@@ -45,6 +50,8 @@ int main(int argc, char* argv[]) {
 			}
 		}
 	}
+
+	finalizar_memoria();
 
     return EXIT_SUCCESS;
 }
@@ -74,4 +81,124 @@ void leer_log(t_log* logger){
 	log_info(memoria_logger, "RETARDO_SWAP: %d", RETARDO_SWAP);
 	log_info(memoria_logger, "LOG_LEVEL: %s", LOG_LEVEL);
 	log_info(memoria_logger, "DUMP_PATH: %s", DUMP_PATH);
+}
+
+/*
+void inicializar_memoria(){
+	espacio_usuario = malloc(TAM_MEMORIA);
+	if(espacio_usuario == NULL){
+		log_error(memoria_logger, "Error al crear memoria de usuario");
+		exit(1);
+	}
+	log_info(memoria_logger, "Se inicia memoria con Paginacion.");
+	
+}
+*/
+
+void finalizar_memoria(){
+	//free(espacio_usuario);
+	log_destroy(memoria_logger);
+	config_destroy(memoria_config);
+}
+
+/*
+**************************************************************************************
+**********************************COMUNICACION****************************************
+**************************************************************************************
+*/
+
+void servidor_escucha(int server_fd_memoria){
+	log_info(memoria_logger, "Iniciando servidor Memoria");
+	while(1){
+		int cliente_fd = esperar_cliente(memoria_logger, "Memoria", server_fd_memoria);
+		if(cliente_fd != -1){
+			pthread_t hilo_cliente;
+			int *args = malloc(sizeof(int));
+			*args = cliente_fd;
+			pthread_create(&hilo_cliente, NULL, (void*) saludar_cliente, args);
+			log_info(memoria_logger, "[THREAD] Creo hilo para atender");
+			pthread_detach(hilo_cliente);
+			free(args);
+		}
+	}
+}
+
+void saludar_cliente(void *void_args){
+	int* cliente_socket = (int*) void_args;
+
+	int code_op = recibir_operacion(*cliente_socket);
+	switch(code_op){
+		case HANDSHAKE:
+			void* enviar = malloc(sizeof(int));
+			int respuesta = 1;
+			memcpy(enviar, &respuesta, sizeof(int));
+			send(*cliente_socket, enviar, sizeof(int), 0);
+			free(enviar);
+
+			procesar_conexion(cliente_socket);
+			break; 
+		case -1;
+			log_error(memoria_logger. "Desconexion en el HANDSHAKE");
+			break;
+		default:
+			log_error(memoria_logger. "Desconexion en el HANDSHAKE: Operacion Desconocida");
+			break;
+	} 
+}
+
+void procesar_conexion(void *void_args){
+	int* args = (int*) void_args;
+	int cliente_fd = *args;
+
+	int cod_op = recibir_operacion(cliente_fd);
+	t_buffer* unBuffer;
+
+	switch(cod_op){
+		case IDENTIFICACION:
+			unBuffer = recibiendo_super_paquete(cliente_fd);
+			// aca es cuendo diferenciamos entre los modulos que llegan a memoria
+			identificar_modulo(unBuffer, cliente_fd);
+			break;
+		case -1:
+			log_error(memoria_logger, "CLIENTE DESCONCETADO");
+			close(cliente_fd);
+			break;
+		default:
+			log_error(memoria_logger, "Operacion desconocida. No quieras meter la pata en [MEMORIA]");
+			break;
+		}
+	
+	free(unBuffer);
+}
+
+void identificar_modulo(t_buffer* unBuffer, int cliente_fd){
+	// hacer funcion que reciba el id del modulo especifico
+	int modulo_id = recibir_int_del_buffer(unBuffer);
+	
+	switch (modulo_id) {
+		case KERNEL:
+			fd_kernel = conexion;
+			log_info(memoria_logger, "[[[[[KERNEL CONECTADO]]]]]");
+			atender_kernel(fd_kernel);
+
+			break;
+		case CPU:
+			fd_cpu = conexion;
+			log_info(memoria_logger, "[[[[[CPU CONECTADO]]]]]");
+			atender_cpu(fd_cpu);
+
+			break;
+		default:
+			log_error(memoria_logger, "[%d]Error al identificar modulo",modulo_id);
+			exit(EXIT_FAILURE);
+			break;
+	}
+}
+
+void atender_kernel(int kernel_fd){
+	// hacer
+}
+
+void atender_cpu(int cpu_fd){
+	// hacer
 }

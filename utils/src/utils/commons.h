@@ -4,13 +4,14 @@
 #include <commons/log.h>
 #include <readline/readline.h>
 #include <commons/config.h>
-#include<stdio.h>
-#include<stdlib.h>
-#include<signal.h>
-#include<unistd.h>
-#include<sys/socket.h>
-#include<netdb.h>
-#include<string.h>
-#include</home/utnso/tp-2025-1c-queCompileALaPrimera/utils/src/utils/socket.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include <signal.h>
+#include <unistd.h>
+#include <sys/socket.h>
+#include <netdb.h>
+#include <string.h>
+#include <pthread.h>
+#include </home/utnso/tp-2025-1c-queCompileALaPrimera/utils/src/utils/socket.h>
 
 #endif
