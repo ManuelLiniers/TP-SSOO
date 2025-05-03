@@ -19,6 +19,13 @@ int main(int argc, char* argv[]) {
 
     mensaje_inicial(conexion_memoria, conexion_kernel_dispatch, conexion_kernel_interrupt);
 
+    //espero PCBs del Kernel por dispatch
+while(1) {
+    int cliente_fd = esperar_cliente(logger, conexion_kernel_dispatch); 
+    if(cliente_fd != -1) {
+        atender_proceso_del_kernel(cliente_fd, logger);
+    }
+}
     terminar_programa(conexion_memoria, conexion_kernel_dispatch, conexion_kernel_interrupt, logger, cpu_config);
 
     return 0;
@@ -59,4 +66,52 @@ void terminar_programa(int conexion_memoria, int conexion_kernel_dispatch, int c
     close(conexion_memoria);
     close(conexion_kernel_dispatch);
     close(conexion_kernel_interrupt);
+}
+
+void atender_proceso_del_kernel(int fd, t_log* logger) {
+    log_info(logger, "Esperando contexto del proceso desde el Kernel...");
+
+    t_contexto* contexto = recibir_contexto(fd);
+    if (!contexto) {
+        log_error(logger, "Fallo al recibir el contexto.");
+        return;
+    }
+
+    while (1) {
+        ciclo_de_instruccion_fetch(logger);
+        ciclo_de_instruccion_decode(logger);
+        ciclo_de_instruccion_execute(logger);
+
+        if (contexto->program_counter == -1) {
+            break;
+        }
+    }
+
+    destruir_estructuras_del_contexto_actual(contexto);
+}
+
+t_contexto* recibir_contexto(int fd) {
+    t_contexto* contexto = malloc(sizeof(t_contexto));
+    contexto->program_counter = 0;
+    contexto->AX = 0;
+    contexto->BX = 0;
+    contexto->CX = 0;
+    contexto->DX = 0;
+    return contexto;
+}
+
+void ciclo_de_instruccion_fetch(t_log* logger) {
+    log_debug(logger, "Fetch de instrucción.");
+}
+
+void ciclo_de_instruccion_decode(t_log* logger) {
+    log_debug(logger, "Decode de instrucción.");
+}
+
+void ciclo_de_instruccion_execute(t_log* logger) {
+    log_debug(logger, "Execute de instrucción.");
+}
+
+void destruir_estructuras_del_contexto_actual(t_contexto* contexto) {
+    free(contexto);
 }
