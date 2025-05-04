@@ -32,6 +32,9 @@ while(1) {
 }
 
 
+
+
+
 t_log* crear_log(){
 
     t_log* logger = log_create("cpu.log", "[CPU]", 1, LOG_LEVEL_DEBUG);
@@ -78,14 +81,27 @@ void atender_proceso_del_kernel(int fd, t_log* logger) {   //HAY QUE IMPLEMENTAR
     }
 
     while (1) {
-        //ciclo_de_instruccion_fetch();
-        //ciclo_de_instruccion_decode(logger);
-        //ciclo_de_instruccion_execute(logger);
-
-        if (contexto->program_counter == -1) {
-            break;
-        }
+    char* instruccion_cruda = ciclo_de_instruccion_fetch(fd, contexto); // fd es conexion_memoria
+    if (!instruccion_cruda) {
+        log_error(logger, "Fallo al recibir la instrucción desde Memoria.");
+        break;
     }
+
+    t_instruccion_decodificada* instruccion = ciclo_de_instruccion_decode(instruccion_cruda);
+    free(instruccion_cruda); // Se libera la instrucción cruda después del decode
+
+    if (!instruccion) {
+        log_error(logger, "Fallo al decodificar la instrucción.");
+        break;
+    }
+
+    ciclo_de_instruccion_execute(instruccion, contexto, logger, fd); // falta implementar
+
+    if (contexto->program_counter == -1) break;
+
+    destruir_instruccion_decodificada(instruccion); // se liberan mallocs
+}
+
 
     destruir_estructuras_del_contexto_actual(contexto);
 }
@@ -99,6 +115,8 @@ t_contexto* recibir_contexto(int fd) {
     contexto->DX = 0;
     return contexto;
 }
+
+////////////////////////////////////////////////////////////////////   FETCH   ///////////////////////////////////////////////////////////////////////////////////
 
 char* ciclo_de_instruccion_fetch(int conexion_memoria, t_contexto* contexto) {
     log_info(logger, "SE EJECUTA FASE FETCH para PC = %d", contexto->program_counter);
@@ -135,14 +153,9 @@ char* recibir_instruccion(int socket_memoria) {
     return instruccion;
 }
 
-//void ciclo_de_instruccion_decode(t_log* logger) {
-//    log_debug(logger, "Decode de instrucción.");
-//}
 
-//void ciclo_de_instruccion_execute(t_log* logger) {
-//    log_debug(logger, "Execute de instrucción.");
-//}
+//////////////////////////////////////////////////////////////////////   DECODE   ///////////////////////////////////////////////////////////////////////////////////
+t_instruccion_decodificada* ciclo_de_instruccion_decode(char* instruccion_cruda) {
+    return decodificar_instruccion(instruccion_cruda);
+}
 
-//void destruir_estructuras_del_contexto_actual(t_contexto* contexto) {
-//    free(contexto);
-//}
