@@ -134,17 +134,6 @@ int recibir_operacion(int socket_cliente)
 }
 
 
-void* recibir_buffer(int* size, int socket_cliente)
-{
-	void * buffer;
-
-	recv(socket_cliente, size, sizeof(int), MSG_WAITALL);
-	buffer = malloc(*size);
-	recv(socket_cliente, buffer, *size, MSG_WAITALL);
-
-	return buffer;
-}
-
 /*
 **************************************************************************************
 ************************************PAQUETE*******************************************
@@ -156,6 +145,17 @@ void crear_buffer(t_paquete* paquete)
 	paquete->buffer = malloc(sizeof(t_buffer));
 	paquete->buffer->size = 0;
 	paquete->buffer->stream = NULL;
+}
+
+void* recibir_buffer(int* size, int socket_cliente)
+{
+	void * buffer;
+
+	recv(socket_cliente, size, sizeof(int), MSG_WAITALL);
+	buffer = malloc(*size);
+	recv(socket_cliente, buffer, *size, MSG_WAITALL);
+
+	return buffer;
 }
 
 t_paquete* crear_paquete(op_code codigo_op)
@@ -199,6 +199,14 @@ void enviar_paquete(t_paquete* paquete, int socket_cliente)
 	send(socket_cliente, a_enviar, bytes, 0);
 
 	free(a_enviar);
+}
+
+t_buffer* recibir_paquete(int cliente_fd){
+	t_buffer* unBuffer = malloc(sizeof(t_buffer));
+	int size;
+	unBuffer->stream = recibir_buffer(&size, conexion);
+	unBuffer->size = size;
+	return unBuffer;
 }
 
 void eliminar_paquete(t_paquete* paquete)

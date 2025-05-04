@@ -33,10 +33,7 @@ typedef struct
 	t_buffer* buffer;
 } t_paquete;
 
-t_paquete* crear_paquete(void);
-void agregar_a_paquete(t_paquete* paquete, void* valor, int tamanio);
-void enviar_paquete(t_paquete* paquete, int socket_cliente);
-t_list* recibir_paquete(int cliente_fd);
+
 
 int iniciar_servidor(t_log* logger, char* ip, char* puerto);
 int esperar_cliente(t_log* logger, const char* name, int socket_servidor);
@@ -51,6 +48,7 @@ t_paquete* crear_paquete(op_code codigo_op)
 void agregar_a_paquete(t_paquete* paquete, void* valor, int tamanio);
 void* serializar_paquete(t_paquete* paquete, int bytes);
 void enviar_paquete(t_paquete* paquete, int socket_cliente);
+t_buffer* recibir_paquete(int cliente_fd);
 void eliminar_paquete(t_paquete* paquete);
 void crear_buffer(t_paquete* paquete)
 void* recibir_buffer(int* size, int socket_cliente);
