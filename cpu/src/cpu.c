@@ -111,7 +111,7 @@ char* ciclo_de_instruccion_fetch(int conexion_memoria, t_contexto* contexto) {
     eliminar_paquete(paquete);
 
     // RECIBO LA RTA AL PEDIDO
-    char* instruccion = recibir_instruccion(conexion_memoria); // deberás implementar esta función
+    char* instruccion = recibir_instruccion(conexion_memoria); 
     log_info(logger, "Instrucción recibida: %s", instruccion);
     return instruccion;
 }
