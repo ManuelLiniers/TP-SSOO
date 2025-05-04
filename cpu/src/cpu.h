@@ -1,6 +1,7 @@
 #include <utils/hello.h>
 #include <utils/commons.h>
-#include</home/utnso/tp-2025-1c-queCompileALaPrimera/utils/src/utils/socket.h>
+#include </home/utnso/tp-2025-1c-queCompileALaPrimera/utils/src/utils/socket.h>
+#include <instruccion.h>
 
 t_log* crear_log();
 t_config* crear_config(t_log* logger);
@@ -35,3 +36,4 @@ void destruir_estructuras_del_contexto_actual(t_contexto* contexto);
 void ciclo_de_instruccion_fetch(t_log* logger);
 void ciclo_de_instruccion_decode(t_log* logger);
 void ciclo_de_instruccion_execute(t_log* logger);
+
