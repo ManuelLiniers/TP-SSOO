@@ -16,8 +16,10 @@
 typedef enum
 {
 	MENSAJE,
-	PAQUETE
-}op_code;
+	PAQUETE,
+	PEDIR_INSTRUCCION,
+	DEVOLVER_INSTRUCCION,
+} op_code;
 
 typedef struct
 {
@@ -43,8 +45,14 @@ void liberar_conexion(int socket_cliente);
 void enviar_mensaje(char* mensaje, int socket_cliente);
 void recibir_mensaje(t_log* logger, int cliente_fd);
 int recibir_operacion(int socket_cliente);
+
+// Paquete
+t_paquete* crear_paquete(op_code codigo_op)
+void agregar_a_paquete(t_paquete* paquete, void* valor, int tamanio);
 void* serializar_paquete(t_paquete* paquete, int bytes);
+void enviar_paquete(t_paquete* paquete, int socket_cliente);
 void eliminar_paquete(t_paquete* paquete);
+void crear_buffer(t_paquete* paquete)
 void* recibir_buffer(int* size, int socket_cliente);
 
 #endif /* INCLUDE_SOCKET_H_ */

@@ -122,7 +122,7 @@ char* recibir_instruccion(int socket_memoria) {
         return NULL;
     }
 
-    if (codigo_operacion != OPCODE_DEVOLVER_INSTRUCCION) {
+    if (codigo_operacion != DEVOLVER_INSTRUCCION) {
         return NULL; // O manejar error de tipo inesperado
     }
 

@@ -97,6 +97,7 @@ void inicializar_memoria(){
 
 void finalizar_memoria(){
 	//free(espacio_usuario);
+	log_info(memoria_logger, "Memoria terminada")
 	log_destroy(memoria_logger);
 	config_destroy(memoria_config);
 }
@@ -201,4 +202,64 @@ void atender_kernel(int kernel_fd){
 
 void atender_cpu(int cpu_fd){
 	// hacer
+	while (1) {
+
+        int cod_op = recibir_operacion(cpu_fd);
+
+        switch (cod_op) {
+            case PEDIR_INSTRUCCION: {
+                uint32_t pid;
+                uint32_t pc;
+				/*
+                // Recibir PID y PC
+                recv(cpu_fd, &pid, sizeof(uint32_t), 0);
+                recv(cpu_fd, &pc, sizeof(uint32_t), 0);
+
+                log_info(memoria_logger, "CPU pide instrucción para PID %d, PC %d", pid, pc);
+
+                // Armar path del archivo de instrucciones
+                char path[256];
+                sprintf(path, "/home/utnso/scripts/%d.txt", pid);
+
+                FILE* archivo = fopen(path, "r");
+                if (!archivo) {
+                    log_error(memoria_logger, "Archivo de instrucciones para PID %d no encontrado", pid);
+                    break;
+                }
+
+                char linea[128];
+                int linea_actual = 0;
+
+                while (fgets(linea, sizeof(linea), archivo)) {
+                    if (linea_actual == pc) break;
+                    linea_actual++;
+                }
+                fclose(archivo);
+
+                // Eliminar salto de línea si hay
+                linea[strcspn(linea, "\n")] = '\0';
+
+                // Enviar op_code primero
+                op_code codigo = DEVOLVER_INSTRUCCION;
+                send(cpu_fd, &codigo, sizeof(op_code), 0);
+
+                // Enviar tamaño
+                uint32_t size = strlen(linea) + 1;
+                send(cpu_fd, &size, sizeof(uint32_t), 0);
+
+                // Enviar instrucción
+                send(cpu_fd, linea, size, 0);
+
+                log_info(memoria_logger, "Instrucción enviada: %s", linea);
+				*/
+                break;
+            }
+			case -1:
+				log_info(memoria_logger, "[CPU] se desconecto. Terminando consulta");
+				exit(1);
+            default:
+                log_warning(memoria_logger, "Operación desconocida de CPU");
+                break;
+        }
+    }
 }
