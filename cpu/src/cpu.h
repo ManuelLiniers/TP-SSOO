@@ -4,6 +4,7 @@
 #include <instruccion.h>
 
 t_log* crear_log();
+t_log* logger;
 t_config* crear_config(t_log* logger);
 void mensaje_inicial(int conexion_memoria, int conexion_kernel_dispatch, int conexion_kernel_interrupt);
 void terminar_programa(int conexion_memoria, int conexion_kernel_dispatch, int conexion_kernel_interrupt, t_log* logger, t_config* cpu_config);
@@ -33,7 +34,4 @@ typedef enum {
 // Funciones que vamos a implementar en etapas
 void atender_proceso_del_kernel(int fd, t_log* logger);
 void destruir_estructuras_del_contexto_actual(t_contexto* contexto);
-void ciclo_de_instruccion_fetch(t_log* logger);
-void ciclo_de_instruccion_decode(t_log* logger);
-void ciclo_de_instruccion_execute(t_log* logger);
 

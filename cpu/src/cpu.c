@@ -21,7 +21,7 @@ int main(int argc, char* argv[]) {
 
     //espero PCBs del Kernel por dispatch
 while(1) {
-    int cliente_fd = esperar_cliente(logger, conexion_kernel_dispatch); 
+    int cliente_fd = esperar_cliente(logger, "KERNEL", conexion_kernel_dispatch); 
     if(cliente_fd != -1) {
         atender_proceso_del_kernel(cliente_fd, logger);
     }
@@ -122,7 +122,7 @@ char* ciclo_de_instruccion_fetch(int conexion_memoria, t_contexto* contexto) {
     log_info(logger, "SE EJECUTA FASE FETCH para PC = %d", contexto->program_counter);
 
     // ENVIO A MEMORIA EL PEDIDO DE INSTRUCCION
-    t_paquete* paquete = crear_paquete(OPCODE_PEDIR_INSTRUCCION);
+    t_paquete* paquete = crear_paquete(PEDIR_INSTRUCCION);
     agregar_a_paquete(paquete, &(contexto->pid), sizeof(uint32_t));
     agregar_a_paquete(paquete, &(contexto->program_counter), sizeof(uint32_t));
     enviar_paquete(paquete, conexion_memoria);
