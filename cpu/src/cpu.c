@@ -68,7 +68,7 @@ void terminar_programa(int conexion_memoria, int conexion_kernel_dispatch, int c
     close(conexion_kernel_interrupt);
 }
 
-void atender_proceso_del_kernel(int fd, t_log* logger) {
+void atender_proceso_del_kernel(int fd, t_log* logger) {   //HAY QUE IMPLEMENTARLA
     log_info(logger, "Esperando contexto del proceso desde el Kernel...");
 
     t_contexto* contexto = recibir_contexto(fd);
@@ -78,9 +78,9 @@ void atender_proceso_del_kernel(int fd, t_log* logger) {
     }
 
     while (1) {
-        ciclo_de_instruccion_fetch(logger);
-        ciclo_de_instruccion_decode(logger);
-        ciclo_de_instruccion_execute(logger);
+        //ciclo_de_instruccion_fetch();
+        //ciclo_de_instruccion_decode(logger);
+        //ciclo_de_instruccion_execute(logger);
 
         if (contexto->program_counter == -1) {
             break;
@@ -100,18 +100,49 @@ t_contexto* recibir_contexto(int fd) {
     return contexto;
 }
 
-void ciclo_de_instruccion_fetch(t_log* logger) {
-    log_debug(logger, "Fetch de instrucción.");
+char* ciclo_de_instruccion_fetch(int conexion_memoria, t_contexto* contexto) {
+    log_info(logger, "SE EJECUTA FASE FETCH para PC = %d", contexto->program_counter);
+
+    // ENVIO A MEMORIA EL PEDIDO DE INSTRUCCION
+    t_paquete* paquete = crear_paquete(OPCODE_PEDIR_INSTRUCCION);
+    agregar_a_paquete(paquete, &(contexto->pid), sizeof(uint32_t));
+    agregar_a_paquete(paquete, &(contexto->program_counter), sizeof(uint32_t));
+    enviar_paquete(paquete, conexion_memoria);
+    eliminar_paquete(paquete);
+
+    // RECIBO LA RTA AL PEDIDO
+    char* instruccion = recibir_instruccion(conexion_memoria); // deberás implementar esta función
+    log_info(logger, "Instrucción recibida: %s", instruccion);
+    return instruccion;
 }
 
-void ciclo_de_instruccion_decode(t_log* logger) {
-    log_debug(logger, "Decode de instrucción.");
+char* recibir_instruccion(int socket_memoria) {
+    op_code codigo_operacion;
+    if (recv(socket_memoria, &codigo_operacion, sizeof(op_code), 0) <= 0) {
+        return NULL;
+    }
+
+    if (codigo_operacion != OPCODE_DEVOLVER_INSTRUCCION) {
+        return NULL; // O manejar error de tipo inesperado
+    }
+
+    // Recibo la instrucción COMO STRING
+    uint32_t size;
+    recv(socket_memoria, &size, sizeof(uint32_t), 0);
+
+    char* instruccion = malloc(size);
+    recv(socket_memoria, instruccion, size, 0);
+    return instruccion;
 }
 
-void ciclo_de_instruccion_execute(t_log* logger) {
-    log_debug(logger, "Execute de instrucción.");
-}
+//void ciclo_de_instruccion_decode(t_log* logger) {
+//    log_debug(logger, "Decode de instrucción.");
+//}
 
-void destruir_estructuras_del_contexto_actual(t_contexto* contexto) {
-    free(contexto);
-}
+//void ciclo_de_instruccion_execute(t_log* logger) {
+//    log_debug(logger, "Execute de instrucción.");
+//}
+
+//void destruir_estructuras_del_contexto_actual(t_contexto* contexto) {
+//    free(contexto);
+//}

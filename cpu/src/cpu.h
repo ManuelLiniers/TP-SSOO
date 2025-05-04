@@ -9,8 +9,7 @@ void terminar_programa(int conexion_memoria, int conexion_kernel_dispatch, int c
 
 // Estructura de contexto de ejecución (PCB simplificado)
 typedef struct {
-    int proceso_pid;
-    int proceso_ticket;
+    int pid;
     int program_counter;
     uint32_t AX;
     uint32_t BX;
