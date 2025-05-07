@@ -15,6 +15,7 @@
 
 typedef enum
 {
+	IDENTIFICACION,
 	MENSAJE,
 	PAQUETE,
 	INICIAR_PROCESO,

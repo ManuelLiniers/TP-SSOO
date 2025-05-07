@@ -184,13 +184,13 @@ void identificar_modulo(t_buffer* unBuffer, int cliente_fd){
 	
 	switch (modulo_id) {
 		case KERNEL:
-			fd_kernel = conexion;
+			fd_kernel = cliente_fd;
 			log_info(memoria_logger, "[[[[[KERNEL CONECTADO]]]]]");
 			atender_kernel(fd_kernel);
 
 			break;
 		case CPU:
-			fd_cpu = conexion;
+			fd_cpu = cliente_fd;
 			log_info(memoria_logger, "[[[[[CPU CONECTADO]]]]]");
 			atender_cpu(fd_cpu);
 
