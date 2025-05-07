@@ -12,6 +12,8 @@ typedef struct {
     int program_counter;        // Contador de instrucción
     t_list* instrucciones;      // Lista de instrucciones (strings o structs)
     t_estado estado;            // Estado actual del proceso
+    //t_list* metricas_estado;         // Lista de veces que estuvo en cada estado
+    //t_list* metricas_estado_tiempo;  // Lista de tiempo que estuvo en cada estado
     // Más campos opcionales: tamaño de memoria, registros, métricas, etc.
 } t_pcb;
 

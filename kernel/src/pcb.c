@@ -9,6 +9,9 @@ t_pcb* pcb_create(int pid, t_list* instrucciones) {
     pcb->program_counter = 0;
     pcb->instrucciones = instrucciones;
     pcb->estado = NEW;
+
+    // Ver como implementamos las listas de las metricas al crear la pcb
+    
     return pcb;
 }
 
