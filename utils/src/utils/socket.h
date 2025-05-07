@@ -50,7 +50,11 @@ void* serializar_paquete(t_paquete* paquete, int bytes);
 void enviar_paquete(t_paquete* paquete, int socket_cliente);
 t_buffer* recibir_paquete(int cliente_fd);
 void eliminar_paquete(t_paquete* paquete);
+
+// buffer
 void crear_buffer(t_paquete* paquete)
 void* recibir_buffer(int* size, int socket_cliente);
+int recibir_int_del_buffer(t_buffer* unBuffer);
+
 
 #endif /* INCLUDE_SOCKET_H_ */

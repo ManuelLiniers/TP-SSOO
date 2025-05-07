@@ -140,24 +140,6 @@ int recibir_operacion(int socket_cliente)
 **************************************************************************************
 */
 
-void crear_buffer(t_paquete* paquete)
-{
-	paquete->buffer = malloc(sizeof(t_buffer));
-	paquete->buffer->size = 0;
-	paquete->buffer->stream = NULL;
-}
-
-void* recibir_buffer(int* size, int socket_cliente)
-{
-	void * buffer;
-
-	recv(socket_cliente, size, sizeof(int), MSG_WAITALL);
-	buffer = malloc(*size);
-	recv(socket_cliente, buffer, *size, MSG_WAITALL);
-
-	return buffer;
-}
-
 t_paquete* crear_paquete(op_code codigo_op)
 {
 	t_paquete* paquete = malloc(sizeof(t_paquete));
@@ -214,4 +196,64 @@ void eliminar_paquete(t_paquete* paquete)
 	free(paquete->buffer->stream);
 	free(paquete->buffer);
 	free(paquete);
+}
+
+/*
+**************************************************************************************
+*************************************BUFFER*******************************************
+**************************************************************************************
+*/
+
+void crear_buffer(t_paquete* paquete)
+{
+	paquete->buffer = malloc(sizeof(t_buffer));
+	paquete->buffer->size = 0;
+	paquete->buffer->stream = NULL;
+}
+
+void* recibir_buffer(int* size, int socket_cliente)
+{
+	void * buffer;
+
+	recv(socket_cliente, size, sizeof(int), MSG_WAITALL);
+	buffer = malloc(*size);
+	recv(socket_cliente, buffer, *size, MSG_WAITALL);
+
+	return buffer;
+}
+
+int recibir_int_del_buffer(t_buffer* unBuffer){
+	if(unBuffer->size == 0){
+		printf("\n[ERROR] Al intentar extraer un INT de un t_buffer vacio\n\n");
+		exit(EXIT_FAILURE);
+	}
+
+	if(unBuffer->size < 0){
+		printf("\n[ERROR] Esto es raro. El t_buffer contiene un size NEGATIVO \n\n");
+		exit(EXIT_FAILURE);
+	}
+
+	int valor_a_devolver;
+	memcpy(&valor_a_devolver, unBuffer->stream, sizeof(int));
+
+	int nuevo_size = unBuffer->size - sizeof(int);
+	if(nuevo_size == 0){
+		free(unBuffer->stream);
+		unBuffer->stream = NULL;
+		unBuffer->size = 0;
+		return valor_a_devolver;
+	}
+	if(nuevo_size < 0){
+		printf("\n[ERROR_INT]: BUFFER CON TAMAÑO NEGATIVO\n\n");
+		//free(valor_a_devolver);
+		//return 0;
+		exit(EXIT_FAILURE);
+	}
+	void* nuevo_unBuffer = malloc(nuevo_size);
+	memcpy(nuevo_unBuffer, unBuffer->stream + sizeof(int), nuevo_size);
+	free(unBuffer->stream);
+	unBuffer->stream = nuevo_unBuffer;
+	unBuffer->size = nuevo_size;
+
+	return valor_a_devolver;
 }

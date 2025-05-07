@@ -27,6 +27,8 @@ int kernel_fd;
 int cpu_fd;
 void* espacio_usuario;
 
+t_list* lista_procesos_recibidos;
+
 // LOGS Y CONFIG
 
 t_log* memoria_logger;

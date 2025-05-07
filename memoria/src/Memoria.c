@@ -22,6 +22,10 @@ int main(int argc, char* argv[]) {
 
 	// inicializar_memoria();  (De momento no)
 
+
+	// Aca se almacenan los procesos que llegan,  
+	// lista_procesos_recibidos = list_create();
+
 	server_fd_memoria = iniciar_servidor(memoria_logger, IP_MEMORIA, PUERTO_ESCUCHA);
 
 //	while(servidor_escucha(server_fd_memoria));
@@ -203,60 +207,62 @@ void atender_kernel(int kernel_fd){
 void atender_cpu(int cpu_fd){
 	// hacer
 	while (1) {
-
+		t_buffer* unBuffer;
         int cod_op = recibir_operacion(cpu_fd);
 
-        switch (cod_op) {
-            case PEDIR_INSTRUCCION: {
-                uint32_t pid;
-                uint32_t pc;
+		switch (cod_op) {
+			case PEDIR_INSTRUCCION: {
+				uint32_t pid;
+				uint32_t pc;
+
+				unBuffer = recibir_paquete(cpu_fd);
+				pid = recibir_int_del_buffer(unBuffer);
+				pc = recibir_int_del_buffer(unBuffer);
+
+				log_info(memoria_logger, "CPU pide instrucción para PID %d, PC %d", pid, pc);
+
 				/*
-                // Recibir PID y PC
-                recv(cpu_fd, &pid, sizeof(uint32_t), 0);
-                recv(cpu_fd, &pc, sizeof(uint32_t), 0);
+				// Armar path del archivo de instrucciones
+				char path[256];
+				sprintf(path, "/home/utnso/scripts/%d.txt", pid);
 
-                log_info(memoria_logger, "CPU pide instrucción para PID %d, PC %d", pid, pc);
+				FILE* archivo = fopen(path, "r");
+				if (!archivo) {
+					log_error(memoria_logger, "Archivo de instrucciones para PID %d no encontrado", pid);
+					break;
+				}
 
-                // Armar path del archivo de instrucciones
-                char path[256];
-                sprintf(path, "/home/utnso/scripts/%d.txt", pid);
+				char linea[128];
+				int linea_actual = 0;
 
-                FILE* archivo = fopen(path, "r");
-                if (!archivo) {
-                    log_error(memoria_logger, "Archivo de instrucciones para PID %d no encontrado", pid);
-                    break;
-                }
+				while (fgets(linea, sizeof(linea), archivo)) {
+					if (linea_actual == pc) break;
+					linea_actual++;
+				}
+				fclose(archivo);
 
-                char linea[128];
-                int linea_actual = 0;
+				// Eliminar salto de línea si hay
+				linea[strcspn(linea, "\n")] = '\0';
 
-                while (fgets(linea, sizeof(linea), archivo)) {
-                    if (linea_actual == pc) break;
-                    linea_actual++;
-                }
-                fclose(archivo);
+				// Enviar op_code primero
+				op_code codigo = DEVOLVER_INSTRUCCION;
+				send(cpu_fd, &codigo, sizeof(op_code), 0);
 
-                // Eliminar salto de línea si hay
-                linea[strcspn(linea, "\n")] = '\0';
+				// Enviar tamaño
+				uint32_t size = strlen(linea) + 1;
+				send(cpu_fd, &size, sizeof(uint32_t), 0);
 
-                // Enviar op_code primero
-                op_code codigo = DEVOLVER_INSTRUCCION;
-                send(cpu_fd, &codigo, sizeof(op_code), 0);
+				// Enviar instrucción
+				send(cpu_fd, linea, size, 0);
 
-                // Enviar tamaño
-                uint32_t size = strlen(linea) + 1;
-                send(cpu_fd, &size, sizeof(uint32_t), 0);
-
-                // Enviar instrucción
-                send(cpu_fd, linea, size, 0);
-
-                log_info(memoria_logger, "Instrucción enviada: %s", linea);
+				log_info(memoria_logger, "Instrucción enviada: %s", linea);
 				*/
-                break;
-            }
+
+				break;
+			}
 			case -1:
 				log_info(memoria_logger, "[CPU] se desconecto. Terminando consulta");
-				exit(1);
+				exit(0);
             default:
                 log_warning(memoria_logger, "Operación desconocida de CPU");
                 break;
