@@ -132,17 +132,22 @@ void servidor_escucha(int server_fd_memoria){
 
 void saludar_cliente(void *void_args){
 	int* cliente_socket = (int*) void_args;
-
 	int code_op = recibir_operacion(*cliente_socket);
+	
 	switch(code_op){
 		case HANDSHAKE:
-			void* enviar = malloc(sizeof(int));
 			int respuesta = 1;
-			memcpy(enviar, &respuesta, sizeof(int));
-			send(*cliente_socket, enviar, sizeof(int), 0);
-			free(enviar);
+			send(*cliente_socket, &respuesta, sizeof(int), 0);
 
-			procesar_conexion(cliente_socket);
+			int op_code = recibir_operacion(*cliente_socket);
+			if (op_code == IDENTIFICACION) {
+				t_buffer* buffer = recibir_paquete(*cliente_socket);
+				identificar_modulo(buffer, *cliente_socket);
+				eliminar_buffer(buffer);
+			} else {
+				log_error(memoria_logger, "Esperaba IDENTIFICACION después de HANDSHAKE");
+				close(*cliente_socket);
+			}
 			break; 
 		case -1;
 			log_error(memoria_logger. "Desconexion en el HANDSHAKE");
@@ -153,30 +158,6 @@ void saludar_cliente(void *void_args){
 	} 
 }
 
-void procesar_conexion(void *void_args){
-	int* args = (int*) void_args;
-	int cliente_fd = *args;
-
-	int op_code = recibir_operacion(cliente_fd);
-	t_buffer* unBuffer;
-
-	switch(op_code){
-		case IDENTIFICACION:
-			unBuffer = recibiendo_super_paquete(cliente_fd);
-			// aca es cuendo diferenciamos entre los modulos que llegan a memoria
-			identificar_modulo(unBuffer, cliente_fd);
-			break;
-		case -1:
-			log_error(memoria_logger, "CLIENTE DESCONCETADO");
-			close(cliente_fd);
-			break;
-		default:
-			log_error(memoria_logger, "Operacion desconocida. No quieras meter la pata en [MEMORIA]");
-			break;
-		}
-	
-	free(unBuffer);
-}
 
 void identificar_modulo(t_buffer* unBuffer, int cliente_fd){
 	// hacer funcion que reciba el id del modulo especifico
