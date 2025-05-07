@@ -35,8 +35,8 @@ int main(int argc, char* argv[]) {
 	while(1){
 		int cliente_fd = esperar_cliente(memoria_logger, "Memoria", server_fd_memoria);
 		if(cliente_fd != -1){
-			int cod_op = recibir_operacion(cliente_fd);
-			switch (cod_op) {
+			int op_code = recibir_operacion(cliente_fd);
+			switch (op_code) {
 				case MENSAJE:
 					recibir_mensaje(memoria_logger, cliente_fd);
 					break;
@@ -72,6 +72,7 @@ void leer_config(t_config* config){
 	RETARDO_SWAP = config_get_int_value(config, "RETARDO_SWAP");
 	LOG_LEVEL = config_get_string_value(config, "LOG_LEVEL");
 	DUMP_PATH = config_get_string_value(config, "DUMP_PATH");
+	PATH_INSTRUCCIONES = config_get_string_value(config, "PATH_INSTRUCCIONES");
 }
 
 void leer_log(t_log* logger){
@@ -85,6 +86,7 @@ void leer_log(t_log* logger){
 	log_info(memoria_logger, "RETARDO_SWAP: %d", RETARDO_SWAP);
 	log_info(memoria_logger, "LOG_LEVEL: %s", LOG_LEVEL);
 	log_info(memoria_logger, "DUMP_PATH: %s", DUMP_PATH);
+	log_info(memoria_logger, "PATH_INSTRUCCIONES: %s", PATH_INSTRUCCIONES);
 }
 
 /*
@@ -155,10 +157,10 @@ void procesar_conexion(void *void_args){
 	int* args = (int*) void_args;
 	int cliente_fd = *args;
 
-	int cod_op = recibir_operacion(cliente_fd);
+	int op_code = recibir_operacion(cliente_fd);
 	t_buffer* unBuffer;
 
-	switch(cod_op){
+	switch(op_code){
 		case IDENTIFICACION:
 			unBuffer = recibiendo_super_paquete(cliente_fd);
 			// aca es cuendo diferenciamos entre los modulos que llegan a memoria
@@ -202,70 +204,52 @@ void identificar_modulo(t_buffer* unBuffer, int cliente_fd){
 
 void atender_kernel(int kernel_fd){
 	// hacer
+	log_info(memoria_logger, "## Kernel Conectado - FD del socket: %d", kernel_fd);
+
+	while (1) {
+		int op_code = recibir_operacion(kernel_fd);
+
+		switch (op_code) {
+			case INICIAR_PROCESO: {
+				unBuffer = recibir_paquete(kernel_fd);
+				// mock de aceptacion
+				mock_aceptacion();
+
+				break;
+			}
+			case -1:{
+				log_info(memoria_logger, "[KERNEL] se desconecto. Terminando consulta");
+				exit(0);
+			}
+            default: {
+				log_warning(memoria_logger, "Operación desconocida de KERNEL");
+                break;
+			}
+		}
+	}
 }
 
 void atender_cpu(int cpu_fd){
 	// hacer
 	while (1) {
 		t_buffer* unBuffer;
-        int cod_op = recibir_operacion(cpu_fd);
+        int op_code = recibir_operacion(cpu_fd);
 
-		switch (cod_op) {
+		switch (op_code) {
 			case PEDIR_INSTRUCCION: {
-				uint32_t pid;
-				uint32_t pc;
-
 				unBuffer = recibir_paquete(cpu_fd);
-				pid = recibir_int_del_buffer(unBuffer);
-				pc = recibir_int_del_buffer(unBuffer);
-
-				log_info(memoria_logger, "CPU pide instrucción para PID %d, PC %d", pid, pc);
-
-				/*
-				// Armar path del archivo de instrucciones
-				char path[256];
-				sprintf(path, "/home/utnso/scripts/%d.txt", pid);
-
-				FILE* archivo = fopen(path, "r");
-				if (!archivo) {
-					log_error(memoria_logger, "Archivo de instrucciones para PID %d no encontrado", pid);
-					break;
-				}
-
-				char linea[128];
-				int linea_actual = 0;
-
-				while (fgets(linea, sizeof(linea), archivo)) {
-					if (linea_actual == pc) break;
-					linea_actual++;
-				}
-				fclose(archivo);
-
-				// Eliminar salto de línea si hay
-				linea[strcspn(linea, "\n")] = '\0';
-
-				// Enviar op_code primero
-				op_code codigo = DEVOLVER_INSTRUCCION;
-				send(cpu_fd, &codigo, sizeof(op_code), 0);
-
-				// Enviar tamaño
-				uint32_t size = strlen(linea) + 1;
-				send(cpu_fd, &size, sizeof(uint32_t), 0);
-
-				// Enviar instrucción
-				send(cpu_fd, linea, size, 0);
-
-				log_info(memoria_logger, "Instrucción enviada: %s", linea);
-				*/
+				atender_peticion_de_instruccion(unBuffer);
 
 				break;
 			}
-			case -1:
+			case -1:{
 				log_info(memoria_logger, "[CPU] se desconecto. Terminando consulta");
 				exit(0);
-            default:
-                log_warning(memoria_logger, "Operación desconocida de CPU");
+			}
+            default: {
+				log_warning(memoria_logger, "Operación desconocida de CPU");
                 break;
+			}
         }
     }
 }

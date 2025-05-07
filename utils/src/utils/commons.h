@@ -14,9 +14,11 @@
 #include <pthread.h>
 #include </home/utnso/tp-2025-1c-queCompileALaPrimera/utils/src/utils/socket.h>
 
-#define KERNEL 1
-#define CPU 2
-#define IO 3
-#define MEMORIA 4
+typedef enum {
+    KERNEL,
+    CPU,
+    IO,
+    MEMORIA
+} modulo_id;
 
 #endif

@@ -1,13 +1,15 @@
 #ifndef MEMORIA_H_
 #define MEMORIA_H_
 
-#include<stdio.h>
-#include<stdlib.h>
-#include<commons/log.h>
-#include<commons/string.h>
-#include<commons/config.h>
-#include<readline/readline.h>
-#include</home/utnso/tp-2025-1c-queCompileALaPrimera/utils/src/utils/socket.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include <commons/log.h>
+#include <commons/string.h>
+#include <commons/config.h>
+#include <readline/readline.h>
+#include </home/utnso/tp-2025-1c-queCompileALaPrimera/utils/src/utils/socket.h>
+#include </home/utnso/tp-2025-1c-queCompileALaPrimera/memoria/include/atencion_a_cpu.h>
+#include </home/utnso/tp-2025-1c-queCompileALaPrimera/memoria/include/atencion_a_kernel.h>
 
 char* IP_MEMORIA;
 char* PUERTO_ESCUCHA;
@@ -20,6 +22,7 @@ char* PATH_SWAPFILE;
 int RETARDO_SWAP;
 char* LOG_LEVEL;
 char* DUMP_PATH;
+char* PATH_INSTRUCCIONES;
 
 
 int server_fd_memoria;

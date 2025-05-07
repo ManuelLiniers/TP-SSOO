@@ -17,8 +17,10 @@ typedef enum
 {
 	MENSAJE,
 	PAQUETE,
+	INICIAR_PROCESO,
 	PEDIR_INSTRUCCION,
 	DEVOLVER_INSTRUCCION,
+	OK
 } op_code;
 
 typedef struct
