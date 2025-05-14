@@ -4,6 +4,7 @@
 #include <commons/log.h>
 #include <readline/readline.h>
 #include <commons/config.h>
+#include <commons/collections/queue.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <signal.h>

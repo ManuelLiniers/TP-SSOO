@@ -1,17 +1,29 @@
 #include <pcb.h>
 #include <stdlib.h>
 
+// Se crea un proceso y se pushea a new
+void crear_proceso(int tamanio_proceso, t_list* instrucciones){
+    t_pcb* pcb_nuevo = pcb_create();
+    pcb_nuevo->instrucciones = instrucciones;
+    pcb_nuevo->tamanio_proceso = tamanio_proceso;
+
+    //wait(mutex_queue_new)
+    queue_push(queue_new, pcb_nuevo);
+    //signal(mutex_queue_new)
+}
+
 // Se crea un PCB con contador en 0 y en NEW
-t_pcb* pcb_create(int pid, t_list* instrucciones) {
+t_pcb* pcb_create(t_list* instrucciones) {
     t_pcb* pcb = malloc(sizeof(t_pcb));
     if (!pcb) return NULL;
-    pcb->pid = pid;
+    pcb->pid = pid_incremental;
     pcb->program_counter = 0;
-    pcb->instrucciones = instrucciones;
     pcb->estado = NEW;
 
+    pid_incremental++;
+
     // Ver como implementamos las listas de las metricas al crear la pcb
-    
+
     return pcb;
 }
 

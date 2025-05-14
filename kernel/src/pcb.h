@@ -2,6 +2,10 @@
 #define PCB_H_
 
 #include <commons/collections/list.h>
+#include <utils/commons.h>
+#include <scheduler.h>
+
+int pid_incremental = 0;
 
 // Estados posibles de un proceso
 typedef enum { NEW, READY, RUNNING, BLOCKED, EXIT } t_estado;
@@ -12,6 +16,7 @@ typedef struct {
     int program_counter;        // Contador de instrucción
     t_list* instrucciones;      // Lista de instrucciones (strings o structs)
     t_estado estado;            // Estado actual del proceso
+    int tamanio_proceso; 
     //t_list* metricas_estado;         // Lista de veces que estuvo en cada estado
     //t_list* metricas_estado_tiempo;  // Lista de tiempo que estuvo en cada estado
     // Más campos opcionales: tamaño de memoria, registros, métricas, etc.
@@ -30,6 +35,8 @@ t_pcb* pcb_create(int pid, t_list* instrucciones);
  * @param pcb_void puntero a t_pcb (pasado como void* para destruir en queues)
  */
 void pcb_destroy(void* pcb_void);
+
+void crear_proceso(int tamanio_proceso, t_list* instrucciones);
 
 #endif // PCB_H_
 
