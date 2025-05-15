@@ -8,7 +8,7 @@
 int pid_incremental = 0;
 
 // Estados posibles de un proceso
-typedef enum { NEW, READY, RUNNING, BLOCKED, EXIT } t_estado;
+typedef enum { NEW, READY, EXEC, BLOCKED, EXIT } t_estado;
 
 // Control Block de un proceso
 typedef struct {

@@ -72,6 +72,13 @@ void inicializar_planificacion(char* nombre_proceso, char* tamanio_proceso){
 	Ver si hacer eso aca o derivarlo en el archivo scheduler.c
 	*/
 
+	pthread_t planificador_corto_plazo;
+	pthread_create(&planificador_corto_plazo, NULL, planificar_corto_plazo, NULL);
+
+	pthread_t planificador_largo_plazo;
+	pthread_create(&planificador_largo_plazo, NULL, planificar_largo_plazo, NULL);
+
+
 	// crear proceso inicial con los argumentos y mandarlo a planificar
 }
 
