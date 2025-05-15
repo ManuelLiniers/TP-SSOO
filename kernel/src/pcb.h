@@ -10,6 +10,8 @@ int pid_incremental = 0;
 // Estados posibles de un proceso
 typedef enum { NEW, READY, EXEC, BLOCKED, EXIT } t_estado;
 
+t_estado[5] posibles_estados = {NEW, READY, EXEC, BLOCKED, EXIT};
+
 // Control Block de un proceso
 typedef struct {
     int pid;                    // Identificador único
@@ -17,10 +19,16 @@ typedef struct {
     t_list* instrucciones;      // Lista de instrucciones (strings o structs)
     t_estado estado;            // Estado actual del proceso
     int tamanio_proceso; 
-    //t_list* metricas_estado;         // Lista de veces que estuvo en cada estado
+    t_metricas_cant* metricas_estado;         // Lista de veces que estuvo en cada estado
     //t_list* metricas_estado_tiempo;  // Lista de tiempo que estuvo en cada estado
     // Más campos opcionales: tamaño de memoria, registros, métricas, etc.
 } t_pcb;
+
+typedef struct{
+    t_estado estado;
+    int cant;
+    t_metricas_cant* sig;
+} t_metricas_cant;
 
 /**
  * @brief Crea un PCB inicializado

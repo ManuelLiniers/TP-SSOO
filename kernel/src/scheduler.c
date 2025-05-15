@@ -59,9 +59,9 @@ bool espacio_en_memoria(*t_pcb proceso){
 void cambiarEstado(t_pcb* proceso, t_estado estado){
 
     proceso->estado = estado;
-    t_metricas_cant* estados = proceso->metricas_estado;
-    for(; estados->estado != estado ; estados = estados->sig);
-    estados->cant++;
+    t_metricas_cant* metricas = proceso->metricas_estado;
+    for(; metricas->estado != estado ; metricas = metricas->sig);
+    metricas->cant++;
 
     // falta las metricas del tiempo
 }

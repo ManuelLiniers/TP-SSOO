@@ -24,7 +24,22 @@ t_pcb* pcb_create(t_list* instrucciones) {
 
     // Ver como implementamos las listas de las metricas al crear la pcb
 
+    inicializarMetricas(&pcb->metricas_estado);
+
     return pcb;
+}
+
+inicializarMetricas(t_metricas_cant** metricas){
+    t_metricas_cant* sig = NULL;
+    for(int i = 4 ; i>=0 ; i--){
+        t_metricas_cant* aux = malloc(sizeof(t_metricas_cant));
+        t_estado e = posibles_estados[i];
+        aux->estado = e;
+        aux->cant = 0;
+        aux->sig = sig;
+        sig = aux;
+    }
+    *metricas = sig;
 }
 
 // Destruyo el PCB y libero lista de inst
