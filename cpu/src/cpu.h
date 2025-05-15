@@ -3,11 +3,18 @@
 #include </home/utnso/tp-2025-1c-queCompileALaPrimera/utils/src/utils/socket.h>
 #include <instruccion.h>
 
+extern int conexion_memoria;
+extern int conexion_kernel_dispatch;
+extern int conexion_kernel_interrupt;
+
 t_log* crear_log();
 t_log* logger;
 t_config* crear_config(t_log* logger);
 void mensaje_inicial(int conexion_memoria, int conexion_kernel_dispatch, int conexion_kernel_interrupt);
 void terminar_programa(int conexion_memoria, int conexion_kernel_dispatch, int conexion_kernel_interrupt, t_log* logger, t_config* cpu_config);
+
+extern bool flag_interrupcion;
+pthread_mutex_t mutex_interrupt;
 
 // Estructura de contexto de ejecución (PCB simplificado)
 typedef struct {

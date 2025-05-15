@@ -1,12 +1,20 @@
 #include <cpu.h>
 
+int conexion_memoria;
+int conexion_kernel_dispatch;
+int conexion_kernel_interrupt;
+
 int main(int argc, char* argv[]) {
     saludar("cpu");
 
     t_log* logger = crear_log();
     t_config* cpu_config = crear_config(logger);
 
+
     int TAMANIO_PAGINA = config_get_int_value(cpu_config, "TAMANIO_PAGINA");
+    bool flag_interrupcion = false;
+    pthread_mutex_init(&mutex_interrupt, NULL);
+
 
     char* ip_memoria = config_get_string_value(cpu_config, "IP_MEMORIA");
 	char* puerto_memoria = config_get_string_value(cpu_config, "PUERTO_MEMORIA");
@@ -15,11 +23,16 @@ int main(int argc, char* argv[]) {
 	char* puerto_kernel_dispatch = config_get_string_value(cpu_config, "PUERTO_KERNEL_DISPATCH");
 	char* puerto_kernel_interrupt = config_get_string_value(cpu_config, "PUERTO_KERNEL_INTERRUPT");
 
-    int conexion_memoria = crear_conexion(logger, ip_memoria, puerto_memoria);
-    int conexion_kernel_dispatch = crear_conexion(logger, ip_kernel, puerto_kernel_dispatch);
-    int conexion_kernel_interrupt = crear_conexion(logger, ip_kernel, puerto_kernel_interrupt);
+    conexion_memoria = crear_conexion(logger, ip_memoria, puerto_memoria);
+    conexion_kernel_dispatch = crear_conexion(logger, ip_kernel, puerto_kernel_dispatch);
+    conexion_kernel_interrupt = crear_conexion(logger, ip_kernel, puerto_kernel_interrupt);
 
     mensaje_inicial(conexion_memoria, conexion_kernel_dispatch, conexion_kernel_interrupt);
+
+
+pthread_t hilo_interrupt;
+pthread_create(&hilo_interrupt, NULL, escuchar_interrupt, &conexion_kernel_interrupt);
+pthread_detach(hilo_interrupt);
 
     //espero PCBs del Kernel por dispatch
 while(1) {
@@ -94,10 +107,20 @@ void atender_proceso_del_kernel(int fd, t_log* logger) {   //EJECUTA CICLO DE IN
     }
 
     ciclo_de_instruccion_execute(instruccion, contexto, logger, fd); 
+    if (hay_interrupcion()) {
+        log_info(logger, "se detectó una interrupción luego de ejecutar la instrucción");
+        enviar_contexto_a_kernel(contexto, INTERRUPCION, conexion_kernel_dispatch, logger);
+
+        pthread_mutex_lock(&mutex_interrupt);
+        flag_interrupcion = false;
+        pthread_mutex_unlock(&mutex_interrupt);
+
+        break;  // Se corta el ciclo
+    }
 
     if (contexto->program_counter == -1) break;
 
-    destruir_instruccion_decodificada(instruccion); // se liberan mallocs
+    destruir_instruccion_decodificada(instruccion); // libero mallocs
 }
     destruir_estructuras_del_contexto_actual(contexto);
 }
@@ -113,6 +136,30 @@ t_contexto* recibir_contexto(int fd) {
     return contexto;
 }
 
+void* escuchar_interrupt(void* arg) {
+    int fd = *(int*)arg;
+
+    while (1) {
+        op_code codigo;
+        if (recv(fd, &codigo, sizeof(op_code), 0) > 0) {
+            if (codigo == MENSAJE) {  // o algún OPCODE_INTERRUPT definido
+                pthread_mutex_lock(&mutex_interrupt);
+                flag_interrupcion = true;
+                pthread_mutex_unlock(&mutex_interrupt);
+
+                log_info(logger, "## Llega interrupción al puerto Interrupt");
+            }
+        }
+    }
+    return NULL;
+}
+
+bool hay_interrupcion() {
+    pthread_mutex_lock(&mutex_interrupt);
+    bool resultado = flag_interrupcion;
+    pthread_mutex_unlock(&mutex_interrupt);
+    return resultado;
+}
 ////////////////////////////////////////////////////////////////////   FETCH   ///////////////////////////////////////////////////////////////////////////////////
 char* ciclo_de_instruccion_fetch(int conexion_memoria, t_contexto* contexto) {
     log_info(logger, "SE EJECUTA FASE FETCH para PC = %d", contexto->program_counter);
@@ -203,12 +250,7 @@ void ciclo_de_instruccion_execute(t_instruccion_decodificada* instruccion, t_con
     else if (string_equals_ignore_case(opcode, "EXIT")) {
         contexto->program_counter = -1;
     }
-
-    // Si la instrucción no fue GOTO (que cambia el PC)y avanza1
-    else {
-        contexto->program_counter++;
-}
-if (string_equals_ignore_case(opcode, "READ")) {
+    else if (string_equals_ignore_case(opcode, "READ")) {
     uint32_t direccion_logica = atoi(instruccion->operandos[0]);
     uint32_t tamanio = atoi(instruccion->operandos[1]);
     uint32_t direccion_fisica = traducir_direccion_logica(direccion_logica, 256, contexto, conexion_memoria); 
@@ -242,9 +284,14 @@ else if (string_equals_ignore_case(opcode, "WRITE")) {
     eliminar_paquete(paquete);
 }
 
+    // Si la instrucción no fue GOTO (que cambia el PC)y avanza1
+    else {
+        contexto->program_counter++;
 }
 
-//poner en archivo mmu.c
+}
+
+//poner en archivo MMU.C
 uint32_t traducir_direccion_logica(uint32_t direccion_logica, int tamanio_pagina, t_contexto* contexto, int conexion_memoria) {
     uint32_t nro_pagina     = direccion_logica / tamanio_pagina;
     uint32_t desplazamiento = direccion_logica % tamanio_pagina;
