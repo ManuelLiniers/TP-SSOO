@@ -186,7 +186,7 @@ void enviar_paquete(t_paquete* paquete, int socket_cliente)
 t_buffer* recibir_paquete(int cliente_fd){
 	t_buffer* unBuffer = malloc(sizeof(t_buffer));
 	int size;
-	unBuffer->stream = recibir_buffer(&size, conexion);
+	unBuffer->stream = recibir_buffer(&size,conexion);
 	unBuffer->size = size;
 	return unBuffer;
 }

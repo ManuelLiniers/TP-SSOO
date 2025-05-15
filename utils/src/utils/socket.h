@@ -21,8 +21,11 @@ typedef enum
 	INICIAR_PROCESO,
 	PEDIR_INSTRUCCION,
 	DEVOLVER_INSTRUCCION,
+	ESCRIBIR_MEMORIA,
+	LEER_MEMORIA,
+	PEDIR_MARCO,
 	OK
-} op_code;
+} op_code;  //tipos de mensaje que la cpu envia a memoria
 
 typedef struct
 {
@@ -47,7 +50,7 @@ void recibir_mensaje(t_log* logger, int cliente_fd);
 int recibir_operacion(int socket_cliente);
 
 // Paquete
-t_paquete* crear_paquete(op_code codigo_op)
+t_paquete* crear_paquete(op_code codigo_op);
 void agregar_a_paquete(t_paquete* paquete, void* valor, int tamanio);
 void* serializar_paquete(t_paquete* paquete, int bytes);
 void enviar_paquete(t_paquete* paquete, int socket_cliente);
@@ -55,7 +58,7 @@ t_buffer* recibir_paquete(int cliente_fd);
 void eliminar_paquete(t_paquete* paquete);
 
 // buffer
-void crear_buffer(t_paquete* paquete)
+void crear_buffer(t_paquete* paquete);
 void* recibir_buffer(int* size, int socket_cliente);
 int recibir_int_del_buffer(t_buffer* unBuffer);
 

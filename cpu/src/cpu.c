@@ -6,6 +6,8 @@ int main(int argc, char* argv[]) {
     t_log* logger = crear_log();
     t_config* cpu_config = crear_config(logger);
 
+    int TAMANIO_PAGINA = config_get_int_value(cpu_config, "TAMANIO_PAGINA");
+
     char* ip_memoria = config_get_string_value(cpu_config, "IP_MEMORIA");
 	char* puerto_memoria = config_get_string_value(cpu_config, "PUERTO_MEMORIA");
 
@@ -30,10 +32,6 @@ while(1) {
 
     return 0;
 }
-
-
-
-
 
 t_log* crear_log(){
 
@@ -71,7 +69,7 @@ void terminar_programa(int conexion_memoria, int conexion_kernel_dispatch, int c
     close(conexion_kernel_interrupt);
 }
 
-void atender_proceso_del_kernel(int fd, t_log* logger) {   //HAY QUE IMPLEMENTARLA
+void atender_proceso_del_kernel(int fd, t_log* logger) {   //EJECUTA CICLO DE INSTRUCCION ENVIADA DESDE MEMORIA
     log_info(logger, "Esperando contexto del proceso desde el Kernel...");
 
     t_contexto* contexto = recibir_contexto(fd);
@@ -95,16 +93,15 @@ void atender_proceso_del_kernel(int fd, t_log* logger) {   //HAY QUE IMPLEMENTAR
         break;
     }
 
-    ciclo_de_instruccion_execute(instruccion, contexto, logger, fd); // falta implementar
+    ciclo_de_instruccion_execute(instruccion, contexto, logger, fd); 
 
     if (contexto->program_counter == -1) break;
 
     destruir_instruccion_decodificada(instruccion); // se liberan mallocs
 }
-
-
     destruir_estructuras_del_contexto_actual(contexto);
 }
+
 
 t_contexto* recibir_contexto(int fd) {
     t_contexto* contexto = malloc(sizeof(t_contexto));
@@ -117,7 +114,6 @@ t_contexto* recibir_contexto(int fd) {
 }
 
 ////////////////////////////////////////////////////////////////////   FETCH   ///////////////////////////////////////////////////////////////////////////////////
-
 char* ciclo_de_instruccion_fetch(int conexion_memoria, t_contexto* contexto) {
     log_info(logger, "SE EJECUTA FASE FETCH para PC = %d", contexto->program_counter);
 
@@ -152,10 +148,123 @@ char* recibir_instruccion(int socket_memoria) {
     recv(socket_memoria, instruccion, size, 0);
     return instruccion;
 }
-
-
 //////////////////////////////////////////////////////////////////////   DECODE   ///////////////////////////////////////////////////////////////////////////////////
 t_instruccion_decodificada* ciclo_de_instruccion_decode(char* instruccion_cruda) {
     return decodificar_instruccion(instruccion_cruda);
+}
+
+t_instruccion_decodificada* decodificar_instruccion(char* instruccion_cruda) {
+    char** tokens = string_split(instruccion_cruda, " ");
+    if (!tokens) return NULL;
+
+    t_instruccion_decodificada* instruccion = malloc(sizeof(t_instruccion_decodificada));
+    instruccion->opcode = strdup(tokens[0]);
+
+    // Cuento cantidad de operandos
+    int cantidad = 0;
+    for (int i = 1; tokens[i] != NULL; i++) cantidad++;
+
+    instruccion->cantidad_operandos = cantidad;
+    instruccion->operandos = malloc(sizeof(char*) * cantidad);
+
+    for (int i = 0; i < cantidad; i++) {
+        instruccion->operandos[i] = strdup(tokens[i + 1]);
+    }
+
+    // Para ver si requiere traducción de dirección
+    if (string_equals_ignore_case(instruccion->opcode, "READ") ||
+        string_equals_ignore_case(instruccion->opcode, "WRITE")) {
+        instruccion->necesita_traduccion = true;
+    } else {
+        instruccion->necesita_traduccion = false;
+    }
+
+    string_array_destroy(tokens);
+    return instruccion;
+}
+
+//////////////////////////////////////////////////////////////EXECUTE///////////////////////////////////////////////////////
+void ciclo_de_instruccion_execute(t_instruccion_decodificada* instruccion, t_contexto* contexto, t_log* logger, int conexion_memoria) {
+    char* opcode = instruccion->opcode;
+
+    log_info(logger, "## PID: %d - Ejecutando: %s", contexto->pid, opcode);
+
+    if (string_equals_ignore_case(opcode, "NOOP")) {
+        usleep(1000 * 1000); // (1 seg)
+    }
+    else if (string_equals_ignore_case(opcode, "GOTO")) {
+        if (instruccion->cantidad_operandos >= 1) {
+            int nuevo_pc = atoi(instruccion->operandos[0]);
+            contexto->program_counter = nuevo_pc;
+        } else {
+            log_error(logger, "GOTO sin operando");
+        }
+    }
+    else if (string_equals_ignore_case(opcode, "EXIT")) {
+        contexto->program_counter = -1;
+    }
+
+    // Si la instrucción no fue GOTO (que cambia el PC)y avanza1
+    else {
+        contexto->program_counter++;
+}
+if (string_equals_ignore_case(opcode, "READ")) {
+    uint32_t direccion_logica = atoi(instruccion->operandos[0]);
+    uint32_t tamanio = atoi(instruccion->operandos[1]);
+    uint32_t direccion_fisica = traducir_direccion_logica(direccion_logica, 256, contexto, conexion_memoria); 
+
+    log_info(logger, "PID: %d - Acción: LEER - Dirección Física: %d", contexto->pid, direccion_fisica);
+
+    t_paquete* paquete = crear_paquete(LEER_MEMORIA);
+    agregar_a_paquete(paquete, &direccion_fisica, sizeof(uint32_t));
+    agregar_a_paquete(paquete, &tamanio, sizeof(uint32_t));
+    enviar_paquete(paquete, conexion_memoria);
+    eliminar_paquete(paquete);
+
+    // Recibir valor leído
+    uint32_t valor;
+    recv(conexion_memoria, &valor, sizeof(uint32_t), 0);
+
+    log_info(logger, "Valor leído: %d", valor);
+}
+else if (string_equals_ignore_case(opcode, "WRITE")) {
+    uint32_t direccion_logica = atoi(instruccion->operandos[0]);
+    char* valor = instruccion->operandos[1];
+
+    uint32_t direccion_fisica = traducir_direccion_logica(direccion_logica, 256, contexto, conexion_memoria);
+
+    log_info(logger, "PID: %d - Acción: ESCRIBIR - Dirección Física: %d - Valor: %s", contexto->pid, direccion_fisica, valor);
+
+    t_paquete* paquete = crear_paquete(ESCRIBIR_MEMORIA);
+    agregar_a_paquete(paquete, &direccion_fisica, sizeof(uint32_t));
+    agregar_a_paquete(paquete, valor, strlen(valor) + 1);
+    enviar_paquete(paquete, conexion_memoria);
+    eliminar_paquete(paquete);
+}
+
+}
+
+//poner en archivo mmu.c
+uint32_t traducir_direccion_logica(uint32_t direccion_logica, int tamanio_pagina, t_contexto* contexto, int conexion_memoria) {
+    uint32_t nro_pagina     = direccion_logica / tamanio_pagina;
+    uint32_t desplazamiento = direccion_logica % tamanio_pagina;
+
+    // Log obligatorio
+    log_info(logger, "PID: %d - OBTENER MARCO - Página: %d", contexto->pid, nro_pagina);
+
+    // Enviar solicitud de marco a Memoria
+    t_paquete* paquete = crear_paquete(PEDIR_MARCO);
+    agregar_a_paquete(paquete, &(contexto->pid), sizeof(uint32_t));
+    agregar_a_paquete(paquete, &nro_pagina, sizeof(uint32_t));
+    enviar_paquete(paquete, conexion_memoria);
+    eliminar_paquete(paquete);
+
+    // Recibir respuesta con número de marco
+    uint32_t marco;
+    recv(conexion_memoria, &marco, sizeof(uint32_t), 0);
+
+    log_info(logger, "PID: %d - Marco recibido: %d", contexto->pid, marco);
+
+    return marco * tamanio_pagina + desplazamiento;
 }
 
