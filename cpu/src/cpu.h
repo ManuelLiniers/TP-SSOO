@@ -16,7 +16,7 @@ void terminar_programa(int conexion_memoria, int conexion_kernel_dispatch, int c
 extern bool flag_interrupcion;
 pthread_mutex_t mutex_interrupt;
 
-// Estructura de contexto de ejecución (PCB simplificado)
+// Estructura de contexto de ejecución (PCB)
 typedef struct {
     int pid;
     int program_counter;
@@ -26,7 +26,7 @@ typedef struct {
     uint32_t DX;
 } t_contexto;
 
-//para identificar razones de desalojo
+//para identificar casusas por desalojo
 typedef enum {
     EXIT,
     IO,

@@ -82,24 +82,24 @@ void terminar_programa(int conexion_memoria, int conexion_kernel_dispatch, int c
     close(conexion_kernel_interrupt);
 }
 
-void atender_proceso_del_kernel(int fd, t_log* logger) {   //EJECUTA CICLO DE INSTRUCCION ENVIADA DESDE MEMORIA
+void atender_proceso_del_kernel(int fd, t_log* logger) {   //EJECUTA CICLO DE INSTRUCCION ENVIADA DESDE MEMORIA, fd es la conexion a memoria
     log_info(logger, "Esperando contexto del proceso desde el Kernel...");
 
-    t_contexto* contexto = recibir_contexto(fd);
+    t_contexto* contexto = recibir_contexto(conexion_kernel_dispatch);  //recibo pcb (t_contexto) de kernel
     if (!contexto) {
         log_error(logger, "Fallo al recibir el contexto.");
         return;
     }
 
     while (1) {
-    char* instruccion_cruda = ciclo_de_instruccion_fetch(fd, contexto); // fd es conexion_memoria
+    char* instruccion_cruda = ciclo_de_instruccion_fetch(fd, contexto); 
     if (!instruccion_cruda) {
         log_error(logger, "Fallo al recibir la instrucción desde Memoria.");
         break;
     }
 
     t_instruccion_decodificada* instruccion = ciclo_de_instruccion_decode(instruccion_cruda);
-    free(instruccion_cruda); // Se libera la instrucción cruda después del decode
+    free(instruccion_cruda); // Se libera la instrucción "cruda" después del decode
 
     if (!instruccion) {
         log_error(logger, "Fallo al decodificar la instrucción.");
@@ -109,7 +109,7 @@ void atender_proceso_del_kernel(int fd, t_log* logger) {   //EJECUTA CICLO DE IN
     ciclo_de_instruccion_execute(instruccion, contexto, logger, fd); 
     if (hay_interrupcion()) {
         log_info(logger, "se detectó una interrupción luego de ejecutar la instrucción");
-        enviar_contexto_a_kernel(contexto, INTERRUPCION, conexion_kernel_dispatch, logger);
+        enviar_contexto_a_kernel(contexto, INTERRUPCION, conexion_kernel_dispatch, logger);  
 
         pthread_mutex_lock(&mutex_interrupt);
         flag_interrupcion = false;
@@ -142,12 +142,12 @@ void* escuchar_interrupt(void* arg) {
     while (1) {
         op_code codigo;
         if (recv(fd, &codigo, sizeof(op_code), 0) > 0) {
-            if (codigo == MENSAJE) {  // o algún OPCODE_INTERRUPT definido
+            if (codigo == MENSAJE) {  
                 pthread_mutex_lock(&mutex_interrupt);
                 flag_interrupcion = true;
                 pthread_mutex_unlock(&mutex_interrupt);
 
-                log_info(logger, "## Llega interrupción al puerto Interrupt");
+                log_info(logger, "Llega interrupción al puerto Interrupt");
             }
         }
     }
@@ -162,7 +162,7 @@ bool hay_interrupcion() {
 }
 ////////////////////////////////////////////////////////////////////   FETCH   ///////////////////////////////////////////////////////////////////////////////////
 char* ciclo_de_instruccion_fetch(int conexion_memoria, t_contexto* contexto) {
-    log_info(logger, "SE EJECUTA FASE FETCH para PC = %d", contexto->program_counter);
+    log_info(logger, "## PID: %d - FETCH - Program Counter: %d", contexto->pid, contexto->program_counter);
 
     // ENVIO A MEMORIA EL PEDIDO DE INSTRUCCION
     t_paquete* paquete = crear_paquete(PEDIR_INSTRUCCION);
@@ -250,8 +250,19 @@ void ciclo_de_instruccion_execute(t_instruccion_decodificada* instruccion, t_con
     else if (string_equals_ignore_case(opcode, "EXIT")) {
         contexto->program_counter = -1;
     }
+    else if (string_equals_ignore_case(opcode, "IO")) {
+    log_info(logger, "PID: %d - Ejecutando: IO - Dispositivo: %s - Tiempo: %s", contexto->pid, instruccion->operandos[0], instruccion->operandos[1]);
+    enviar_contexto_a_kernel(contexto, IO);
+    contexto->program_counter = -1;
+}
+else if (string_equals_ignore_case(opcode, "DUMP_MEMORY")) {
+    log_info(logger, "PID: %d - Ejecutando: DUMP_MEMORY", contexto->pid);
+    enviar_contexto_a_kernel(contexto, SIGNAL); // SEGUNDO PARAMETRO ES EL MOTIVO DE DESLOJO (PUSE SIGNAL XQ SI)
+    contexto->program_counter = -1;
+}
+
     else if (string_equals_ignore_case(opcode, "READ")) {
-    uint32_t direccion_logica = atoi(instruccion->operandos[0]);
+    uint32_t direccion_logica = atoi(instruccion->operandos[0]); //el primer parametro de READ es la dir logica, el segundo el tamanio
     uint32_t tamanio = atoi(instruccion->operandos[1]);
     uint32_t direccion_fisica = traducir_direccion_logica(direccion_logica, 256, contexto, conexion_memoria); 
 
@@ -270,7 +281,7 @@ void ciclo_de_instruccion_execute(t_instruccion_decodificada* instruccion, t_con
     log_info(logger, "Valor leído: %d", valor);
 }
 else if (string_equals_ignore_case(opcode, "WRITE")) {
-    uint32_t direccion_logica = atoi(instruccion->operandos[0]);
+    uint32_t direccion_logica = atoi(instruccion->operandos[0]);  //el primer parametro de WRITE es la dir logica, el segundo son los datos
     char* valor = instruccion->operandos[1];
 
     uint32_t direccion_fisica = traducir_direccion_logica(direccion_logica, 256, contexto, conexion_memoria);
@@ -284,7 +295,7 @@ else if (string_equals_ignore_case(opcode, "WRITE")) {
     eliminar_paquete(paquete);
 }
 
-    // Si la instrucción no fue GOTO (que cambia el PC)y avanza1
+    // Si la instrucción no fue GOTO (que cambia el PC)y avanza1 para buscar una instruccion a ejecutar
     else {
         contexto->program_counter++;
 }
