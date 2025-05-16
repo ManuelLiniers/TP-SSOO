@@ -36,9 +36,9 @@ int main(int argc, char* argv[]) {
 
     printf("El valor de la ip es: %s", ip);
     printf("\nEl valor del puerto es: %s", puerto);
-    printf("\nEl valor del log level es: %s", log_level);
+    printf("\nEl valor del log level es: %s\n", log_level);
 
-     int conexion_kernel = crear_conexion(logger, ip, puerto);
+    int conexion_kernel = crear_conexion(logger, ip, puerto);
     if (conexion_kernel == -1) {
         log_error(logger, "No se pudo conectar al Kernel");
         return EXIT_FAILURE;
@@ -46,19 +46,67 @@ int main(int argc, char* argv[]) {
 
     enviar_mensaje(nombre_dispositivo, conexion_kernel);
     log_info(logger, "Me conecto al kernel como: %s", nombre_dispositivo);
-
+    procesar_io(conexion_kernel, logger);
     terminar_programa(logger, config, conexion_kernel);
     return 0;
 }
 
 t_config* iniciar_config(void) {
-	    t_config* nuevo_config = config_create("/home/utnso/tp-2025-1c-queCompileALaPrimera/io/io.config");
-	    if(nuevo_config == NULL) {
-		    perror("Error al intentar cargar el config");
-		    exit(EXIT_FAILURE);
-	    }
+	t_config* nuevo_config = config_create("/home/utnso/tp-2025-1c-queCompileALaPrimera/io/io.config");
+	if(nuevo_config == NULL) {
+        perror("Error al intentar cargar el config");
+        exit(EXIT_FAILURE);
+	}
     printf("Se creo exitosamente la config del io\n");
 	return nuevo_config;
+}
+
+// 🟦 Recibe y procesa peticiones de IO desde el Kernel
+void procesar_io(int socket_kernel, t_log* logger) {
+    while (1) {
+        op_code codigo_operacion;
+        if (recv(socket_kernel, &codigo_operacion, sizeof(op_code), MSG_WAITALL) <= 0) {
+            log_error(logger, "Error al recibir código de operación del Kernel");
+            break;
+        }
+
+        if (codigo_operacion == PETICION_IO) {
+            int size;
+            if (recv(socket_kernel, &size, sizeof(int), MSG_WAITALL) <= 0) {
+                log_error(logger, "Error al recibir tamaño del stream");
+                break;
+            }
+
+            void* stream = malloc(size);
+            if (recv(socket_kernel, stream, size, MSG_WAITALL) <= 0) {
+                log_error(logger, "Error al recibir stream de la petición IO");
+                free(stream);
+                break;
+            }
+
+            t_peticion_io* peticion = deserializar_peticion_io(stream);
+
+            log_info(logger, "## PID: %d - Inicio de IO - Tiempo: %d", peticion->pid, peticion->tiempo);
+            usleep(peticion->tiempo * 1000);  // milisegundos → microsegundos
+            log_info(logger, "## PID: %d - Fin de IO", peticion->pid);
+
+            // Enviar confirmación de fin al Kernel (opcional: podría ser un código o el PID)
+            send(socket_kernel, &peticion->pid, sizeof(int), 0);
+
+            free(stream);
+            free(peticion);
+        } else {
+            log_warning(logger, "Código de operación no esperado: %d", codigo_operacion);
+        }
+    }
+}
+
+// 🟦 Deserializa el stream recibido en un struct
+t_peticion_io* deserializar_peticion_io(void* stream) {
+    t_peticion_io* peticion = malloc(sizeof(t_peticion_io));
+    memcpy(&peticion->pid, stream, sizeof(int));
+    memcpy(&peticion->tiempo, stream + sizeof(int), sizeof(int));
+    return peticion;
 }
 
 void terminar_programa(t_log* logger, t_config* config, int conexion) {
