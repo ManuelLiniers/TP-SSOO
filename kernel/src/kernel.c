@@ -6,11 +6,11 @@ int main(int argc, char* argv[]) {
 	iniciar_planificacion(argv[1], argv[2]);
 
     log_info(logger_kernel,"Iniciando servidor Kernel");
-	int server_fd_kernel_io = iniciar_servidor(logger_kernel, IP_KERNEL, PUERTO_KERNEL); 
+	int server_fd_kernel_io = iniciar_servidor(logger_kernel, ip_kernel, puerto_kernel); 
 	//Si esta ESCUCHANDO en PUERTO KERNEL -> SE CONECTA CON IO PORQUE IO ES CLIENTE NADA MÁS DE ESTE PUERTO. SI ESCUCHA OTRO PUERTO, SE CONECTA A ALGUNO DE CPU
 
 	// t_list* lista;
-	while(1){
+	/* while(1){
 		int cliente_fd = esperar_cliente(logger_kernel, "Kernel", server_fd_kernel_io);
 		if(cliente_fd != -1){
 			int cod_op = recibir_operacion(cliente_fd);
@@ -31,7 +31,7 @@ int main(int argc, char* argv[]) {
 					break;
 			}
 		}
-	}
+	} */
 
     
 
@@ -51,16 +51,15 @@ void iniciar_config(void){
 void inicializar_kernel(char* nombre_proceso, char* tamanio_proceso){
     iniciar_config();
 	logger_kernel = log_create("kernel.log", "[Kernel]", 1, LOG_LEVEL_INFO);
-    
 	
-
-	// estas conexiones iniciales creo que no van al inicializar el kernel
-	
-	/* char* ip = config_get_string_value(config_kernel, "IP_MEMORIA");
-    char* puerto = config_get_string_value(config_kernel, "PUERTO_MEMORIA");
-    log_info(logger_kernel, "La ip de la memoria: %s \n", ip);
-
-    int conexion = crear_conexion(logger_kernel, ip, puerto);
+	ip_memoria = config_get_string_value(config_kernel, "IP_MEMORIA");
+    puerto_memoria = config_get_string_value(config_kernel, "PUERTO_MEMORIA");
+	ip_kernel = config_get_string_value(config_kernel, "IP_KERNEL");
+	puerto_kernel = config_get_string_value(config_kernel, "PUERTO_KERNEL");
+	puerto_dispatch = config_get_string_value(config_kernel, "PUERTO_ESCUCHA_DISPATCH");
+	puerto_interrupt = config_get_string_value(config_kernel, "PUERTO_ESCUCHA_INTERRUPT");
+	puerto_io = config_get_string_value(config_kernel, "PUERTO_ESCUCHA_IO");
+    /* int conexion = crear_conexion(logger_kernel, ip, puerto);
 	enviar_mensaje("Conexion desde kernel", conexion); */
 }
 

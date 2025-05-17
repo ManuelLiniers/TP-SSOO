@@ -2,8 +2,13 @@
 #include <pcb.h>
 #include <scheduler.h>
 
-char* IP_KERNEL = "127.0.0.1";
-char* PUERTO_KERNEL = "8003";   //sin hilos hay que cambiarlo manualmente
+char* ip_kernel;
+char* ip_memoria;
+char* puerto_kernel;   //sin hilos hay que cambiarlo manualmente
+char* puerto_memoria;
+char* puerto_dispatch;
+char* puerto_interrupt;
+char* puerto_io;
 t_config *config_kernel;
 t_log* logger_kernel;
 

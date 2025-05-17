@@ -19,4 +19,7 @@ void scheduler_init(void);
  */
 void scheduler_destroy(void);
 
+void* planificar_largo_plazo(void* arg);
+void* planificar_corto_plazo(void* arg);
+
 #endif // SCHEDULER_H_
