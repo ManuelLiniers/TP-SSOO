@@ -130,6 +130,14 @@ void servidor_escucha(int server_fd_memoria){
 	}
 }
 
+/*
+	Explicacion:
+	1- Llega el cliente y se hace el handshake (codigo de operacion HANDSHAKE)
+	2- Cliente manda un paquete con codigo de operacion IDENTIFICACION
+	      2-a El Contenido del paquete es un unico int que indica el modulo correspondiente
+	3- Luego cada cliente indica lo que necesita mandando otro paquete
+*/
+
 void saludar_cliente(void *void_args){
 	int* cliente_socket = (int*) void_args;
 	int code_op = recibir_operacion(*cliente_socket);
@@ -184,17 +192,18 @@ void identificar_modulo(t_buffer* unBuffer, int cliente_fd){
 }
 
 void atender_kernel(int kernel_fd){
-	// hacer
+
 	log_info(memoria_logger, "## Kernel Conectado - FD del socket: %d", kernel_fd);
 
 	while (1) {
 		int op_code = recibir_operacion(kernel_fd);
+		t_buffer* unBuffer;
 
 		switch (op_code) {
 			case INICIAR_PROCESO: {
 				unBuffer = recibir_paquete(kernel_fd);
 				// mock de aceptacion
-				mock_aceptacion();
+				mock_aceptacion(unBuffer);
 
 				break;
 			}
@@ -207,11 +216,18 @@ void atender_kernel(int kernel_fd){
                 break;
 			}
 		}
+		eliminar_buffer(unBuffer);
 	}
 }
 
+/*
+	Explicacion CPU PEDIR_INSTRUCCION:
+	1- CPU manda un paquete que incluye el pid del proceso junto con el pc que necesita 
+	2- 
+	3- Luego cada cliente indica lo que necesita mandando otro paquete
+*/
+
 void atender_cpu(int cpu_fd){
-	// hacer
 	while (1) {
 		t_buffer* unBuffer;
         int op_code = recibir_operacion(cpu_fd);
@@ -232,5 +248,6 @@ void atender_cpu(int cpu_fd){
                 break;
 			}
         }
+		eliminar_buffer(unBuffer);
     }
 }

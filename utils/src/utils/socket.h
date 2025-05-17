@@ -15,6 +15,7 @@
 
 typedef enum
 {
+	HANDSHAKE,
 	IDENTIFICACION,
 	MENSAJE,
 	PAQUETE,
