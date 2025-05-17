@@ -2,7 +2,7 @@
 #include <stdlib.h>
 
 // Se crea un proceso y se pushea a new
-void crear_proceso(int tamanio_proceso, t_list* instrucciones){
+void crear_proceso(t_list* instrucciones, int tamanio_proceso){
     t_pcb* pcb_nuevo = pcb_create();
     pcb_nuevo->instrucciones = instrucciones;
     pcb_nuevo->tamanio_proceso = tamanio_proceso;
@@ -13,7 +13,7 @@ void crear_proceso(int tamanio_proceso, t_list* instrucciones){
 }
 
 // Se crea un PCB con contador en 0 y en NEW
-t_pcb* pcb_create(t_list* instrucciones) {
+t_pcb* pcb_create() {
     t_pcb* pcb = malloc(sizeof(t_pcb));
     if (!pcb) return NULL;
     pcb->pid = pid_incremental;
@@ -29,7 +29,7 @@ t_pcb* pcb_create(t_list* instrucciones) {
     return pcb;
 }
 
-inicializarMetricas(t_metricas_cant** metricas){
+void inicializarMetricas(t_metricas_cant** metricas){
     t_metricas_cant* sig = NULL;
     for(int i = 4 ; i>=0 ; i--){
         t_metricas_cant* aux = malloc(sizeof(t_metricas_cant));

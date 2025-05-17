@@ -3,7 +3,9 @@
 int main(int argc, char* argv[]) {
     inicializar_kernel();
 
-	iniciar_planificacion(argv[1], argv[2]);
+	crear_proceso(argv[1], argv[2]); // Creo proceso inicial con valores recibidos por parametro
+
+	iniciar_planificacion();
 
     log_info(logger_kernel,"Iniciando servidor Kernel");
 	int server_fd_kernel_io = iniciar_servidor(logger_kernel, ip_kernel, puerto_kernel); 
@@ -50,6 +52,7 @@ void iniciar_config(void){
 
 void inicializar_kernel(char* nombre_proceso, char* tamanio_proceso){
     iniciar_config();
+	iniciar_mutex();
 	logger_kernel = log_create("kernel.log", "[Kernel]", 1, LOG_LEVEL_INFO);
 	
 	ip_memoria = config_get_string_value(config_kernel, "IP_MEMORIA");
@@ -63,7 +66,7 @@ void inicializar_kernel(char* nombre_proceso, char* tamanio_proceso){
 	enviar_mensaje("Conexion desde kernel", conexion); */
 }
 
-void inicializar_planificacion(char* nombre_proceso, char* tamanio_proceso){
+void inicializar_planificacion(){
 
 	/* 
 	Incializar la planificacion creando las colas y entiendo que crear hilo 
@@ -76,8 +79,5 @@ void inicializar_planificacion(char* nombre_proceso, char* tamanio_proceso){
 
 	pthread_t planificador_largo_plazo;
 	pthread_create(&planificador_largo_plazo, NULL, planificar_largo_plazo, NULL);
-
-
-	// crear proceso inicial con los argumentos y mandarlo a planificar
 }
 

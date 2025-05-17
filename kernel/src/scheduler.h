@@ -9,6 +9,8 @@ extern t_queue* queue_ready;
 extern t_queue* queue_block;
 extern t_queue* queue_exit;
 
+
+
 /**
  * @brief Inicializa las cuatro colas del scheduler
  */

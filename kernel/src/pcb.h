@@ -10,7 +10,7 @@ int pid_incremental = 0;
 // Estados posibles de un proceso
 typedef enum { NEW, READY, EXEC, BLOCKED, EXIT } t_estado;
 
-t_estado[5] posibles_estados = {NEW, READY, EXEC, BLOCKED, EXIT};
+t_estado posibles_estados[5] = {NEW, READY, EXEC, BLOCKED, EXIT};
 
 // Control Block de un proceso
 typedef struct {
@@ -36,7 +36,7 @@ typedef struct{
  * @param instrucciones Lista de instrucciones (creada externamente)
  * @return puntero a t_pcb o NULL en caso de error
  */
-t_pcb* pcb_create(int pid, t_list* instrucciones);
+t_pcb* pcb_create();
 
 /**
  * @brief Destruye un PCB liberando instrucciones y la propia estructura
@@ -44,7 +44,9 @@ t_pcb* pcb_create(int pid, t_list* instrucciones);
  */
 void pcb_destroy(void* pcb_void);
 
-void crear_proceso(int tamanio_proceso, t_list* instrucciones);
+void crear_proceso(t_list* instrucciones, int tamanio_proceso);
+
+void inicializarMetricas(t_metricas_cant** metricas);
 
 #endif // PCB_H_
 

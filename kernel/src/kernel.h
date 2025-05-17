@@ -1,6 +1,7 @@
 #include <utils/commons.h>
 #include <pcb.h>
 #include <scheduler.h>
+#include<semaforos.h>
 
 char* ip_kernel;
 char* ip_memoria;
@@ -15,4 +16,8 @@ t_log* logger_kernel;
 t_config* iniciar_config(void);
 void iniciar_conexion();
 void inicializar_kernel();
-void inicializar_planificacion(char* nombre_proceso, char* tamanio_proceso);
+void inicializar_planificacion();
+
+// SEMAFOROS
+
+
