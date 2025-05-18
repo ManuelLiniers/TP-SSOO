@@ -3,6 +3,7 @@
 
 #include <commons/collections/queue.h>
 #include "pcb.h"
+#include<semaforos.h>
 
 extern t_queue* queue_new;
 extern t_queue* queue_ready;

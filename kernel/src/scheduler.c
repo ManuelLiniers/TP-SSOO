@@ -34,16 +34,30 @@ void* planificar_corto_plazo(void* arg){
 
 void* planificar_largo_plazo(void* arg){
 	while(1){
+        wait_sem(&nuevo_proceso);
+        wait_mutex(&mutex_queue_new);
 		if(!queue_is_empty(queue_new)){
 			t_pcb* proceso = queue_peek(queue_new);
+            signal_mutex(mutex_queue_new);
 			if(espacio_en_memoria(proceso)){
+
+                wait_mutex(mutex_queue_new);
 				queue_pop(queue_new);
+                signal_mutex(mutex_queue_new);
+
+                wait_mutex(mutex_queue_ready);
 				queue_push(queue_ready, proceso);
-				// ver tema semaforos
+                signal_mutex(mutex_queue_ready);
 			}
+            else{
+                signal_sem(&nuevo_proceso); // el proceso nuevo sigue en NEW, hago signal de vuelta
+                wait_sem(&proceso_terminado); // espero que algun proceso finalice 
+
+                //HACER SIGNAL EN FINALIZACION
+            }
 		}
 		else{
-			// ver tema semaforos
+            signal_mutex(mutex_queue_new); // libero recurso del mutex
 		}
 	}
 

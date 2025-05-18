@@ -4,6 +4,7 @@
 #include <commons/collections/list.h>
 #include <utils/commons.h>
 #include <scheduler.h>
+#include<semaforos.h>
 
 int pid_incremental = 0;
 

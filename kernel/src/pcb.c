@@ -7,9 +7,10 @@ void crear_proceso(t_list* instrucciones, int tamanio_proceso){
     pcb_nuevo->instrucciones = instrucciones;
     pcb_nuevo->tamanio_proceso = tamanio_proceso;
 
-    //wait(mutex_queue_new)
+    wait(mutex_queue_new);
     queue_push(queue_new, pcb_nuevo);
-    //signal(mutex_queue_new)
+    signal(mutex_queue_new);
+    signal(nuevo_proceso);
 }
 
 // Se crea un PCB con contador en 0 y en NEW
@@ -22,9 +23,14 @@ t_pcb* pcb_create() {
 
     pid_incremental++;
 
-    // Ver como implementamos las listas de las metricas al crear la pcb
-
     inicializarMetricas(&pcb->metricas_estado);
+
+    /* tengo una idea para implementar las metricas que capaz es mas simple
+    no lo pense tanto en codigo pero capaz que sea un vector con 5 espacios
+    donde cada estado equivalga a cada espacio, hacemos una funcion que
+    devuelva la posicion segun el estado que pidas para poder acceder
+    ejemplo: pcb->metricas[id_estado(NEW)], id_estado(NEW) devolveria 0 
+    */
 
     return pcb;
 }

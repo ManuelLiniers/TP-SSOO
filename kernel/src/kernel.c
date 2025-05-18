@@ -2,10 +2,10 @@
 
 int main(int argc, char* argv[]) {
     inicializar_kernel();
+	iniciar_planificacion();
 
 	crear_proceso(argv[1], argv[2]); // Creo proceso inicial con valores recibidos por parametro
 
-	iniciar_planificacion();
 
     log_info(logger_kernel,"Iniciando servidor Kernel");
 	int server_fd_kernel_io = iniciar_servidor(logger_kernel, ip_kernel, puerto_kernel); 
@@ -52,7 +52,7 @@ void iniciar_config(void){
 
 void inicializar_kernel(char* nombre_proceso, char* tamanio_proceso){
     iniciar_config();
-	iniciar_mutex();
+	iniciar_semaforos();
 	logger_kernel = log_create("kernel.log", "[Kernel]", 1, LOG_LEVEL_INFO);
 	
 	ip_memoria = config_get_string_value(config_kernel, "IP_MEMORIA");

@@ -18,9 +18,22 @@ void signal_sem(sem_t *sem)
 }
 
 
-void iniciar_mutex(){
+void iniciar_semaforos(){
     pthread_mutex_init(&mutex_queue_new, NULL);
     pthread_mutex_init(&mutex_queue_ready, NULL);
     pthread_mutex_init(&mutex_queue_block, NULL);
     pthread_mutex_init(&mutex_queue_exit, NULL);
+
+    sem_init(nuevo_proceso, 0, 0);
+    sem_init(proceso_terminado, 0, 0);
+};
+
+void destruir_semaforos() {
+    pthread_mutex_destroy(&mutex_queue_new);
+    pthread_mutex_destroy(&mutex_queue_ready);
+    pthread_mutex_destroy(&mutex_queue_block);
+    pthread_mutex_destroy(&mutex_queue_exit);
+
+    sem_destroy(nuevo_proceso);
+    sem_destroy(proceso_terminado);
 };
