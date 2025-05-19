@@ -1,7 +1,7 @@
 #include <utils/commons.h>
 #include <pcb.h>
 #include <scheduler.h>
-#include<semaforos.h>
+#include <semaforos.h>
 
 char* ip_kernel;
 char* ip_memoria;

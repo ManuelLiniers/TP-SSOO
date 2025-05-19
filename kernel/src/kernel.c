@@ -50,7 +50,7 @@ void iniciar_config(void){
 }
 
 
-void inicializar_kernel(char* nombre_proceso, char* tamanio_proceso){
+void inicializar_kernel(char* instrucciones, char* tamanio_proceso){
     iniciar_config();
 	iniciar_semaforos();
 	logger_kernel = log_create("kernel.log", "[Kernel]", 1, LOG_LEVEL_INFO);

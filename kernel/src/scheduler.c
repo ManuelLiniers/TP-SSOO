@@ -1,5 +1,7 @@
 #include "scheduler.h"
 
+int identificadores[3] = {HANDSHAKE, IDENTIFICACION, KERNEL};
+
 // Definición de las colas globales
 t_queue* queue_new;
 t_queue* queue_ready;
@@ -27,7 +29,8 @@ void* planificar_corto_plazo(void* arg){
         
         // enviar a CPU
 
-
+        // send(cliente_dispatch, proceso->pid, 4, 0);
+        // send(cliente_dispatch, proceso->program_counter, 4, 0);
 	}
 
 }
@@ -43,6 +46,7 @@ void* planificar_largo_plazo(void* arg){
 
                 wait_mutex(mutex_queue_new);
 				queue_pop(queue_new);
+                cambiarEstado(proceso, READY);
                 signal_mutex(mutex_queue_new);
 
                 wait_mutex(mutex_queue_ready);
@@ -57,17 +61,33 @@ void* planificar_largo_plazo(void* arg){
             }
 		}
 		else{
+            wait_mutex(mutex_queue_new);
+			queue_pop(queue_new);
+            cambiarEstado(proceso, READY);
             signal_mutex(mutex_queue_new); // libero recurso del mutex
 		}
 	}
 
 }
 
-bool espacio_en_memoria(*t_pcb proceso){
-    
-    // mandar el proceso a memoria
+bool espacio_en_memoria(t_pcb* proceso){
+    int conexion = crear_conexion(logger_kernel, ip_memoria, puerto_memoria);
+    enviar_identificadores(conexion);
+    t_paquete* paquete = crear_paquete(INICIAR_PROCESO);
+    agregar_a_paquete(paquete, proceso->pid, 4);
+    agregar_a_paquete(paquete, proceso->tamanio_proceso, 4);
+    enviar_paquete(paquete, conexion);
+
+    // falta recibir y analizar respuesta de memoria
 
 	return 1;
+}
+
+void enviar_identificadores(int conexion){
+    for(int i = 0 ; i < 4 ; i ++){
+        t_paquete* paquete = crear_paquete(identificadores[i];
+        enviar_paquete(paquete);
+    }
 }
 
 void cambiarEstado(t_pcb* proceso, t_estado estado){
