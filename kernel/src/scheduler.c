@@ -1,6 +1,7 @@
 #include "scheduler.h"
 
-int identificadores[3] = {HANDSHAKE, IDENTIFICACION, KERNEL};
+void cambiarEstado(t_pcb* proceso,t_estado EXEC);
+bool espacio_en_memoria(t_pcb* proceso);
 
 // Definición de las colas globales
 t_queue* queue_new;
@@ -41,17 +42,17 @@ void* planificar_largo_plazo(void* arg){
         wait_mutex(&mutex_queue_new);
 		if(!queue_is_empty(queue_new)){
 			t_pcb* proceso = queue_peek(queue_new);
-            signal_mutex(mutex_queue_new);
+            // signal_mutex(mutex_queue_new);
 			if(espacio_en_memoria(proceso)){
 
-                wait_mutex(mutex_queue_new);
+                // wait_mutex(mutex_queue_new);
 				queue_pop(queue_new);
                 cambiarEstado(proceso, READY);
-                signal_mutex(mutex_queue_new);
+                // signal_mutex(mutex_queue_new);
 
-                wait_mutex(mutex_queue_ready);
+                // wait_mutex(mutex_queue_ready);
 				queue_push(queue_ready, proceso);
-                signal_mutex(mutex_queue_ready);
+                // signal_mutex(mutex_queue_ready);
 			}
             else{
                 signal_sem(&nuevo_proceso); // el proceso nuevo sigue en NEW, hago signal de vuelta
@@ -61,10 +62,10 @@ void* planificar_largo_plazo(void* arg){
             }
 		}
 		else{
-            wait_mutex(mutex_queue_new);
+            // wait_mutex(mutex_queue_new);
 			queue_pop(queue_new);
-            cambiarEstado(proceso, READY);
-            signal_mutex(mutex_queue_new); // libero recurso del mutex
+            
+            // signal_mutex(mutex_queue_new); // libero recurso del mutex
 		}
 	}
 
@@ -72,21 +73,28 @@ void* planificar_largo_plazo(void* arg){
 
 bool espacio_en_memoria(t_pcb* proceso){
     int conexion = crear_conexion(logger_kernel, ip_memoria, puerto_memoria);
-    enviar_identificadores(conexion);
-    t_paquete* paquete = crear_paquete(INICIAR_PROCESO);
-    agregar_a_paquete(paquete, proceso->pid, 4);
-    agregar_a_paquete(paquete, proceso->tamanio_proceso, 4);
+    hacer_handshake(conexion);
+    t_paquete* paquete = crear_paquete(IDENTIFICACION);
+    agregar_a_paquete(paquete, KERNEL, sizeof(op_code));
+    agregar_a_paquete(paquete, &proceso->pid, sizeof(int));
+    agregar_a_paquete(paquete, &proceso->tamanio_proceso, sizeof(int));
     enviar_paquete(paquete, conexion);
 
     // falta recibir y analizar respuesta de memoria
 
-	return 1;
+    t_buffer* buffer = malloc(sizeof(t_buffer));
+    int resultado = recv(conexion, buffer, sizeof(int), 0);    
+    free(buffer);
+	return resultado==1;
 }
 
-void enviar_identificadores(int conexion){
-    for(int i = 0 ; i < 4 ; i ++){
-        t_paquete* paquete = crear_paquete(identificadores[i];
-        enviar_paquete(paquete);
+void hacer_handshake(int conexion){
+    t_paquete* paquete = crear_paquete(HANDSHAKE);
+    enviar_paquete(paquete, conexion);
+    t_buffer* buffer = malloc(sizeof(t_buffer));
+    int resultado = recv(conexion, buffer, sizeof(int), 0);
+    if(resultado != 1){
+        log_error(logger_kernel, "Error al hacer el handshake");
     }
 }
 

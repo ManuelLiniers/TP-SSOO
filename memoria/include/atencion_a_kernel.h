@@ -11,7 +11,7 @@
 
 //============ENVIOS A KERNEL=======================
 
-
+void mock_aceptacion(t_buffer* unBuffer);
 
 
 

@@ -1,3 +1,6 @@
+#ifndef SEMAFOROS_H_
+#define SEMAFOROS_H_
+
 #include<semaphore.h>
 #include<utils/commons.h>
 // Semaforos y Mutex
@@ -15,3 +18,5 @@ void wait_sem(sem_t *sem);
 void signal_mutex(pthread_mutex_t *mutex);
 void wait_mutex(pthread_mutex_t *mutex);
 void destruir_semaforos();
+
+#endif

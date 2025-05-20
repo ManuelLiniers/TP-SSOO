@@ -11,7 +11,7 @@ void atender_peticion_de_instruccion(t_buffer* un_buffer);
 
 //============ENVIOS A CPU=======================
 
-void enviar_una_instruccion_a_cpu(char* instruccion);
+void enviar_instruccion_a_cpu(char* instruccion);
 
 
 

@@ -62,6 +62,8 @@ void eliminar_paquete(t_paquete* paquete);
 void crear_buffer(t_paquete* paquete);
 void* recibir_buffer(int* size, int socket_cliente);
 int recibir_int_del_buffer(t_buffer* unBuffer);
-
+uint32_t recibir_uint32_del_buffer(t_buffer* unBuffer);
+void obtener_del_buffer(t_buffer *buffer, void *dest, int size);
+void eliminar_buffer(t_buffer* unBuffer);
 
 #endif /* INCLUDE_SOCKET_H_ */

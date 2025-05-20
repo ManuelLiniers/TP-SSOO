@@ -12,6 +12,9 @@ extern t_queue* queue_exit;
 
 extern char* ip_memoria;
 extern char* puerto_memoria;
+extern int conexion;
+extern t_config *config_kernel;
+extern t_log* logger_kernel;
 
 /**
  * @brief Inicializa las cuatro colas del scheduler
@@ -25,5 +28,7 @@ void scheduler_destroy(void);
 
 void* planificar_largo_plazo(void* arg);
 void* planificar_corto_plazo(void* arg);
+void hacer_handshake(int conexion);
+
 
 #endif // SCHEDULER_H_

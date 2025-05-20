@@ -2,13 +2,13 @@
 
 int main(int argc, char* argv[]) {
     inicializar_kernel();
-	iniciar_planificacion();
+	inicializar_planificacion();
 
-	crear_proceso(argv[1], argv[2]); // Creo proceso inicial con valores recibidos por parametro
+	// crear_proceso(argv[1], argv[2]); // Creo proceso inicial con valores recibidos por parametro
 
 
-    log_info(logger_kernel,"Iniciando servidor Kernel");
-	int server_fd_kernel_io = iniciar_servidor(logger_kernel, ip_kernel, puerto_kernel); 
+    // log_info(logger_kernel,"Iniciando servidor Kernel");
+	// int server_fd_kernel_io = iniciar_servidor(logger_kernel, ip_kernel, puerto_kernel); 
 	//Si esta ESCUCHANDO en PUERTO KERNEL -> SE CONECTA CON IO PORQUE IO ES CLIENTE NADA MÁS DE ESTE PUERTO. SI ESCUCHA OTRO PUERTO, SE CONECTA A ALGUNO DE CPU
 
 	// t_list* lista;
@@ -40,7 +40,7 @@ int main(int argc, char* argv[]) {
     return EXIT_SUCCESS;
 }
 
-void iniciar_config(void){
+void iniciar_config(){
     config_kernel = config_create("/home/utnso/tp-2025-1c-queCompileALaPrimera/kernel/kernel.config");
     if(config_kernel == NULL){
         perror("Error al crear el config del Kernel");
@@ -62,8 +62,9 @@ void inicializar_kernel(char* instrucciones, char* tamanio_proceso){
 	puerto_dispatch = config_get_string_value(config_kernel, "PUERTO_ESCUCHA_DISPATCH");
 	puerto_interrupt = config_get_string_value(config_kernel, "PUERTO_ESCUCHA_INTERRUPT");
 	puerto_io = config_get_string_value(config_kernel, "PUERTO_ESCUCHA_IO");
-    /* int conexion = crear_conexion(logger_kernel, ip, puerto);
-	enviar_mensaje("Conexion desde kernel", conexion); */
+    
+	int conexion = crear_conexion(logger_kernel, ip_memoria, puerto_memoria);
+	// enviar_mensaje("Conexion desde kernel", conexion);
 }
 
 void inicializar_planificacion(){

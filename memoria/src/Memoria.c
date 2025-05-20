@@ -3,7 +3,7 @@
 
 
 int main(int argc, char* argv[]) {
-	inicializar_memoria()
+	inicializar_memoria();
 
 	while(servidor_escucha(server_fd_memoria));
 
@@ -79,7 +79,7 @@ void inicializar_memoria(){
 
 void finalizar_memoria(){
 	//free(espacio_usuario);
-	log_info(memoria_logger, "Memoria terminada")
+	log_info(memoria_logger, "Memoria terminada");
 	log_destroy(memoria_logger);
 	config_destroy(memoria_config);
 }
@@ -133,11 +133,11 @@ void saludar_cliente(void *void_args){
 				close(*cliente_socket);
 			}
 			break; 
-		case -1;
-			log_error(memoria_logger. "Desconexion en el HANDSHAKE");
+		case -1:
+			log_error(memoria_logger, "Desconexion en el HANDSHAKE");
 			break;
 		default:
-			log_error(memoria_logger. "Desconexion en el HANDSHAKE: Operacion Desconocida");
+			log_error(memoria_logger, "Desconexion en el HANDSHAKE: Operacion Desconocida");
 			break;
 	} 
 }
@@ -151,7 +151,7 @@ void identificar_modulo(t_buffer* unBuffer, int cliente_fd){
 		case KERNEL:
 			fd_kernel = cliente_fd;
 			log_info(memoria_logger, "[[[[[KERNEL CONECTADO]]]]]");
-			atender_kernel(fd_kernel);
+			atender_kernel(fd_kernel); // agregar que reciba el buffer
 
 			break;
 		case CPU:

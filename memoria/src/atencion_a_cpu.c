@@ -7,6 +7,8 @@
 	3- Luego cada cliente indica lo que necesita mandando otro paquete
 */
 
+extern int cpu_fd;
+
 void atender_cpu(int cpu_fd){
 	while (1) {
 		t_buffer* unBuffer;

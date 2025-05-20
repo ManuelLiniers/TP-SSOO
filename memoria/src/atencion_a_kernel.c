@@ -1,11 +1,13 @@
 #include </home/utnso/tp-2025-1c-queCompileALaPrimera/memoria/include/atencion_a_kernel.h>
 
-void atender_kernel(int kernel_fd){
+extern int kernel_fd;
+
+void atender_kernel(int kernel_fd){ // agregar que reciba el buffer
 
 	log_info(memoria_logger, "## Kernel Conectado - FD del socket: %d", kernel_fd);
 
 	while (1) {
-		int op_code = recibir_operacion(kernel_fd);
+		int op_code = recibir_operacion(kernel_fd); // sugiero cambiar recibir_operacion(kernel_fd) por recibir_int_del_buffer(buffer)
 		t_buffer* unBuffer;
 
 		switch (op_code) {

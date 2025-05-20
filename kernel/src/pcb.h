@@ -13,12 +13,20 @@ typedef enum { NEW, READY, EXEC, BLOCKED, EXIT } t_estado;
 
 t_estado posibles_estados[5] = {NEW, READY, EXEC, BLOCKED, EXIT};
 
-typedef struct{
+struct t_metricas_cant{
     t_estado estado;
     int cant;
     struct t_metricas_cant* sig;
-} t_metricas_cant;
+}; 
+typedef struct t_metricas_cant t_metricas_cant;
 
+struct t_metricas_estado_tiempo{
+    t_estado estado;
+    int tiempo_inicio;
+    int tiempo_fin;
+    struct t_metricas_estado_tiempo* sig;
+};
+typedef struct t_metricas_estado_tiempo t_metricas_estado_tiempo;
 
 // Control Block de un proceso
 typedef struct {
@@ -28,7 +36,7 @@ typedef struct {
     t_estado estado;            // Estado actual del proceso
     int tamanio_proceso; 
     t_metricas_cant* metricas_estado;         // Lista de veces que estuvo en cada estado
-    //t_list* metricas_estado_tiempo;  // Lista de tiempo que estuvo en cada estado
+    t_metricas_estado_tiempo* metricas_tiempo;  // Lista de tiempo que estuvo en cada estado
     // Más campos opcionales: tamaño de memoria, registros, métricas, etc.
 } t_pcb;
 
