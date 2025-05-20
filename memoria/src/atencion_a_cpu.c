@@ -1,11 +1,43 @@
 #include </home/utnso/tp-2025-1c-queCompileALaPrimera/memoria/include/atencion_a_cpu.h>
 
+/*
+	Explicacion CPU PEDIR_INSTRUCCION:
+	1- CPU manda un paquete que incluye el pid del proceso junto con el pc que necesita 
+	2- 
+	3- Luego cada cliente indica lo que necesita mandando otro paquete
+*/
+
+void atender_cpu(int cpu_fd){
+	while (1) {
+		t_buffer* unBuffer;
+        int op_code = recibir_operacion(cpu_fd);
+
+		switch (op_code) {
+			case PEDIR_INSTRUCCION: {
+				unBuffer = recibir_paquete(cpu_fd);
+				atender_peticion_de_instruccion(unBuffer);
+
+				break;
+			}
+			case -1:{
+				log_info(memoria_logger, "[CPU] se desconecto. Terminando consulta");
+				exit(0);
+			}
+            default: {
+				log_warning(memoria_logger, "Operación desconocida de CPU");
+                break;
+			}
+        }
+		eliminar_buffer(unBuffer);
+    }
+}
+
 void atender_peticion_de_instruccion(t_buffer* unBuffer){
     uint32_t pid;
 	uint32_t pc;
 
-	pid = recibir_int_del_buffer(unBuffer);
-	pc = recibir_int_del_buffer(unBuffer);
+	pid = recibir_uint32_del_buffer(unBuffer);
+	pc = recibir_uint32_del_buffer(unBuffer);
 
 	log_info(memoria_logger, "CPU pide instrucción para PID %d, PC %d", pid, pc);
 
@@ -46,7 +78,7 @@ void atender_peticion_de_instruccion(t_buffer* unBuffer){
 	enviar_instruccion_a_cpu(instruccion);
 }
 
-void enviar_una_instruccion_a_cpu(char* instruccion){
+void enviar_instruccion_a_cpu(char* instruccion){
     // Enviar op_code primero
 	op_code codigo = DEVOLVER_INSTRUCCION;
 	send(cpu_fd, &codigo, sizeof(op_code), 0);

@@ -186,7 +186,7 @@ void enviar_paquete(t_paquete* paquete, int socket_cliente)
 t_buffer* recibir_paquete(int cliente_fd){
 	t_buffer* unBuffer = malloc(sizeof(t_buffer));
 	int size;
-	unBuffer->stream = recibir_buffer(&size,conexion);
+	unBuffer->stream = recibir_buffer(&size,cliente_fd);
 	unBuffer->size = size;
 	return unBuffer;
 }
@@ -256,4 +256,18 @@ int recibir_int_del_buffer(t_buffer* unBuffer){
 	unBuffer->size = nuevo_size;
 
 	return valor_a_devolver;
+}
+
+uint32_t recibir_uint32_del_buffer(t_buffer* unBuffer){
+	uint32_t value;
+    obtener_del_buffer(buffer, &value, sizeof(uint32_t));
+    free(value);
+	return value;
+}
+
+void obtener_del_buffer(t_buffer *buffer, void *dest, int size){
+	memcpy(dest, buffer->stream, size);
+    buffer->size -= size;
+    memmove(buffer->stream, buffer->stream + size, buffer->size);
+    buffer->stream = realloc(buffer->stream, buffer->size);
 }

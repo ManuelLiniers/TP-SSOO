@@ -10,6 +10,7 @@
 #include </home/utnso/tp-2025-1c-queCompileALaPrimera/utils/src/utils/socket.h>
 #include </home/utnso/tp-2025-1c-queCompileALaPrimera/memoria/include/atencion_a_cpu.h>
 #include </home/utnso/tp-2025-1c-queCompileALaPrimera/memoria/include/atencion_a_kernel.h>
+#include </home/utnso/tp-2025-1c-queCompileALaPrimera/memoria/include/proceso.h>
 
 char* IP_MEMORIA;
 char* PUERTO_ESCUCHA;
@@ -26,11 +27,11 @@ char* PATH_INSTRUCCIONES;
 
 
 int server_fd_memoria;
-int kernel_fd;
-int cpu_fd;
+int fd_kernel;
+int fd_cpu;
 void* espacio_usuario;
 
-t_list* lista_procesos_recibidos;
+t_list* procesos_memoria;
 
 // LOGS Y CONFIG
 
