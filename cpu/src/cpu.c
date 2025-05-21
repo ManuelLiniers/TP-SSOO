@@ -252,12 +252,12 @@ void ciclo_de_instruccion_execute(t_instruccion_decodificada* instruccion, t_con
     }
     else if (string_equals_ignore_case(opcode, "IO")) {
     log_info(logger, "PID: %d - Ejecutando: IO - Dispositivo: %s - Tiempo: %s", contexto->pid, instruccion->operandos[0], instruccion->operandos[1]);
-    enviar_contexto_a_kernel(contexto, CAUSA_IO);
+    enviar_contexto_a_kernel(contexto, CAUSA_IO, conexion_kernel_dispatch, logger);
     contexto->program_counter = -1;
 }
 else if (string_equals_ignore_case(opcode, "DUMP_MEMORY")) {
     log_info(logger, "PID: %d - Ejecutando: DUMP_MEMORY", contexto->pid);
-    enviar_contexto_a_kernel(contexto, SIGNAL); // SEGUNDO PARAMETRO ES EL MOTIVO DE DESLOJO (PUSE SIGNAL XQ SI)
+    enviar_contexto_a_kernel(contexto, SIGNAL, conexion_kernel_dispatch, logger); // SEGUNDO PARAMETRO ES EL MOTIVO DE DESLOJO (PUSE SIGNAL XQ SI)
     contexto->program_counter = -1;
 }
 
@@ -302,7 +302,26 @@ else if (string_equals_ignore_case(opcode, "WRITE")) {
 
 }
 
-//poner en archivo MMU.C
+void enviar_contexto_a_kernel(t_contexto* contexto, motivo_desalojo motivo, int fd, t_log* logger) {
+    char* motivo_str[] = {
+    "EXIT", "CAUSA_IO", "WAIT", "SIGNAL", "PAGE_FAULT", "INTERRUPCION", "DESALOJO_POR_QUANTUM"}; //mismo orden que el enum de motivodesalojo
+log_info(logger, "## PID: %d - Desalojado - Motivo: %s", contexto->pid, motivo_str[motivo]);
+
+    t_paquete* paquete = crear_paquete(CONTEXTO_PROCESO); // contxtoproceso es opcode
+
+    agregar_a_paquete(paquete, &(contexto->pid), sizeof(uint32_t));
+    agregar_a_paquete(paquete, &(contexto->program_counter), sizeof(uint32_t));
+    agregar_a_paquete(paquete, &(contexto->AX), sizeof(uint32_t));
+    agregar_a_paquete(paquete, &(contexto->BX), sizeof(uint32_t));
+    agregar_a_paquete(paquete, &(contexto->CX), sizeof(uint32_t));
+    agregar_a_paquete(paquete, &(contexto->DX), sizeof(uint32_t));
+    agregar_a_paquete(paquete, &motivo, sizeof(motivo_desalojo));  
+    enviar_paquete(paquete, fd);
+    eliminar_paquete(paquete);
+}
+
+
+//esto va en archivo MMU.C
 uint32_t traducir_direccion_logica(uint32_t direccion_logica, int tamanio_pagina, t_contexto* contexto, int conexion_memoria) {
     uint32_t nro_pagina     = direccion_logica / tamanio_pagina;
     uint32_t desplazamiento = direccion_logica % tamanio_pagina;
@@ -317,7 +336,7 @@ uint32_t traducir_direccion_logica(uint32_t direccion_logica, int tamanio_pagina
     enviar_paquete(paquete, conexion_memoria);
     eliminar_paquete(paquete);
 
-    // Recibir respuesta con número de marco
+    // Recibir respuesta con num de marco
     uint32_t marco;
     recv(conexion_memoria, &marco, sizeof(uint32_t), 0);
 

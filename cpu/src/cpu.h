@@ -50,5 +50,4 @@ t_instruccion_decodificada* decodificar_instruccion(char* instruccion_cruda);
 void ciclo_de_instruccion_execute(t_instruccion_decodificada* instruccion, t_contexto* contexto, t_log* logger, int conexion_memoria);
 uint32_t traducir_direccion_logica(uint32_t direccion_logica, int tamanio_pagina, t_contexto* contexto, int conexion_memoria);
 bool hay_interrupcion();
-
-// hacerla: void enviar_contexto_a_kernel(t_contexto* contexto, motivo_desalojo motivo, int fd, t_log* logger);  
+void enviar_contexto_a_kernel(t_contexto* contexto, motivo_desalojo motivo, int fd, t_log* logger);  

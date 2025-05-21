@@ -26,7 +26,8 @@ typedef enum
 	LEER_MEMORIA,
 	PEDIR_MARCO,
 	PETICION_IO,
-	OK
+	OK,
+	CONTEXTO_PROCESO
 } op_code; 
 
 typedef struct
