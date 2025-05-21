@@ -223,6 +223,16 @@ void* recibir_buffer(int* size, int socket_cliente)
 }
 
 int recibir_int_del_buffer(t_buffer* unBuffer){
+	int* valor_a_devolver = (int*) recibir_informacion_del_buffer(unBuffer, sizeof(int)); 
+	return (*valor_a_devolver);
+}
+
+char* recibir_string_del_buffer(t_buffer* unBuffer){
+	char* valor_a_devolver = (char*) recibir_informacion_del_buffer(unBuffer, sizeof(char[20])); 
+	return valor_a_devolver;
+}
+
+void* recibir_informacion_del_buffer(t_buffer* unBuffer, size_t tamanio){
 	if(unBuffer->size == 0){
 		printf("\n[ERROR] Al intentar extraer un INT de un t_buffer vacio\n\n");
 		exit(EXIT_FAILURE);
@@ -233,8 +243,8 @@ int recibir_int_del_buffer(t_buffer* unBuffer){
 		exit(EXIT_FAILURE);
 	}
 
-	int valor_a_devolver;
-	memcpy(&valor_a_devolver, unBuffer->stream, sizeof(int));
+	void* valor_a_devolver;
+	memcpy(&valor_a_devolver, unBuffer->stream, tamanio);
 
 	int nuevo_size = unBuffer->size - sizeof(int);
 	if(nuevo_size == 0){

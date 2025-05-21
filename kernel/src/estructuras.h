@@ -7,6 +7,9 @@
 #include "semaforos.h"
 
 int pid_incremental = 0;
+int id_incremental = 0;
+
+t_list* dispositivos_io;
 
 // Estados posibles de un proceso
 typedef enum { NEW, READY, EXEC, BLOCKED, EXIT } t_estado;
@@ -57,6 +60,15 @@ void pcb_destroy(void* pcb_void);
 
 void crear_proceso(char* instrucciones, char* tamanio_proceso);
 
+typedef struct{
+    char nombre[20];
+    int id;
+} dispositivo_io;
+
+
+typedef struct{
+    t_pcb pid;
+    int tiempo;
+} tiempo_en_io ;
 
 #endif // PCB_H_
-

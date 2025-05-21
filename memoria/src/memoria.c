@@ -153,7 +153,7 @@ void identificar_modulo(t_buffer* unBuffer, int cliente_fd){
 		case KERNEL:
 			int kernel_fd = cliente_fd;
 			log_info(memoria_logger, "[[[[[KERNEL CONECTADO]]]]]");
-			atender_kernel(kernel_fd); // agregar que reciba el buffer
+			atender_kernel(kernel_fd);
 
 			break;
 		case CPU:

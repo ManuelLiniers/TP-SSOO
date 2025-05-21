@@ -2,7 +2,7 @@
 #define SCHEDULER_H_
 
 #include <commons/collections/queue.h>
-#include "pcb.h"
+#include "estructuras.h"
 #include "semaforos.h"
 #include "conexion.h"
 
