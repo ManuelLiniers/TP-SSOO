@@ -42,41 +42,13 @@ void atender_peticion_de_instruccion(t_buffer* unBuffer, int cpu_fd){
 
 	log_info(memoria_logger, "CPU pide instrucción para PID %d, PC %d", pid, pc);
 
-    /*/ Armar path del archivo de instrucciones
-    char path[256];
-    sprintf(path, "%s/%d.txt", PATH_INSTRUCCIONES, pid);
-
-    FILE* archivo = fopen(path, "r");
-    if (!archivo) {
-        log_error(memoria_logger, "Archivo de instrucciones para PID %d no encontrado", pid);
-        exit(0);
-    }
-*/
-    char instruccion[128];/*
-    int instruccion_actual = 0;
-
-    while (fgets(instruccion, sizeof(instruccion), archivo)) {
-        if (instruccion_actual == pc) break;
-        instruccion_actual++;
-    }
-
-    fclose(archivo);
-
-    // Eliminar salto de línea si hay
-    instruccion[strcspn(instruccion, "\n")] = '\0';
-
-    log_info(memoria_logger, "## PID: %d - Obtener instrucción: %d - Instrucción: %s", pid, pc, instruccion);
-	*/
-
-    /*
 	t_proceso* un_proceso = obtener_proceso_por_id(pid);
 
 	// Obtener la instruccion
 	char* instruccion = obtener_instruccion_por_indice(un_proceso, pc);
 
-	log_info(memoria_logger, "<PID:%d> <PC:%d> <%s>", pid, pc, instruccion)
-    */
-
+	log_info(memoria_logger, "## PID: %d - Obtener instruccion: %d - Instruccion: %s", pid, pc, instruccion);
+	
 	enviar_instruccion_a_cpu(instruccion, cpu_fd);
 }
 

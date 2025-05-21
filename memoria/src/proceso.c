@@ -61,3 +61,28 @@ t_list* leer_archivo_y_cargar_instrucciones(char* path_archivo) {
     fclose(archivo);
     return instrucciones;
 }
+
+t_proceso* obtener_proceso_por_id(int pid){
+    bool _buscar_el_pid(t_proceso* proceso){
+		return proceso->pid == pid;
+	};
+	t_proceso* un_proceso = list_find(procesos_memoria, (void*)_buscar_el_pid);
+	if(un_proceso == NULL){
+		log_error(memoria_logger, "PID<%d> No encontrado en la lista de procesos", pid);
+		exit(EXIT_FAILURE);
+	}
+	return un_proceso;
+}
+
+char* obtener_instruccion_por_indice(t_proceso* un_proceso, int indice_instruccion){
+	char* instruccion_actual;
+	if(indice_instruccion >= 0 && indice_instruccion < list_size(un_proceso->instrucciones)){
+		instruccion_actual = list_get(un_proceso->instrucciones, indice_instruccion);
+		return instruccion_actual;
+	}
+	else{
+		log_error(memoria_logger, "PID<%d> - Nro de Instruccion <%d> NO VALIDA", un_proceso->pid, indice_instruccion);
+		exit(EXIT_FAILURE);
+		return NULL;
+	}
+}
