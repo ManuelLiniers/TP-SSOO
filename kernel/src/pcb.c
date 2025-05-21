@@ -20,10 +20,10 @@ void crear_proceso(t_list* instrucciones, int tamanio_proceso){
     pcb_nuevo->instrucciones = instrucciones;
     pcb_nuevo->tamanio_proceso = tamanio_proceso;
 
-    // wait(mutex_queue_new);
+    wait_mutex(&mutex_queue_new);
     queue_push(queue_new, pcb_nuevo);
-    // signal(mutex_queue_new);
-    // signal(nuevo_proceso);
+    signal_mutex(&mutex_queue_new);
+    signal_sem(&nuevo_proceso);
 }
 
 // Se crea un PCB con contador en 0 y en NEW

@@ -4,7 +4,7 @@ int main(int argc, char* argv[]) {
     inicializar_kernel();
 	inicializar_planificacion();
 
-	// crear_proceso(argv[1], argv[2]); // Creo proceso inicial con valores recibidos por parametro
+	crear_proceso(argv[1], argv[2]); // Creo proceso inicial con valores recibidos por parametro
 
 
     // log_info(logger_kernel,"Iniciando servidor Kernel");
@@ -63,7 +63,7 @@ void inicializar_kernel(char* instrucciones, char* tamanio_proceso){
 	puerto_interrupt = config_get_string_value(config_kernel, "PUERTO_ESCUCHA_INTERRUPT");
 	puerto_io = config_get_string_value(config_kernel, "PUERTO_ESCUCHA_IO");
     
-	int conexion = crear_conexion(logger_kernel, ip_memoria, puerto_memoria);
+	// int conexion = crear_conexion(logger_kernel, ip_memoria, puerto_memoria);
 	// enviar_mensaje("Conexion desde kernel", conexion);
 }
 

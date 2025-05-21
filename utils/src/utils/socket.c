@@ -257,20 +257,3 @@ int recibir_int_del_buffer(t_buffer* unBuffer){
 
 	return valor_a_devolver;
 }
-
-uint32_t recibir_uint32_del_buffer(t_buffer* unBuffer){
-	uint32_t value;
-    obtener_del_buffer(unBuffer, &value, sizeof(uint32_t));
-	return value;
-}
-
-void obtener_del_buffer(t_buffer *buffer, void *dest, int size){
-	memcpy(dest, buffer->stream, size);
-    buffer->size -= size;
-    memmove(buffer->stream, buffer->stream + size, buffer->size);
-    buffer->stream = realloc(buffer->stream, buffer->size);
-}
-
-void eliminar_buffer(t_buffer* unBuffer){
-	free(unBuffer);
-}

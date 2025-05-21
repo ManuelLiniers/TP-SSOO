@@ -6,13 +6,7 @@
 #include "scheduler.h"
 #include "semaforos.h"
 
-char* ip_kernel;
-char* ip_memoria;
-char* puerto_kernel;   //sin hilos hay que cambiarlo manualmente
-char* puerto_memoria;
-char* puerto_dispatch;
-char* puerto_interrupt;
-char* puerto_io;
+
 
 void iniciar_config();
 void iniciar_conexion();

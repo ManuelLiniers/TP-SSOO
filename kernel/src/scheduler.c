@@ -42,50 +42,51 @@ void* planificar_largo_plazo(void* arg){
         wait_mutex(&mutex_queue_new);
 		if(!queue_is_empty(queue_new)){
 			t_pcb* proceso = queue_peek(queue_new);
-            // signal_mutex(mutex_queue_new);
+            signal_mutex(&mutex_queue_new);
 			if(espacio_en_memoria(proceso)){
 
-                // wait_mutex(mutex_queue_new);
+                wait_mutex(&mutex_queue_new);
 				queue_pop(queue_new);
                 cambiarEstado(proceso, READY);
-                // signal_mutex(mutex_queue_new);
+                signal_mutex(&mutex_queue_new);
 
-                // wait_mutex(mutex_queue_ready);
+                wait_mutex(&mutex_queue_ready);
 				queue_push(queue_ready, proceso);
-                // signal_mutex(mutex_queue_ready);
+                signal_mutex(&mutex_queue_ready);
 			}
             else{
                 signal_sem(&nuevo_proceso); // el proceso nuevo sigue en NEW, hago signal de vuelta
                 wait_sem(&proceso_terminado); // espero que algun proceso finalice 
 
-                //HACER SIGNAL EN FINALIZACION
+                // HACER SIGNAL EN FINALIZACION
             }
 		}
 		else{
-            // wait_mutex(mutex_queue_new);
-			queue_pop(queue_new);
-            
-            // signal_mutex(mutex_queue_new); // libero recurso del mutex
+            signal_mutex(&mutex_queue_new); // libero recurso del mutex
 		}
 	}
 
 }
 
 bool espacio_en_memoria(t_pcb* proceso){
-    int conexion = crear_conexion(logger_kernel, ip_memoria, puerto_memoria);
+    int conexion = crear_conexion_memoria();
     hacer_handshake(conexion);
-    t_paquete* paquete = crear_paquete(IDENTIFICACION);
-    agregar_a_paquete(paquete, KERNEL, sizeof(op_code));
-    agregar_a_paquete(paquete, &proceso->pid, sizeof(int));
-    agregar_a_paquete(paquete, &proceso->tamanio_proceso, sizeof(int));
-    enviar_paquete(paquete, conexion);
+
+    t_paquete* paqueteID = crear_paquete(IDENTIFICACION);
+    agregar_a_paquete(paqueteID, KERNEL, sizeof(op_code));
+    enviar_paquete(paqueteID, conexion);
+
+    t_paquete* paqueteInfo = crear_paquete(INICIAR_PROCESO);
+    agregar_a_paquete(paqueteInfo, &proceso->pid, sizeof(int));
+    agregar_a_paquete(paqueteInfo, &proceso->tamanio_proceso, sizeof(int));
+    enviar_paquete(paqueteInfo, conexion);
 
     // falta recibir y analizar respuesta de memoria
 
     t_buffer* buffer = malloc(sizeof(t_buffer));
-    int resultado = recv(conexion, buffer, sizeof(int), 0);    
+    int resultado = recv(conexion, buffer, sizeof(int), 0);
     free(buffer);
-	return resultado==1;
+    return resultado==OK;
 }
 
 void hacer_handshake(int conexion){
