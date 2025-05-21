@@ -1,4 +1,4 @@
-#include </home/utnso/tp-2025-1c-queCompileALaPrimera/memoria/include/atencion_a_cpu.h>
+#include <atencion_a_cpu.h>
 
 /*
 	Explicacion CPU PEDIR_INSTRUCCION:

@@ -1,4 +1,4 @@
-#include "/home/utnso/tp-2025-1c-queCompileALaPrimera/memoria/include/variables_memoria.h"
+#include "variables_memoria.h"
 
 char* PUERTO_ESCUCHA;
 int TAM_MEMORIA;

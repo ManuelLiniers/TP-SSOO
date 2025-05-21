@@ -1,26 +1,5 @@
-#include </home/utnso/tp-2025-1c-queCompileALaPrimera/memoria/include/Memoria.h>
+#include <memoria.h>
 
-/*char* PUERTO_ESCUCHA;
-int TAM_MEMORIA;
-int TAM_PAGINA;
-int ENTRADAS_POR_TABLA;
-int CANTIDAD_NIVELES;
-int RETARDO_MEMORIA;
-char* PATH_SWAPFILE;
-int RETARDO_SWAP;
-char* LOG_LEVEL;
-char* DUMP_PATH;
-char* PATH_INSTRUCCIONES;
-
-int server_fd_memoria;
-int fd_kernel;
-int fd_cpu;
-void* espacio_usuario;
-
-t_list* procesos_memoria;
-
-t_log* memoria_logger;
-t_config* memoria_config;*/
 
 int main(int argc, char* argv[]) {
 	inicializar_memoria();

@@ -1,4 +1,4 @@
-#include </home/utnso/tp-2025-1c-queCompileALaPrimera/memoria/include/atencion_a_kernel.h>
+#include <atencion_a_kernel.h>
 
 
 void atender_kernel(int kernel_fd){ // agregar que reciba el buffer
