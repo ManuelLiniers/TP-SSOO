@@ -1,7 +1,7 @@
-#include <utils/hello.h>
-#include <utils/commons.h>
-#include </home/utnso/tp-2025-1c-queCompileALaPrimera/utils/src/utils/socket.h>
-#include <instruccion.h>
+#include "utils/hello.h"
+#include "utils/commons.h"
+#include "utils/socket.h"
+#include "instruccion.h"
 
 extern int conexion_memoria;
 extern int conexion_kernel_dispatch;
@@ -29,7 +29,7 @@ typedef struct {
 //para identificar casusas por desalojo
 typedef enum {
     EXIT,
-    IO,
+    CAUSA_IO,
     WAIT,
     SIGNAL,
     PAGE_FAULT,
@@ -41,4 +41,14 @@ typedef enum {
 // Funciones que vamos a implementar en etapas
 void atender_proceso_del_kernel(int fd, t_log* logger);
 void destruir_estructuras_del_contexto_actual(t_contexto* contexto);
+void* escuchar_interrupt(void* arg);
+t_contexto* recibir_contexto(int fd);
+char* ciclo_de_instruccion_fetch(int conexion_memoria, t_contexto* contexto);
+char* recibir_instruccion(int socket_memoria);
+t_instruccion_decodificada* ciclo_de_instruccion_decode(char* instruccion_cruda);
+t_instruccion_decodificada* decodificar_instruccion(char* instruccion_cruda);
+void ciclo_de_instruccion_execute(t_instruccion_decodificada* instruccion, t_contexto* contexto, t_log* logger, int conexion_memoria);
+uint32_t traducir_direccion_logica(uint32_t direccion_logica, int tamanio_pagina, t_contexto* contexto, int conexion_memoria);
+bool hay_interrupcion();
 
+// hacerla: void enviar_contexto_a_kernel(t_contexto* contexto, motivo_desalojo motivo, int fd, t_log* logger);  

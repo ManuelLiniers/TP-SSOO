@@ -1,4 +1,4 @@
-#include<semaforos.h>
+#include "semaforos.h"
 
 
 // wait y signal para semaforos

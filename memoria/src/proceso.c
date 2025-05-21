@@ -1,2 +1,2 @@
-#include <proceso.h>
+#include "../include/proceso.h"
 

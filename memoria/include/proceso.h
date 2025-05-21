@@ -7,10 +7,10 @@
 #include <commons/string.h>
 #include <commons/config.h>
 #include <readline/readline.h>
-#include </home/utnso/tp-2025-1c-queCompileALaPrimera/utils/src/utils/socket.h>
-#include <atencion_a_cpu.h>
-#include <atencion_a_kernel.h>
-#include <memoria.h>
+#include "utils/socket.h"
+#include "atencion_a_cpu.h"
+#include "atencion_a_kernel.h"
+#include "memoria.h"
 
 typedef struct{
 	int pid;

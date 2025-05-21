@@ -1,4 +1,4 @@
-#include "variables_memoria.h"
+#include "../include/variables_memoria.h"
 
 char* PUERTO_ESCUCHA;
 int TAM_MEMORIA;

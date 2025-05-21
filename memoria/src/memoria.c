@@ -1,5 +1,4 @@
-#include <memoria.h>
-
+#include "../include/memoria.h"
 
 int main(int argc, char* argv[]) {
 	inicializar_memoria();
@@ -89,7 +88,6 @@ void finalizar_memoria(){
 */
 
 int servidor_escucha(int server_fd_memoria){
-	log_info(memoria_logger, "Iniciando servidor Memoria");
 
 	while(server_fd_memoria != -1){
 		int cliente_fd = esperar_cliente(memoria_logger, "Memoria", server_fd_memoria);

@@ -1,7 +1,7 @@
 #include "main.h"
-#include <utils/hello.h>
-#include <utils/commons.h>
-#include</home/utnso/tp-2025-1c-queCompileALaPrimera/utils/src/utils/socket.h>
+#include "utils/hello.h"
+#include "utils/commons.h"
+#include "utils/socket.h"
 
 
 int main(int argc, char* argv[]) {

@@ -1,10 +1,10 @@
 #ifndef KERNEL_H_
 #define KERNEL_H_
 
-#include <utils/commons.h>
-#include <pcb.h>
-#include <scheduler.h>
-#include <semaforos.h>
+#include "utils/commons.h"
+#include "pcb.h"
+#include "scheduler.h"
+#include "semaforos.h"
 
 char* ip_kernel;
 char* ip_memoria;

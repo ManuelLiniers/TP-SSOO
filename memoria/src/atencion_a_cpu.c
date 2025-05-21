@@ -1,4 +1,4 @@
-#include <atencion_a_cpu.h>
+#include "../include/atencion_a_cpu.h"
 
 /*
 	Explicacion CPU PEDIR_INSTRUCCION:

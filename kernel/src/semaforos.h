@@ -1,8 +1,9 @@
 #ifndef SEMAFOROS_H_
 #define SEMAFOROS_H_
 
-#include<semaphore.h>
-#include<utils/commons.h>
+#include <semaphore.h>
+#include "utils/commons.h"
+
 // Semaforos y Mutex
 extern pthread_mutex_t mutex_queue_new;
 extern pthread_mutex_t mutex_queue_ready;

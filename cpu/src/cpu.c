@@ -1,4 +1,4 @@
-#include <cpu.h>
+#include "cpu.h"
 
 int conexion_memoria;
 int conexion_kernel_dispatch;
@@ -252,7 +252,7 @@ void ciclo_de_instruccion_execute(t_instruccion_decodificada* instruccion, t_con
     }
     else if (string_equals_ignore_case(opcode, "IO")) {
     log_info(logger, "PID: %d - Ejecutando: IO - Dispositivo: %s - Tiempo: %s", contexto->pid, instruccion->operandos[0], instruccion->operandos[1]);
-    enviar_contexto_a_kernel(contexto, IO);
+    enviar_contexto_a_kernel(contexto, CAUSA_IO);
     contexto->program_counter = -1;
 }
 else if (string_equals_ignore_case(opcode, "DUMP_MEMORY")) {

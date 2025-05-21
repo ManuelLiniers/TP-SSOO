@@ -1,17 +1,17 @@
 #ifndef INCLUDE_SOCKET_H_
 #define INCLUDE_SOCKET_H_
 
-#include<stdio.h>
-#include<stdlib.h>
-#include<signal.h>
-#include<unistd.h>
-#include<sys/socket.h>
-#include<netdb.h>
-#include<string.h>
-#include<commons/log.h>
-#include<commons/collections/list.h>
-#include<assert.h>
-#include</home/utnso/tp-2025-1c-queCompileALaPrimera/utils/src/utils/commons.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include <signal.h>
+#include <unistd.h>
+#include <sys/socket.h>
+#include <netdb.h>
+#include <string.h>
+#include <commons/log.h>
+#include <commons/collections/list.h>
+#include <assert.h>
+#include "commons.h"
 
 typedef enum
 {
@@ -25,8 +25,9 @@ typedef enum
 	ESCRIBIR_MEMORIA,
 	LEER_MEMORIA,
 	PEDIR_MARCO,
+	PETICION_IO,
 	OK
-} op_code;  //tipos de mensaje que la cpu envia a memoria
+} op_code; 
 
 typedef struct
 {

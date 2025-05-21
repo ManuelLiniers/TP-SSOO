@@ -1,8 +1,8 @@
 #ifndef ATENCION_A_KERNEL_H_
 #define ATENCION_A_KERNEL_H_
 
-#include </home/utnso/tp-2025-1c-queCompileALaPrimera/utils/src/utils/commons.h>
-#include <memoria.h>
+#include "utils/commons.h"
+#include "memoria.h"
 
 //============RECIBIDOS DE KERNEL=======================
 
