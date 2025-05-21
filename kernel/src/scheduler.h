@@ -25,6 +25,7 @@ void scheduler_destroy(void);
 void* planificar_largo_plazo(void* arg);
 void* planificar_corto_plazo(void* arg);
 void hacer_handshake(int conexion);
+poner_en_ejecucion(t_pcb* proceso);
 
 
 #endif // SCHEDULER_H_

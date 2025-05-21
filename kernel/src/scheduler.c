@@ -25,10 +25,18 @@ void scheduler_destroy(void) {
 
 void* planificar_corto_plazo(void* arg){
 	while(1){
-        t_pcb* proceso = queue_pop(queue_ready);
-        cambiarEstado(proceso, EXEC);
-        
-        // enviar a CPU
+        wait_sem(&proceso_ready);
+        // wait de cpu libre?
+        wait_mutex(&mutex_queue_ready);
+        if(!queue_is_empty(queue_ready)){
+            t_pcb* proceso = queue_pop(queue_ready);
+            signal_mutex(&mutex_queue_ready);
+            poner_en_ejecucion(proceso);
+            cambiarEstado(proceso, EXEC);
+        }
+        else{
+            signal_mutex(&mutex_queue_ready);
+        }
 
         // send(cliente_dispatch, proceso->pid, 4, 0);
         // send(cliente_dispatch, proceso->program_counter, 4, 0);
@@ -53,6 +61,8 @@ void* planificar_largo_plazo(void* arg){
                 wait_mutex(&mutex_queue_ready);
 				queue_push(queue_ready, proceso);
                 signal_mutex(&mutex_queue_ready);
+
+                signal_sem(&proceso_ready);
 			}
             else{
                 signal_sem(&nuevo_proceso); // el proceso nuevo sigue en NEW, hago signal de vuelta
@@ -79,6 +89,7 @@ bool espacio_en_memoria(t_pcb* proceso){
     t_paquete* paqueteInfo = crear_paquete(INICIAR_PROCESO);
     agregar_a_paquete(paqueteInfo, &proceso->pid, sizeof(int));
     agregar_a_paquete(paqueteInfo, &proceso->tamanio_proceso, sizeof(int));
+    agregar_a_paquete(paqueteInfo, &proceso->instrucciones, sizeof(char*));
     enviar_paquete(paqueteInfo, conexion);
 
     // falta recibir y analizar respuesta de memoria
@@ -107,4 +118,10 @@ void cambiarEstado(t_pcb* proceso, t_estado estado){
     metricas->cant++;
 
     // falta las metricas del tiempo
+}
+
+void poner_en_ejecucion(t_pcb* proceso){
+
+    // mandar a alguna cpu dependiendo de cual este libre
+
 }

@@ -25,6 +25,7 @@ void iniciar_semaforos(){
     pthread_mutex_init(&mutex_queue_exit, NULL);
 
     sem_init(&nuevo_proceso, 0, 0);
+    sem_init(&proceso_ready, 0, 0);
     sem_init(&proceso_terminado, 0, 0);
 };
 
@@ -35,5 +36,6 @@ void destruir_semaforos() {
     pthread_mutex_destroy(&mutex_queue_exit);
 
     sem_destroy(&nuevo_proceso);
+    sem_destroy(&proceso_ready);
     sem_destroy(&proceso_terminado);
 };
