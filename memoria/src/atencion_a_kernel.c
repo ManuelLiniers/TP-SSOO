@@ -36,9 +36,19 @@ void mock_aceptacion(t_buffer* unBuffer, int kernel_fd){
 
 	pid = recibir_int_del_buffer(unBuffer);
 	tamanio = recibir_int_del_buffer(unBuffer);
+// 	Espero a verificar si hay espacio para asignar el path
 
     log_info(memoria_logger, "Pedido de crear proceso PID %d con tamaño %d", pid, tamanio);
 
-    int respuesta = OK;
+
+    int respuesta = OK; // En un futuro indica cuanto espacio de memoria hay libre
     send(kernel_fd, &respuesta, sizeof(int), 0);
+	log_info(memoria_logger, "Creando proceso PID %d", pid);
+
+	char* path_instrucciones;
+	path_instrucciones = recibir_informacion_del_buffer(unBuffer, sizeof(char*));
+
+	t_proceso* procesoNuevo = crear_proceso(pid, tamanio, path_instrucciones);
+
+	agregar_proceso_a_lista(procesoNuevo, procesos_memoria);
 }

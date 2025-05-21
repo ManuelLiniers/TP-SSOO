@@ -17,8 +17,13 @@ typedef struct{
 	int size;
 	char* pathInstrucciones;
 	t_list* instrucciones;
-	t_list* tabla_paginas;
-	pthread_mutex_t mutex_TP;
+	// t_list* tabla_paginas;
+	// pthread_mutex_t mutex_TP;
 }t_proceso;
+
+
+t_proceso* crear_proceso(int pid, int size, char* path_instruc);
+void agregar_proceso_a_lista(t_proceso* un_proceso ,t_list* una_lista);
+t_list* leer_archivo_y_cargar_instrucciones(char* path_archivo);
 
 #endif /* PROCESO_H_ */
