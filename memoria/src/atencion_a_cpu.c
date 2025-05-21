@@ -7,7 +7,6 @@
 	3- Luego cada cliente indica lo que necesita mandando otro paquete
 */
 
-extern int cpu_fd;
 
 void atender_cpu(int cpu_fd){
 	while (1) {
@@ -17,7 +16,7 @@ void atender_cpu(int cpu_fd){
 		switch (op_code) {
 			case PEDIR_INSTRUCCION: {
 				unBuffer = recibir_paquete(cpu_fd);
-				atender_peticion_de_instruccion(unBuffer);
+				atender_peticion_de_instruccion(unBuffer, cpu_fd);
 
 				break;
 			}
@@ -34,7 +33,7 @@ void atender_cpu(int cpu_fd){
     }
 }
 
-void atender_peticion_de_instruccion(t_buffer* unBuffer){
+void atender_peticion_de_instruccion(t_buffer* unBuffer, int cpu_fd){
     uint32_t pid;
 	uint32_t pc;
 
@@ -43,7 +42,7 @@ void atender_peticion_de_instruccion(t_buffer* unBuffer){
 
 	log_info(memoria_logger, "CPU pide instrucción para PID %d, PC %d", pid, pc);
 
-    // Armar path del archivo de instrucciones
+    /*/ Armar path del archivo de instrucciones
     char path[256];
     sprintf(path, "%s/%d.txt", PATH_INSTRUCCIONES, pid);
 
@@ -52,8 +51,8 @@ void atender_peticion_de_instruccion(t_buffer* unBuffer){
         log_error(memoria_logger, "Archivo de instrucciones para PID %d no encontrado", pid);
         exit(0);
     }
-
-    char instruccion[128];
+*/
+    char instruccion[128];/*
     int instruccion_actual = 0;
 
     while (fgets(instruccion, sizeof(instruccion), archivo)) {
@@ -67,6 +66,7 @@ void atender_peticion_de_instruccion(t_buffer* unBuffer){
     instruccion[strcspn(instruccion, "\n")] = '\0';
 
     log_info(memoria_logger, "## PID: %d - Obtener instrucción: %d - Instrucción: %s", pid, pc, instruccion);
+	*/
 
     /*
 	t_proceso* un_proceso = obtener_proceso_por_id(pid);
@@ -77,10 +77,10 @@ void atender_peticion_de_instruccion(t_buffer* unBuffer){
 	log_info(memoria_logger, "<PID:%d> <PC:%d> <%s>", pid, pc, instruccion)
     */
 
-	enviar_instruccion_a_cpu(instruccion);
+	enviar_instruccion_a_cpu(instruccion, cpu_fd);
 }
 
-void enviar_instruccion_a_cpu(char* instruccion){
+void enviar_instruccion_a_cpu(char* instruccion, int cpu_fd){
     // Enviar op_code primero
 	op_code codigo = DEVOLVER_INSTRUCCION;
 	send(cpu_fd, &codigo, sizeof(op_code), 0);

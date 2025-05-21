@@ -1,6 +1,26 @@
 #include </home/utnso/tp-2025-1c-queCompileALaPrimera/memoria/include/Memoria.h>
 
+/*char* PUERTO_ESCUCHA;
+int TAM_MEMORIA;
+int TAM_PAGINA;
+int ENTRADAS_POR_TABLA;
+int CANTIDAD_NIVELES;
+int RETARDO_MEMORIA;
+char* PATH_SWAPFILE;
+int RETARDO_SWAP;
+char* LOG_LEVEL;
+char* DUMP_PATH;
+char* PATH_INSTRUCCIONES;
 
+int server_fd_memoria;
+int fd_kernel;
+int fd_cpu;
+void* espacio_usuario;
+
+t_list* procesos_memoria;
+
+t_log* memoria_logger;
+t_config* memoria_config;*/
 
 int main(int argc, char* argv[]) {
 	inicializar_memoria();
@@ -14,7 +34,6 @@ int main(int argc, char* argv[]) {
 }
 
 void leer_config(t_config* config){
-//	IP_MEMORIA = NULL;
 	PUERTO_ESCUCHA = config_get_string_value(config, "PUERTO_ESCUCHA");
 	TAM_MEMORIA = config_get_int_value(config, "TAM_MEMORIA");
 	TAM_PAGINA = config_get_int_value(config, "TAM_PAGINA");
@@ -55,7 +74,6 @@ void inicializar_memoria(){
 	}
 
 	leer_config(memoria_config);
-
 	//  leer_log(memoria_logger);  		(Para pruebas)
 
 	log_info(memoria_logger,"Iniciando servidor Memoria");
@@ -63,7 +81,7 @@ void inicializar_memoria(){
 	// Aca se almacenan los procesos que llegan,  
 	procesos_memoria = list_create();
 
-	server_fd_memoria = iniciar_servidor(memoria_logger, IP_MEMORIA, PUERTO_ESCUCHA);
+	server_fd_memoria = iniciar_servidor(memoria_logger, NULL, PUERTO_ESCUCHA);
 
 
 	/*
@@ -79,9 +97,10 @@ void inicializar_memoria(){
 
 void finalizar_memoria(){
 	//free(espacio_usuario);
-	log_info(memoria_logger, "Memoria terminada");
+	log_info(memoria_logger, "Memoria terminada correctamente");
 	log_destroy(memoria_logger);
 	config_destroy(memoria_config);
+	list_destroy(procesos_memoria);
 }
 
 /*
@@ -90,20 +109,23 @@ void finalizar_memoria(){
 **************************************************************************************
 */
 
-void servidor_escucha(int server_fd_memoria){
+int servidor_escucha(int server_fd_memoria){
 	log_info(memoria_logger, "Iniciando servidor Memoria");
+
 	while(server_fd_memoria != -1){
 		int cliente_fd = esperar_cliente(memoria_logger, "Memoria", server_fd_memoria);
+
 		if(cliente_fd != -1){
 			pthread_t hilo_cliente;
 			int *args = malloc(sizeof(int));
 			*args = cliente_fd;
 			pthread_create(&hilo_cliente, NULL, (void*) saludar_cliente, args);
-			log_info(memoria_logger, "[THREAD] Creo hilo para atender");
+			log_info(memoria_logger, "[THREAD] Creo hilo para atender cliente");
 			pthread_detach(hilo_cliente);
-			free(args);
 		}
 	}
+
+	return EXIT_SUCCESS;
 }
 
 /*
@@ -116,21 +138,24 @@ void servidor_escucha(int server_fd_memoria){
 
 void saludar_cliente(void *void_args){
 	int* cliente_socket = (int*) void_args;
-	int code_op = recibir_operacion(*cliente_socket);
+	int socket_fd = *cliente_socket;
+	free(void_args);
 	
+	int code_op = recibir_operacion(socket_fd);
+
 	switch(code_op){
 		case HANDSHAKE:
 			int respuesta = 1;
-			send(*cliente_socket, &respuesta, sizeof(int), 0);
+			send(socket_fd, &respuesta, sizeof(int), 0);
 
-			int op_code = recibir_operacion(*cliente_socket);
+			int op_code = recibir_operacion(socket_fd);
 			if (op_code == IDENTIFICACION) {
-				t_buffer* buffer = recibir_paquete(*cliente_socket);
-				identificar_modulo(buffer, *cliente_socket);
+				t_buffer* buffer = recibir_paquete(socket_fd);
+				identificar_modulo(buffer, socket_fd);
 				eliminar_buffer(buffer);
 			} else {
 				log_error(memoria_logger, "Esperaba IDENTIFICACION después de HANDSHAKE");
-				close(*cliente_socket);
+				close(socket_fd);
 			}
 			break; 
 		case -1:
@@ -149,19 +174,18 @@ void identificar_modulo(t_buffer* unBuffer, int cliente_fd){
 	
 	switch (modulo_id) {
 		case KERNEL:
-			fd_kernel = cliente_fd;
+			int kernel_fd = cliente_fd;
 			log_info(memoria_logger, "[[[[[KERNEL CONECTADO]]]]]");
-			atender_kernel(fd_kernel); // agregar que reciba el buffer
+			atender_kernel(kernel_fd); // agregar que reciba el buffer
 
 			break;
 		case CPU:
-			fd_cpu = cliente_fd;
+			int cpu_fd = cliente_fd;
 			log_info(memoria_logger, "[[[[[CPU CONECTADO]]]]]");
-			atender_cpu(fd_cpu);
-
+			atender_cpu(cpu_fd);
 			break;
 		default:
-			log_error(memoria_logger, "[%d]Error al identificar modulo",modulo_id);
+			log_error(memoria_logger, "[%d] Error al identificar modulo",modulo_id);
 			exit(EXIT_FAILURE);
 			break;
 	}

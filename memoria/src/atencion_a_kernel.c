@@ -1,6 +1,5 @@
 #include </home/utnso/tp-2025-1c-queCompileALaPrimera/memoria/include/atencion_a_kernel.h>
 
-extern int kernel_fd;
 
 void atender_kernel(int kernel_fd){ // agregar que reciba el buffer
 
@@ -14,7 +13,7 @@ void atender_kernel(int kernel_fd){ // agregar que reciba el buffer
 			case INICIAR_PROCESO: {
 				unBuffer = recibir_paquete(kernel_fd);
 				// mock de aceptacion
-				mock_aceptacion(unBuffer);
+				mock_aceptacion(unBuffer, kernel_fd);
 
 				break;
 			}
@@ -31,7 +30,7 @@ void atender_kernel(int kernel_fd){ // agregar que reciba el buffer
 	}
 }
 
-void mock_aceptacion(t_buffer* unBuffer){
+void mock_aceptacion(t_buffer* unBuffer, int kernel_fd){
     uint32_t pid;
 	uint32_t tamanio;
 

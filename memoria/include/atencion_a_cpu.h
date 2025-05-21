@@ -5,13 +5,13 @@
 #include </home/utnso/tp-2025-1c-queCompileALaPrimera/memoria/include/Memoria.h>
 
 //============RECIBIDOS DE CPU=======================
-void atender_peticion_de_instruccion(t_buffer* un_buffer);
+void atender_peticion_de_instruccion(t_buffer* un_buffer, int cpu_fd);
 
 
 
 //============ENVIOS A CPU=======================
 
-void enviar_instruccion_a_cpu(char* instruccion);
+void enviar_instruccion_a_cpu(char* instruccion, int cpu_fd);
 
 
 
