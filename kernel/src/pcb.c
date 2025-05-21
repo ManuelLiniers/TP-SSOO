@@ -15,11 +15,11 @@ void inicializarMetricas(t_metricas_cant** metricas){
 }
 
 // Se crea un proceso y se pushea a new
-void crear_proceso(t_list* instrucciones, int tamanio_proceso){
+void crear_proceso(char* instrucciones, char* tamanio_proceso){
     t_pcb* pcb_nuevo = pcb_create();
     pcb_nuevo->instrucciones = instrucciones;
-    pcb_nuevo->tamanio_proceso = tamanio_proceso;
-
+    pcb_nuevo->tamanio_proceso = atoi(tamanio_proceso);
+    
     wait_mutex(&mutex_queue_new);
     queue_push(queue_new, pcb_nuevo);
     signal_mutex(&mutex_queue_new);
@@ -55,6 +55,6 @@ void pcb_destroy(void* pcb_void) {
     t_pcb* pcb = (t_pcb*)pcb_void;
     if (!pcb) return;
     // Asumimos que cada instrucción fue duplicada con malloc/string_new
-    list_destroy_and_destroy_elements(pcb->instrucciones, free);
+    //list_destroy_and_destroy_elements(pcb->instrucciones, free); 
     free(pcb);
 }

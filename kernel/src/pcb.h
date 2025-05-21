@@ -32,7 +32,7 @@ typedef struct t_metricas_estado_tiempo t_metricas_estado_tiempo;
 typedef struct {
     int pid;                    // Identificador único
     int program_counter;        // Contador de instrucción
-    t_list* instrucciones;      // Lista de instrucciones (strings o structs)
+    char* instrucciones;      // Lista de instrucciones (strings o structs)
     t_estado estado;            // Estado actual del proceso
     int tamanio_proceso; 
     t_metricas_cant* metricas_estado;         // Lista de veces que estuvo en cada estado
@@ -55,7 +55,7 @@ t_pcb* pcb_create();
  */
 void pcb_destroy(void* pcb_void);
 
-void crear_proceso(t_list* instrucciones, int tamanio_proceso);
+void crear_proceso(char* instrucciones, char* tamanio_proceso);
 
 
 #endif // PCB_H_

@@ -6,8 +6,6 @@
 #include "scheduler.h"
 #include "semaforos.h"
 
-
-
 void iniciar_config();
 void iniciar_conexion();
 void inicializar_kernel();
