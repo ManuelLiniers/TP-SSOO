@@ -1,7 +1,9 @@
 #include "estructuras.h"
 #include <stdlib.h>
 
-t_list* dispositivos_io = list_create();
+void iniciar_dispositivos_io(){
+    dispositivos_io = list_create();
+}
 
 void inicializarMetricas(t_metricas_cant** metricas){
     t_metricas_cant* sig = NULL;

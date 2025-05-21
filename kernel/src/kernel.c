@@ -60,8 +60,21 @@ void inicializar_planificacion(){
 }
 
 void inicializar_servidores(){
+	iniciar_dispositivos_io();
 	pthread_t* servidor_io = malloc(sizeof(pthread_t));
 	pthread_create(servidor_io, NULL, (void*) iniciar_servidor_io, NULL);
+	pthread_t* cpu_interrupt = malloc(sizeof(pthread_t));
+	pthread_create(cpu_interrupt, NULL, (void*) iniciar_cpu_interrupt, NULL);
+	pthread_t* cpu_dispatch = malloc(sizeof(pthread_t));
+	pthread_create(cpu_dispatch, NULL, (void*) iniciar_cpu_dispatch, NULL);
+}
+
+void iniciar_cpu_dispatch(void* arg){
+
+}
+
+void iniciar_cpu_interrupt(void* arg){
+	
 }
 
 void iniciar_servidor_io(void* arg){
@@ -114,5 +127,7 @@ void atender_io(void* arg){
 void identificar_io(t_buffer* unBuffer,int socket_fd){
 	dispositivo_io* dispositivo = malloc(sizeof(dispositivo_io));
 	strcpy(dispositivo->nombre, recibir_string_del_buffer(unBuffer));
+	dispositivo->id = id_io_incremental;
+	id_io_incremental++;
 	list_add(dispositivos_io, dispositivo);
 }

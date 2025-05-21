@@ -7,9 +7,10 @@
 #include "semaforos.h"
 
 int pid_incremental = 0;
-int id_incremental = 0;
+int id_io_incremental = 0;
 
-t_list* dispositivos_io;
+extern t_list* dispositivos_io;
+void iniciar_dispositivos_io();
 
 // Estados posibles de un proceso
 typedef enum { NEW, READY, EXEC, BLOCKED, EXIT } t_estado;
