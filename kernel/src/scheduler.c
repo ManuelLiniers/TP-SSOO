@@ -9,13 +9,13 @@ t_cpu* buscar_cpu_libre(t_list* lista_cpus);
 // Definición de las colas globales
 t_queue* queue_new;
 t_queue* queue_ready;
-t_queue* queue_block;
+t_list* queue_block;
 t_queue* queue_exit;
 
 void scheduler_init(void) {
     queue_new   = queue_create();
     queue_ready = queue_create();
-    queue_block = queue_create();
+    queue_block = list_create();
     queue_exit  = queue_create();
     lista_procesos_ejecutando = list_create();
 }
@@ -23,7 +23,7 @@ void scheduler_init(void) {
 void scheduler_destroy(void) {
     queue_destroy_and_destroy_elements(queue_new, pcb_destroy);
     queue_destroy_and_destroy_elements(queue_ready, pcb_destroy);
-    queue_destroy_and_destroy_elements(queue_block, pcb_destroy);
+    list_destroy_and_destroy_elements(queue_block, pcb_destroy);
     queue_destroy_and_destroy_elements(queue_exit, pcb_destroy);
 }
 
@@ -67,6 +67,8 @@ void esperar_dispatch(void* arg){
     uint32_t CX = recibir_uint32_del_buffer(paquete);
     uint32_t DX = recibir_uint32_del_buffer(paquete);
     int motivo = recibir_int_del_buffer(paquete);
+    int io_id = recibir_int_del_buffer(paquete);
+    int io_tiempo = recibir_int_del_buffer(paquete);
 
     t_pcb* proceso = buscar_proceso_pid(pid);
     proceso->program_counter = pc;
@@ -75,11 +77,40 @@ void esperar_dispatch(void* arg){
     {
     case EXIT:
         cambiarEstado(proceso, EXIT);
+
+        wait_mutex(&mutex_queue_exit);
+        queue_push(queue_exit, proceso);
+        signal_mutex(&mutex_queue_exit);
+
         signal_sem(&proceso_terminado);
         break;
     case CAUSA_IO:
+
+        t_dispositivo_io* dispositivo = buscar_io(io_id);
+        if(dispositivo == NULL){
+            log_error(logger_kernel, "No se encontro la IO: %d", io_id);
+            break;
+        }
+        t_paquete* paquete = crear_paquete(PETICION_IO);
+        agregar_a_paquete(paquete, &pid, sizeof(int));
+        agregar_a_paquete(paquete, &io_tiempo,sizeof(int));
+        enviar_paquete(paquete, dispositivo->socket);
+
+        wait_mutex(&mutex_queue_block);
+        queue_push(list_get(queue_block, io_id), proceso);
+        signal_mutex(&mutex_queue_block);
+
+        cambiarEstado(proceso, BLOCKED);
+
+        eliminar_paquete(paquete);
         break;
+
+    case SIGNAL:
+        // ver que hacer con este motivo que envia cpu
+        break;
+    
     default:
+        log_error(logger_kernel, "Motivo de desalojo desconocido");
         break;
     }
     

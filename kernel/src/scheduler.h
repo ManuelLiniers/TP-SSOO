@@ -8,7 +8,7 @@
 
 extern t_queue* queue_new;
 extern t_queue* queue_ready;
-extern t_queue* queue_block;
+extern t_list* queue_block;
 extern t_queue* queue_exit;
 
 
