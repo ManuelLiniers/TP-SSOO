@@ -38,6 +38,8 @@ typedef struct {
     // Más campos opcionales: tamaño de memoria, registros, métricas, etc.
 } t_pcb;
 
+extern t_list* lista_procesos_ejecutando;
+
 
 /**
  * @brief Crea un PCB inicializado

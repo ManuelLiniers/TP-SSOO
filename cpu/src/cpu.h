@@ -26,18 +26,6 @@ typedef struct {
     uint32_t DX;
 } t_contexto;
 
-//para identificar casusas por desalojo
-typedef enum {
-    EXIT,
-    CAUSA_IO,
-    WAIT,
-    SIGNAL,
-    PAGE_FAULT,
-    INTERRUPCION,
-    DESALOJO_POR_QUANTUM
-} motivo_desalojo;
-
-
 // Funciones que vamos a implementar en etapas
 void atender_proceso_del_kernel(int fd, t_log* logger);
 void destruir_estructuras_del_contexto_actual(t_contexto* contexto);

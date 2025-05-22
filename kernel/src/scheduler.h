@@ -27,6 +27,7 @@ void esperar_devolucion_proceso(void* arg);
 void esperar_dispatch(void* arg);
 void esperar_interrupt(void* arg);
 void* planificar_corto_plazo(void* arg);
+t_pcb* buscar_proceso_pid(uint32_t pid);
 
 
 #endif // SCHEDULER_H_

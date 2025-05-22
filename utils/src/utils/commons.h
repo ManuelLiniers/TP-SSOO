@@ -22,4 +22,15 @@ typedef enum {
     MEMORIA
 } modulo_id;
 
+//para identificar casusas por desalojo
+typedef enum {
+    EXIT,
+    CAUSA_IO,
+    WAIT,
+    SIGNAL,
+    PAGE_FAULT,
+    INTERRUPCION,
+    DESALOJO_POR_QUANTUM
+} motivo_desalojo;
+
 #endif
