@@ -46,6 +46,10 @@ int main(int argc, char* argv[]) {
 
     enviar_mensaje(nombre_dispositivo, conexion_kernel);
     log_info(logger, "Me conecto al kernel como: %s", nombre_dispositivo);
+    hacer_handshake(logger, conexion_kernel);
+    t_paquete* paqueteID = crear_paquete(IDENTIFICACION);
+    memcpy(paqueteID->buffer->stream, argv[1], sizeof(char[20]));
+    enviar_paquete(paqueteID, conexion_kernel);
     procesar_io(conexion_kernel, logger);
     terminar_programa(logger, config, conexion_kernel);
     return 0;
