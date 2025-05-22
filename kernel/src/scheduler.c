@@ -2,7 +2,9 @@
 
 void cambiarEstado(t_pcb* proceso,t_estado EXEC);
 bool espacio_en_memoria(t_pcb* proceso);
-void poner_en_ejecucion(t_pcb* proceso);
+void poner_en_ejecucion(t_pcb* proceso, t_cpu** cpu_encargada);
+t_dispositivo_io* buscar_io(int id_io);
+t_cpu* buscar_cpu_libre(t_list* lista_cpus);
 
 // Definición de las colas globales
 t_queue* queue_new;
@@ -32,13 +34,14 @@ void* planificar_corto_plazo(void* arg){
         if(!queue_is_empty(queue_ready)){
             t_pcb* proceso = queue_pop(queue_ready);
             signal_mutex(&mutex_queue_ready);
-            poner_en_ejecucion(proceso);
+            t_cpu* cpu_encargada = malloc(sizeof(t_cpu));
+            poner_en_ejecucion(proceso, &cpu_encargada);
             cambiarEstado(proceso, EXEC);
             /* 
             crear hilo que quede a la espera de recibir dicho PID después de la ejecución? 
             */
-           /* pthread_t* esperar_devolucion = malloc(sizeof(pthread_t));
-           pthread_create(esperar_devolucion, NULL, (void*) esperar_devolucion_proceso, NULL); */
+           pthread_t* esperar_devolucion = malloc(sizeof(pthread_t));
+           pthread_create(esperar_devolucion, NULL, (void*) esperar_devolucion_proceso, (void*) cpu_encargada);
         }
         else{
             signal_mutex(&mutex_queue_ready);
@@ -47,11 +50,67 @@ void* planificar_corto_plazo(void* arg){
 
 }
 
-/* void esperar_devolucion_proceso(void* arg){
-    t_buffer* buffer = malloc(sizeof(t_buffer));
-    recv(socket, buffer, , NULL);
+void esperar_devolucion_proceso(void* arg){
+    pthread_t* dispatch = malloc(sizeof(pthread_t));
+    pthread_create(dispatch, NULL, (void*) esperar_dispatch, arg);
+    pthread_t* interrupt = malloc(sizeof(pthread_t));
+    pthread_create(interrupt, NULL, (void*) esperar_interrupt, arg);
+}
 
-} */
+void esperar_dispatch(void* arg){
+    t_cpu* cpu_encargada = (t_cpu*) arg;
+    t_buffer* buffer = malloc(sizeof(t_buffer)); 
+    recv(cpu_encargada->socket_dispatch, buffer, sizeof(int), 0); 
+    
+    /* 
+    
+    CORREGIR sizeof(int) 
+    
+    */
+
+    free(buffer);
+}
+
+void esperar_interrupt(void* arg){
+    t_cpu* cpu_encargada = (t_cpu*) arg;
+    t_buffer* buffer = malloc(sizeof(t_buffer)); 
+    recv(cpu_encargada->socket_interrupt, buffer, sizeof(int), 0);
+    
+    /* 
+    
+    CORREGIR sizeof(int) 
+    
+    */
+
+    int* pid_proceso;
+    memcpy(buffer->stream, (void*) pid_proceso, sizeof(int));
+    int* tiempo_proceso;
+    memcpy(buffer->stream, (void*) tiempo_proceso, sizeof(int));
+    int* id_io_a_usar;
+    memcpy(buffer->stream, (void*) id_io_a_usar, sizeof(int));
+    int id_io = *id_io_a_usar;
+
+    t_dispositivo_io* dispositivo = buscar_io(id_io);
+    if(dispositivo == NULL){
+        log_error(logger_kernel, "No se encontro la IO: %d", id_io);
+    }
+    t_paquete* paquete = crear_paquete(PETICION_IO);
+    agregar_a_paquete(paquete, pid_proceso, sizeof(int));
+    agregar_a_paquete(paquete, tiempo_proceso,sizeof(int));
+    // send();
+    free(buffer);
+}
+
+t_dispositivo_io* buscar_io(int id_io){
+    for(int i = 0; i<list_size(lista_dispositivos_io); i++){
+        t_dispositivo_io* actual = (t_dispositivo_io*) list_get(lista_dispositivos_io, i);
+        if(actual->id == id_io){
+            return actual;
+        }
+    }
+    return NULL;
+}
+
 
 void* planificar_largo_plazo(void* arg){
 	while(1){
@@ -124,8 +183,24 @@ void cambiarEstado(t_pcb* proceso, t_estado estado){
     list_add(proceso->metricas_tiempo, metrica);
 }
 
-void poner_en_ejecucion(t_pcb* proceso){
+void poner_en_ejecucion(t_pcb* proceso, t_cpu** cpu_encargada){
 
+    t_cpu* cpu_libre = buscar_cpu_libre(lista_cpus);
     // mandar a alguna cpu dependiendo de cual este libre
 
+    //
+
+    *cpu_encargada = cpu_libre;
+
+}
+
+t_cpu* buscar_cpu_libre(t_list* lista_cpus){
+    for(int i = 0; i<list_size(lista_cpus); i++){
+        t_cpu* actual = list_get(lista_cpus, i);
+        if(actual->esta_libre){
+            return actual;
+        }
+    }
+    log_error(logger_kernel, "No se hay CPUs libres");
+    return NULL;
 }

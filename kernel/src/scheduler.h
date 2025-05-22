@@ -23,6 +23,9 @@ void scheduler_init(void);
 void scheduler_destroy(void);
 
 void* planificar_largo_plazo(void* arg);
+void esperar_devolucion_proceso(void* arg);
+void esperar_dispatch(void* arg);
+void esperar_interrupt(void* arg);
 void* planificar_corto_plazo(void* arg);
 
 

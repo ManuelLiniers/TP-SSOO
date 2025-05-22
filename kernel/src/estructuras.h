@@ -9,7 +9,7 @@
 int pid_incremental = 0;
 int id_io_incremental = 0;
 
-extern t_list* dispositivos_io;
+extern t_list* lista_dispositivos_io;
 void iniciar_dispositivos_io();
 extern t_list* lista_cpus;
 void iniciar_cpus();
@@ -60,17 +60,17 @@ typedef struct{
     int socket_dispatch;
     int socket_interrupt;
     bool esta_libre;
-} cpu;
+} t_cpu;
 
 typedef struct{
     char nombre[20];
     int id;
     int socket;
-} dispositivo_io;
+} t_dispositivo_io;
 
 typedef struct{
     t_pcb pid;
     int tiempo;
-} tiempo_en_io ;
+} tiempo_en_io;
 
 #endif // PCB_H_

@@ -2,7 +2,7 @@
 #include <stdlib.h>
 
 void iniciar_dispositivos_io(){
-    dispositivos_io = list_create();
+    lista_dispositivos_io = list_create();
 }
 
 void iniciar_cpus(){

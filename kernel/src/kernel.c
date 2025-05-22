@@ -99,10 +99,16 @@ void atender_dispatch(void* arg){
 		case HANDSHAKE:
 		int respuesta = 1;
 			send(socket_fd, &respuesta, sizeof(int), 0);
-
+			int code_op = recibir_operacion(socket_fd);
+			if(code_op == IDENTIFICACION){
 				t_buffer* buffer = recibir_paquete(socket_fd);
-				identificar_cpu(buffer, socket_fd, modificar_dispatch);
+				identificar_cpu(buffer, socket_fd, modificar_interrupt);
 				eliminar_buffer(buffer);
+			}
+			else{
+				log_error(logger_kernel, "Esperaba IDENTIFICACION después de HANDSHAKE");
+				close(socket_fd);
+			}
 			break; 
 		case -1:
 			log_error(logger_kernel, "Desconexion en el HANDSHAKE");
@@ -113,13 +119,13 @@ void atender_dispatch(void* arg){
 	}
 }
 
-bool comparar_cpu_id(cpu* existente, cpu* buscada){
+bool comparar_cpu_id(t_cpu* existente, t_cpu* buscada){
 	return strcmp(existente->cpu_id, buscada->cpu_id) == 0;
 }
 
-cpu* cpu_ya_existe(t_list* lista, cpu* buscada){
+t_cpu* cpu_ya_existe(t_list* lista, t_cpu* buscada){
 	for(int i = 0; i<list_size(lista); i++){
-		cpu* actual = (cpu*) list_get(lista, i);
+		t_cpu* actual = (t_cpu*) list_get(lista, i);
 		if(comparar_cpu_id(actual, buscada)){
 			return actual;
 		}
@@ -127,10 +133,10 @@ cpu* cpu_ya_existe(t_list* lista, cpu* buscada){
 	return NULL;
 }
 
-void identificar_cpu(t_buffer* buffer, int socket_fd, void (*funcion)(cpu*, int)){
-	cpu* cpu_nueva = malloc(sizeof(cpu));
+void identificar_cpu(t_buffer* buffer, int socket_fd, void (*funcion)(t_cpu*, int)){
+	t_cpu* cpu_nueva = malloc(sizeof(t_cpu));
 	strcpy(cpu_nueva->cpu_id, recibir_string_del_buffer(buffer));
-	cpu* encontrada = cpu_ya_existe(lista_cpus, cpu_nueva);
+	t_cpu* encontrada = cpu_ya_existe(lista_cpus, cpu_nueva);
 	if(encontrada == NULL){
 		funcion(cpu_nueva, socket_fd);
 		list_add(lista_cpus, cpu_nueva);
@@ -141,7 +147,7 @@ void identificar_cpu(t_buffer* buffer, int socket_fd, void (*funcion)(cpu*, int)
 	}
 }
 
-void modificar_dispatch(cpu* una_cpu, int socket_fd){
+void modificar_dispatch(t_cpu* una_cpu, int socket_fd){
 	una_cpu->socket_dispatch = socket_fd;
 }
 
@@ -172,10 +178,16 @@ void atender_interrupt(void* arg){
 		case HANDSHAKE:
 		int respuesta = 1;
 			send(socket_fd, &respuesta, sizeof(int), 0);
-
+			int code_op = recibir_operacion(socket_fd);
+			if(code_op == IDENTIFICACION){
 				t_buffer* buffer = recibir_paquete(socket_fd);
 				identificar_cpu(buffer, socket_fd, modificar_interrupt);
 				eliminar_buffer(buffer);
+			}
+			else{
+				log_error(logger_kernel, "Esperaba IDENTIFICACION después de HANDSHAKE");
+				close(socket_fd);
+			}
 			break; 
 		case -1:
 			log_error(logger_kernel, "Desconexion en el HANDSHAKE");
@@ -186,7 +198,7 @@ void atender_interrupt(void* arg){
 	}
 }
 
-void modificar_interrupt(cpu* una_cpu, int socket_fd){
+void modificar_interrupt(t_cpu* una_cpu, int socket_fd){
 	una_cpu->socket_interrupt = socket_fd;
 }
 
@@ -237,10 +249,10 @@ void atender_io(void* arg){
 }
 
 void identificar_io(t_buffer* unBuffer, int socket_fd){
-	dispositivo_io* dispositivo = malloc(sizeof(dispositivo_io));
+	t_dispositivo_io* dispositivo = malloc(sizeof(t_dispositivo_io));
 	strcpy(dispositivo->nombre, recibir_string_del_buffer(unBuffer));
 	dispositivo->id = id_io_incremental;
 	id_io_incremental++;
 	dispositivo->socket = socket_fd;
-	list_add(dispositivos_io, dispositivo);
+	list_add(lista_dispositivos_io, dispositivo);
 }
