@@ -74,7 +74,7 @@ void iniciar_cpu_dispatch(void* arg){
 }
 
 void iniciar_cpu_interrupt(void* arg){
-	
+
 }
 
 void iniciar_servidor_io(void* arg){
@@ -105,15 +105,9 @@ void atender_io(void* arg){
 		int respuesta = 1;
 			send(socket_fd, &respuesta, sizeof(int), 0);
 
-			int op_code = recibir_operacion(socket_fd);
-			if (op_code == IDENTIFICACION) {
 				t_buffer* buffer = recibir_paquete(socket_fd);
 				identificar_io(buffer, socket_fd);
 				eliminar_buffer(buffer);
-			} else {
-				log_error(logger_kernel, "Esperaba IDENTIFICACION después de HANDSHAKE");
-				close(socket_fd);
-			}
 			break; 
 		case -1:
 			log_error(logger_kernel, "Desconexion en el HANDSHAKE");
@@ -129,5 +123,6 @@ void identificar_io(t_buffer* unBuffer,int socket_fd){
 	strcpy(dispositivo->nombre, recibir_string_del_buffer(unBuffer));
 	dispositivo->id = id_io_incremental;
 	id_io_incremental++;
+	dispositivo->socket = socket_fd;
 	list_add(dispositivos_io, dispositivo);
 }

@@ -64,6 +64,7 @@ void crear_proceso(char* instrucciones, char* tamanio_proceso);
 typedef struct{
     char nombre[20];
     int id;
+    int socket;
 } dispositivo_io;
 
 
