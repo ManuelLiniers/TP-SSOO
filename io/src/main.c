@@ -50,7 +50,8 @@ int main(int argc, char* argv[]) {
     t_paquete* paqueteID = crear_paquete(IDENTIFICACION);
     memcpy(paqueteID->buffer->stream, argv[1], sizeof(char[20]));
     enviar_paquete(paqueteID, conexion_kernel);
-    procesar_io(conexion_kernel, logger);
+    int operacion = recibir_operacion(conexion_kernel);
+    procesar_io(conexion_kernel, logger, operacion);
     terminar_programa(logger, config, conexion_kernel);
     return 0;
 }
@@ -66,9 +67,8 @@ t_config* iniciar_config(void) {
 }
 
 // 🟦 Recibe y procesa peticiones de IO desde el Kernel
-void procesar_io(int socket_kernel, t_log* logger) {
+void procesar_io(int socket_kernel, t_log* logger, int codigo_operacion) {
     while (1) {
-        op_code codigo_operacion;
         if (recv(socket_kernel, &codigo_operacion, sizeof(op_code), MSG_WAITALL) <= 0) {
             log_error(logger, "Error al recibir código de operación del Kernel");
             break;
