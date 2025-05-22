@@ -169,7 +169,10 @@ bool espacio_en_memoria(t_pcb* proceso){
     // falta recibir y analizar respuesta de memoria
 
     t_buffer* buffer = malloc(sizeof(t_buffer));
-    int resultado = recv(conexion, buffer, sizeof(int), 0);
+    recv(conexion, buffer, sizeof(int), 0);
+    int* tiene_espacio = malloc(sizeof(int));
+    memcpy(buffer, (void*) tiene_espacio, sizeof(int));
+    int resultado = *tiene_espacio;
     free(buffer);
     return resultado==OK;
 }
