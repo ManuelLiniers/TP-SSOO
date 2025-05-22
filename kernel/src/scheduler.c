@@ -82,11 +82,11 @@ void esperar_interrupt(void* arg){
     
     */
 
-    int* pid_proceso;
+    int* pid_proceso = malloc(sizeof(int));
     memcpy(buffer->stream, (void*) pid_proceso, sizeof(int));
-    int* tiempo_proceso;
+    int* tiempo_proceso = malloc(sizeof(int));
     memcpy(buffer->stream, (void*) tiempo_proceso, sizeof(int));
-    int* id_io_a_usar;
+    int* id_io_a_usar = malloc(sizeof(int));
     memcpy(buffer->stream, (void*) id_io_a_usar, sizeof(int));
     int id_io = *id_io_a_usar;
 
