@@ -100,6 +100,9 @@ void esperar_interrupt(void* arg){
     enviar_paquete(paquete, dispositivo->socket);
     eliminar_paquete(paquete);
     free(buffer);
+    free(pid_proceso);
+    free(tiempo_proceso);
+    free(id_io_a_usar);
 }
 
 t_dispositivo_io* buscar_io(int id_io){
