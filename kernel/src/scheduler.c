@@ -97,7 +97,8 @@ void esperar_interrupt(void* arg){
     t_paquete* paquete = crear_paquete(PETICION_IO);
     agregar_a_paquete(paquete, pid_proceso, sizeof(int));
     agregar_a_paquete(paquete, tiempo_proceso,sizeof(int));
-    // send();
+    enviar_paquete(paquete, dispositivo->socket);
+    eliminar_paquete(paquete);
     free(buffer);
 }
 
@@ -153,6 +154,7 @@ bool espacio_en_memoria(t_pcb* proceso){
     t_paquete* paqueteID = crear_paquete(IDENTIFICACION);
     agregar_a_paquete(paqueteID, KERNEL, sizeof(op_code));
     enviar_paquete(paqueteID, conexion);
+    eliminar_paquete(paqueteID);
 
     t_paquete* paqueteInfo = crear_paquete(INICIAR_PROCESO);
     agregar_a_paquete(paqueteInfo, &proceso->pid, sizeof(int));
@@ -160,6 +162,7 @@ bool espacio_en_memoria(t_pcb* proceso){
     agregar_a_paquete(paqueteInfo, &proceso->instrucciones, sizeof(char*));
     enviar_paquete(paqueteInfo, conexion);
 
+    eliminar_paquete(paqueteInfo);
     // falta recibir y analizar respuesta de memoria
 
     t_buffer* buffer = malloc(sizeof(t_buffer));
@@ -188,8 +191,13 @@ void poner_en_ejecucion(t_pcb* proceso, t_cpu** cpu_encargada){
     t_cpu* cpu_libre = buscar_cpu_libre(lista_cpus);
     // mandar a alguna cpu dependiendo de cual este libre
 
-    //
+    t_paquete* paquete = crear_paquete(CONTEXTO_PROCESO);
+    agregar_a_paquete(paquete, &proceso->pid, sizeof(int));
+    agregar_a_paquete(paquete, &proceso->program_counter, sizeof(int));
+    enviar_paquete(paquete, cpu_libre->socket_dispatch);
+    eliminar_paquete(paquete);
 
+    //
     *cpu_encargada = cpu_libre;
 
 }
