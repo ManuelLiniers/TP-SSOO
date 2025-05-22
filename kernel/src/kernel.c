@@ -217,11 +217,16 @@ void atender_io(void* arg){
 		case HANDSHAKE:
 		int respuesta = 1;
 			send(socket_fd, &respuesta, sizeof(int), 0);
-
+			int code_op = recibir_operacion(socket_fd);
+			if(code_op==IDENTIFICACION){
 				t_buffer* buffer = recibir_paquete(socket_fd);
 				identificar_io(buffer, socket_fd);
 				eliminar_buffer(buffer);
-			break; 
+			}
+			else{
+				log_error(logger_kernel, "Esperaba IDENTIFICACION después de HANDSHAKE");
+				close(socket_fd);
+			}
 		case -1:
 			log_error(logger_kernel, "Desconexion en el HANDSHAKE");
 			break;
