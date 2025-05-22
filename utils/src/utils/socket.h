@@ -70,4 +70,6 @@ void* recibir_informacion_del_buffer(t_buffer* unBuffer, size_t tamanio);
 void obtener_del_buffer(t_buffer *buffer, void *dest, int size);
 void eliminar_buffer(t_buffer* unBuffer);
 
+void hacer_handshake(t_log* logger, int conexion);
+
 #endif /* INCLUDE_SOCKET_H_ */

@@ -61,6 +61,9 @@ void inicializar_planificacion(){
 
 void inicializar_servidores(){
 	iniciar_dispositivos_io();
+	iniciar_cpus();
+
+
 	pthread_t* servidor_io = malloc(sizeof(pthread_t));
 	pthread_create(servidor_io, NULL, (void*) iniciar_servidor_io, NULL);
 	pthread_t* cpu_interrupt = malloc(sizeof(pthread_t));
@@ -70,11 +73,121 @@ void inicializar_servidores(){
 }
 
 void iniciar_cpu_dispatch(void* arg){
+	int server_fd_kernel_dispatch = iniciar_servidor(logger_kernel, NULL, puerto_dispatch);
 
+	while (server_fd_kernel_dispatch != -1)
+	{
+		int cliente_fd = esperar_cliente(logger_kernel, "Kernel", server_fd_kernel_dispatch);
+		if(cliente_fd != -1){
+			pthread_t hilo_cliente;
+			int *args = malloc(sizeof(int));
+			*args = cliente_fd;
+			pthread_create(&hilo_cliente, NULL, (void*) atender_dispatch, args);
+			log_info(logger_kernel, "[THREAD] Creo hilo para atender dispatch");
+			pthread_detach(hilo_cliente);
+		}
+	}
+}
+
+void atender_dispatch(void* arg){
+	int* io_socket = (int*) arg;
+	int socket_fd = *io_socket;
+	free(arg);
+	
+	int code_op = recibir_operacion(socket_fd);
+	switch(code_op){
+		case HANDSHAKE:
+		int respuesta = 1;
+			send(socket_fd, &respuesta, sizeof(int), 0);
+
+				t_buffer* buffer = recibir_paquete(socket_fd);
+				identificar_cpu(buffer, socket_fd, modificar_dispatch);
+				eliminar_buffer(buffer);
+			break; 
+		case -1:
+			log_error(logger_kernel, "Desconexion en el HANDSHAKE");
+			break;
+		default:
+			log_error(logger_kernel, "Desconexion en el HANDSHAKE: Operacion Desconocida");
+			break;
+	}
+}
+
+bool comparar_cpu_id(cpu* existente, cpu* buscada){
+	return strcmp(existente->cpu_id, buscada->cpu_id) == 0;
+}
+
+cpu* cpu_ya_existe(t_list* lista, cpu* buscada){
+	for(int i = 0; i<list_size(lista); i++){
+		cpu* actual = (cpu*) list_get(lista, i);
+		if(comparar_cpu_id(actual, buscada)){
+			return actual;
+		}
+	}
+	return NULL;
+}
+
+void identificar_cpu(t_buffer* buffer, int socket_fd, void (*funcion)(cpu*, int)){
+	cpu* cpu_nueva = malloc(sizeof(cpu));
+	strcpy(cpu_nueva->cpu_id, recibir_string_del_buffer(buffer));
+	cpu* encontrada = cpu_ya_existe(lista_cpus, cpu_nueva);
+	if(encontrada == NULL){
+		funcion(cpu_nueva, socket_fd);
+		list_add(lista_cpus, cpu_nueva);
+	}
+	else{ 
+		funcion(encontrada, socket_fd);
+		free(cpu_nueva);
+	}
+}
+
+void modificar_dispatch(cpu* una_cpu, int socket_fd){
+	una_cpu->socket_dispatch = socket_fd;
 }
 
 void iniciar_cpu_interrupt(void* arg){
+	int server_fd_kernel_interrupt = iniciar_servidor(logger_kernel, NULL, puerto_interrupt);
 
+	while (server_fd_kernel_interrupt != -1)
+	{
+		int cliente_fd = esperar_cliente(logger_kernel, "Kernel", server_fd_kernel_interrupt);
+		if(cliente_fd != -1){
+			pthread_t hilo_cliente;
+			int *args = malloc(sizeof(int));
+			*args = cliente_fd;
+			pthread_create(&hilo_cliente, NULL, (void*) atender_interrupt, args);
+			log_info(logger_kernel, "[THREAD] Creo hilo para atender dispatch");
+			pthread_detach(hilo_cliente);
+		}
+	}
+}
+
+void atender_interrupt(void* arg){
+	int* io_socket = (int*) arg;
+	int socket_fd = *io_socket;
+	free(arg);
+	
+	int code_op = recibir_operacion(socket_fd);
+	switch(code_op){
+		case HANDSHAKE:
+		int respuesta = 1;
+			send(socket_fd, &respuesta, sizeof(int), 0);
+
+				t_buffer* buffer = recibir_paquete(socket_fd);
+				identificar_cpu(buffer, socket_fd, modificar_interrupt);
+				eliminar_buffer(buffer);
+			break; 
+		case -1:
+			log_error(logger_kernel, "Desconexion en el HANDSHAKE");
+			break;
+		default:
+			log_error(logger_kernel, "Desconexion en el HANDSHAKE: Operacion Desconocida");
+			break;
+	}
+}
+
+void modificar_interrupt(cpu* una_cpu, int socket_fd){
+	una_cpu->socket_interrupt = socket_fd;
 }
 
 void iniciar_servidor_io(void* arg){
@@ -118,7 +231,7 @@ void atender_io(void* arg){
 	}
 }
 
-void identificar_io(t_buffer* unBuffer,int socket_fd){
+void identificar_io(t_buffer* unBuffer, int socket_fd){
 	dispositivo_io* dispositivo = malloc(sizeof(dispositivo_io));
 	strcpy(dispositivo->nombre, recibir_string_del_buffer(unBuffer));
 	dispositivo->id = id_io_incremental;

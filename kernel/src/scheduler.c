@@ -2,6 +2,7 @@
 
 void cambiarEstado(t_pcb* proceso,t_estado EXEC);
 bool espacio_en_memoria(t_pcb* proceso);
+void poner_en_ejecucion(t_pcb* proceso);
 
 // Definición de las colas globales
 t_queue* queue_new;
@@ -33,16 +34,24 @@ void* planificar_corto_plazo(void* arg){
             signal_mutex(&mutex_queue_ready);
             poner_en_ejecucion(proceso);
             cambiarEstado(proceso, EXEC);
+            /* 
+            crear hilo que quede a la espera de recibir dicho PID después de la ejecución? 
+            */
+           /* pthread_t* esperar_devolucion = malloc(sizeof(pthread_t));
+           pthread_create(esperar_devolucion, NULL, (void*) esperar_devolucion_proceso, NULL); */
         }
         else{
             signal_mutex(&mutex_queue_ready);
         }
-
-        // send(cliente_dispatch, proceso->pid, 4, 0);
-        // send(cliente_dispatch, proceso->program_counter, 4, 0);
 	}
 
 }
+
+/* void esperar_devolucion_proceso(void* arg){
+    t_buffer* buffer = malloc(sizeof(t_buffer));
+    recv(socket, buffer, , NULL);
+
+} */
 
 void* planificar_largo_plazo(void* arg){
 	while(1){
@@ -80,7 +89,7 @@ void* planificar_largo_plazo(void* arg){
 
 bool espacio_en_memoria(t_pcb* proceso){
     int conexion = crear_conexion_memoria();
-    hacer_handshake(conexion);
+    hacer_handshake(logger_kernel, conexion);
 
     t_paquete* paqueteID = crear_paquete(IDENTIFICACION);
     agregar_a_paquete(paqueteID, KERNEL, sizeof(op_code));
@@ -100,24 +109,19 @@ bool espacio_en_memoria(t_pcb* proceso){
     return resultado==OK;
 }
 
-void hacer_handshake(int conexion){
-    t_paquete* paquete = crear_paquete(HANDSHAKE);
-    enviar_paquete(paquete, conexion);
-    t_buffer* buffer = malloc(sizeof(t_buffer));
-    int resultado = recv(conexion, buffer, sizeof(int), 0);
-    if(resultado != 1){
-        log_error(logger_kernel, "Error al hacer el handshake");
-    }
-}
 
 void cambiarEstado(t_pcb* proceso, t_estado estado){
 
     proceso->estado = estado;
-    t_metricas_cant* metricas = proceso->metricas_estado;
-    for(; metricas->estado != estado ; metricas = metricas->sig);
-    metricas->cant++;
+    proceso->metricas_estado[id_estado(estado)]++;
 
     // falta las metricas del tiempo
+
+    t_metricas_estado_tiempo* metrica = malloc(sizeof(t_metricas_estado_tiempo));
+    metrica->estado = estado;
+    // metrica->tiempo_inicio = tiempo_ahora;
+
+    list_add(proceso->metricas_tiempo, metrica);
 }
 
 void poner_en_ejecucion(t_pcb* proceso){

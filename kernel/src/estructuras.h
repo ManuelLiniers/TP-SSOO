@@ -11,26 +11,20 @@ int id_io_incremental = 0;
 
 extern t_list* dispositivos_io;
 void iniciar_dispositivos_io();
+extern t_list* lista_cpus;
+void iniciar_cpus();
 
 // Estados posibles de un proceso
 typedef enum { NEW, READY, EXEC, BLOCKED, EXIT } t_estado;
 
-t_estado posibles_estados[5] = {NEW, READY, EXEC, BLOCKED, EXIT};
+int id_estado(t_estado estado);
 
-struct t_metricas_cant{
-    t_estado estado;
-    int cant;
-    struct t_metricas_cant* sig;
-}; 
-typedef struct t_metricas_cant t_metricas_cant;
 
-struct t_metricas_estado_tiempo{
+typedef struct{
     t_estado estado;
     int tiempo_inicio;
     int tiempo_fin;
-    struct t_metricas_estado_tiempo* sig;
-};
-typedef struct t_metricas_estado_tiempo t_metricas_estado_tiempo;
+ } t_metricas_estado_tiempo;
 
 // Control Block de un proceso
 typedef struct {
@@ -39,8 +33,8 @@ typedef struct {
     char* instrucciones;      // Lista de instrucciones (strings o structs)
     t_estado estado;            // Estado actual del proceso
     int tamanio_proceso; 
-    t_metricas_cant* metricas_estado;         // Lista de veces que estuvo en cada estado
-    t_metricas_estado_tiempo* metricas_tiempo;  // Lista de tiempo que estuvo en cada estado
+    int metricas_estado[5];         // Lista de veces que estuvo en cada estado
+    t_list* metricas_tiempo;  // Lista de tiempo que estuvo en cada estado
     // Más campos opcionales: tamaño de memoria, registros, métricas, etc.
 } t_pcb;
 
@@ -62,11 +56,17 @@ void pcb_destroy(void* pcb_void);
 void crear_proceso(char* instrucciones, char* tamanio_proceso);
 
 typedef struct{
+    char cpu_id[20];
+    int socket_dispatch;
+    int socket_interrupt;
+    bool esta_libre;
+} cpu;
+
+typedef struct{
     char nombre[20];
     int id;
     int socket;
 } dispositivo_io;
-
 
 typedef struct{
     t_pcb pid;

@@ -5,17 +5,8 @@ void iniciar_dispositivos_io(){
     dispositivos_io = list_create();
 }
 
-void inicializarMetricas(t_metricas_cant** metricas){
-    t_metricas_cant* sig = NULL;
-    for(int i = 4 ; i>=0 ; i--){
-        t_metricas_cant* aux = malloc(sizeof(t_metricas_cant));
-        t_estado e = posibles_estados[i];
-        aux->estado = e;
-        aux->cant = 0;
-        aux->sig = sig;
-        sig = aux;
-    }
-    *metricas = sig;
+void iniciar_cpus(){
+    lista_cpus = list_create();
 }
 
 // Se crea un proceso y se pushea a new
@@ -40,7 +31,9 @@ t_pcb* pcb_create() {
 
     pid_incremental++;
 
-    inicializarMetricas(&pcb->metricas_estado);
+    int metricas_estado[5] = {0, 0, 0, 0, 0};
+    memcpy(pcb->metricas_estado, metricas_estado, sizeof(int[5]));
+    pcb->metricas_tiempo = list_create();
 
     /* tengo una idea para implementar las metricas que capaz es mas simple
     no lo pense tanto en codigo pero capaz que sea un vector con 5 espacios
@@ -52,6 +45,30 @@ t_pcb* pcb_create() {
     return pcb;
 }
 
+
+int id_estado(t_estado estado){
+    switch (estado)
+    {
+    case NEW:
+        return 0;
+        break;
+    case READY:
+        return 1;
+    break;
+    case EXEC:
+        return 2;
+        break;
+    case BLOCKED:
+        return 3;
+        break;
+    case EXIT:
+        return 4;
+        break;
+    default:
+        return -1;
+        break;
+    }
+}
 
 
 // Destruyo el PCB y libero lista de inst
