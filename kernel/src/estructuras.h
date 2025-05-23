@@ -35,6 +35,7 @@ typedef struct {
     int tamanio_proceso; 
     int metricas_estado[5];         // Lista de veces que estuvo en cada estado
     t_list* metricas_tiempo;  // Lista de tiempo que estuvo en cada estado
+    int registros[4];
     // Más campos opcionales: tamaño de memoria, registros, métricas, etc.
 } t_pcb;
 

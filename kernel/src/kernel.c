@@ -26,9 +26,9 @@ void iniciar_config(){
 
 
 void inicializar_kernel(char* instrucciones, char* tamanio_proceso){
+	logger_kernel = log_create("kernel.log", "[Kernel]", 1, LOG_LEVEL_INFO);
     iniciar_config();
 	iniciar_semaforos();
-	logger_kernel = log_create("kernel.log", "[Kernel]", 1, LOG_LEVEL_INFO);
 	
 	ip_memoria = config_get_string_value(config_kernel, "IP_MEMORIA");
     puerto_memoria = config_get_string_value(config_kernel, "PUERTO_MEMORIA");

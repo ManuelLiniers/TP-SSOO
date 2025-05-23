@@ -289,8 +289,10 @@ void hacer_handshake(t_log* logger, int conexion){
     t_paquete* paquete = crear_paquete(HANDSHAKE);
     enviar_paquete(paquete, conexion);
     t_buffer* buffer = malloc(sizeof(t_buffer));
-    int resultado = recv(conexion, buffer, sizeof(int), 0);
+    recv(conexion, buffer, sizeof(int), 0);
+	int resultado = recibir_int_del_buffer(buffer);
     if(resultado != 1){
         log_error(logger, "Error al hacer el handshake");
     }
+	free(buffer);
 }

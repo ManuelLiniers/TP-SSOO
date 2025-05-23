@@ -1,5 +1,7 @@
 #include "scheduler.h"
 
+t_pcb* buscar_proceso_pid(uint32_t pid);
+
 void cambiarEstado(t_pcb* proceso,t_estado EXEC);
 bool espacio_en_memoria(t_pcb* proceso);
 void poner_en_ejecucion(t_pcb* proceso, t_cpu** cpu_encargada);
@@ -61,21 +63,20 @@ void esperar_dispatch(void* arg){
     t_buffer* paquete = recibir_paquete(cpu_encargada->socket_dispatch);
 
     uint32_t pid = recibir_uint32_del_buffer(paquete);
+    t_pcb* proceso = buscar_proceso_pid(pid);
     uint32_t pc = recibir_uint32_del_buffer(paquete);
-    uint32_t AX = recibir_uint32_del_buffer(paquete);
-    uint32_t BX = recibir_uint32_del_buffer(paquete);
-    uint32_t CX = recibir_uint32_del_buffer(paquete);
-    uint32_t DX = recibir_uint32_del_buffer(paquete);
+    for(int i=0; i<4; i++){
+        proceso->registros[i] = recibir_uint32_del_buffer(paquete);
+    };
     int motivo = recibir_int_del_buffer(paquete);
     int io_id = recibir_int_del_buffer(paquete);
     int io_tiempo = recibir_int_del_buffer(paquete);
 
-    t_pcb* proceso = buscar_proceso_pid(pid);
     proceso->program_counter = pc;
     
     switch (motivo)
     {
-    case EXIT:
+    case FINALIZADO:
         cambiarEstado(proceso, EXIT);
 
         wait_mutex(&mutex_queue_exit);

@@ -24,7 +24,7 @@ typedef enum {
 
 //para identificar casusas por desalojo
 typedef enum {
-    EXIT,
+    FINALIZADO,
     CAUSA_IO,
     WAIT,
     SIGNAL,

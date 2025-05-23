@@ -28,6 +28,8 @@ t_pcb* pcb_create() {
     pcb->pid = pid_incremental;
     pcb->program_counter = 0;
     pcb->estado = NEW;
+    int registros[4] = {0, 0, 0, 0};
+    memcpy(pcb->registros, registros, sizeof(int[4]));
 
     pid_incremental++;
 
