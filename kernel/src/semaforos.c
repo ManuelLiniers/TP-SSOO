@@ -1,5 +1,16 @@
 #include "semaforos.h"
 
+// Mutexes
+pthread_mutex_t mutex_queue_new;
+pthread_mutex_t mutex_queue_ready;
+pthread_mutex_t mutex_queue_block;
+pthread_mutex_t mutex_queue_exit;
+
+// Semáforos
+sem_t nuevo_proceso;
+sem_t proceso_terminado;
+sem_t proceso_ready;
+
 
 // wait y signal para semaforos
 void wait_mutex(pthread_mutex_t *mutex){

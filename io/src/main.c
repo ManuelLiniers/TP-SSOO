@@ -48,7 +48,8 @@ int main(int argc, char* argv[]) {
     log_info(logger, "Me conecto al kernel como: %s", nombre_dispositivo);
     hacer_handshake(logger, conexion_kernel);
     t_paquete* paqueteID = crear_paquete(IDENTIFICACION);
-    memcpy(paqueteID->buffer->stream, argv[1], sizeof(char[20]));
+    // memcpy(paqueteID->buffer->stream, argv[1], sizeof(char[20]));
+    agregar_a_paquete(paqueteID, nombre_dispositivo, sizeof(char[20]));
     enviar_paquete(paqueteID, conexion_kernel);
     int operacion = recibir_operacion(conexion_kernel);
     procesar_io(conexion_kernel, logger, operacion);

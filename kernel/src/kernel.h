@@ -3,8 +3,8 @@
 
 #include "utils/commons.h"
 #include "estructuras.h"
-#include "scheduler.h"
-#include "semaforos.h"
+#include <scheduler.h>
+#include <semaforos.h>
 
 void iniciar_config();
 void iniciar_conexion();

@@ -38,7 +38,7 @@ int iniciar_servidor(t_log* logger, char* ip, char* puerto)
 	}
 
     freeaddrinfo(server_info);
-    log_info(logger, "Listo para escuchar");
+    // log_info(logger, "Listo para escuchar");
 	
 	return server_socket;
 }

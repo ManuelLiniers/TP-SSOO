@@ -6,8 +6,8 @@
 #include "scheduler.h"
 #include "semaforos.h"
 
-int pid_incremental = 0;
-int id_io_incremental = 0;
+extern int pid_incremental;
+extern int id_io_incremental;
 
 extern t_list* lista_dispositivos_io;
 void iniciar_dispositivos_io();

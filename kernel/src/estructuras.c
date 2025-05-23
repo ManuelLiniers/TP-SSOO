@@ -1,6 +1,12 @@
 #include "estructuras.h"
 #include <stdlib.h>
 
+int pid_incremental = 0;
+int id_io_incremental = 0;
+t_list* lista_dispositivos_io;
+t_list* lista_cpus;
+t_list* lista_procesos_ejecutando;
+
 void iniciar_dispositivos_io(){
     lista_dispositivos_io = list_create();
 }

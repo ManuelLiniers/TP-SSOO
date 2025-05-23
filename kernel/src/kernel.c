@@ -1,5 +1,8 @@
 #include "kernel.h"
 
+pthread_t servidor_io;
+pthread_t cpu_dispatch;
+
 int main(int argc, char* argv[]) {
     inicializar_kernel();
 	inicializar_planificacion();
@@ -37,6 +40,8 @@ void inicializar_kernel(char* instrucciones, char* tamanio_proceso){
 	puerto_dispatch = config_get_string_value(config_kernel, "PUERTO_ESCUCHA_DISPATCH");
 	puerto_interrupt = config_get_string_value(config_kernel, "PUERTO_ESCUCHA_INTERRUPT");
 	puerto_io = config_get_string_value(config_kernel, "PUERTO_ESCUCHA_IO");
+
+	log_info(logger_kernel, "kernel inicializado");
     
 	// int conexion = crear_conexion(logger_kernel, ip_memoria, puerto_memoria);
 	// enviar_mensaje("Conexion desde kernel", conexion);
@@ -57,26 +62,36 @@ void inicializar_planificacion(){
 
 	pthread_t* planificador_largo_plazo = malloc(sizeof(pthread_t));
 	pthread_create(planificador_largo_plazo, NULL, planificar_largo_plazo, NULL);
+
+	log_info(logger_kernel, "planificacion inicializada");
 }
 
 void inicializar_servidores(){
 	iniciar_dispositivos_io();
 	iniciar_cpus();
 
+	pthread_create(&cpu_dispatch, NULL, (void*) iniciar_cpu_dispatch, NULL);
+	pthread_detach(cpu_dispatch);
+	
+	pthread_create(&servidor_io, NULL, (void*) iniciar_servidor_io, NULL);
+	pthread_detach(servidor_io);
 
-	pthread_t* servidor_io = malloc(sizeof(pthread_t));
-	pthread_create(servidor_io, NULL, (void*) iniciar_servidor_io, NULL);
-	pthread_t* cpu_interrupt = malloc(sizeof(pthread_t));
-	pthread_create(cpu_interrupt, NULL, (void*) iniciar_cpu_interrupt, NULL);
-	pthread_t* cpu_dispatch = malloc(sizeof(pthread_t));
-	pthread_create(cpu_dispatch, NULL, (void*) iniciar_cpu_dispatch, NULL);
+/* 	pthread_t cpu_interrupt;
+	pthread_create(&cpu_interrupt, NULL, (void*) iniciar_cpu_interrupt, NULL);
+	pthread_detach(cpu_interrupt); */
+
+	
+
+	log_info(logger_kernel, "servidores iniciados");
 }
 
 void iniciar_cpu_dispatch(void* arg){
+	log_info(logger_kernel, "entre dispatch");
 	int server_fd_kernel_dispatch = iniciar_servidor(logger_kernel, NULL, puerto_dispatch);
 
 	while (server_fd_kernel_dispatch != -1)
 	{
+		log_info(logger_kernel, "escuchando dispatch");
 		int cliente_fd = esperar_cliente(logger_kernel, "Kernel", server_fd_kernel_dispatch);
 		if(cliente_fd != -1){
 			pthread_t hilo_cliente;
@@ -97,7 +112,7 @@ void atender_dispatch(void* arg){
 	int code_op = recibir_operacion(socket_fd);
 	switch(code_op){
 		case HANDSHAKE:
-		int respuesta = 1;
+			int respuesta = 1;
 			send(socket_fd, &respuesta, sizeof(int), 0);
 			int code_op = recibir_operacion(socket_fd);
 			if(code_op == IDENTIFICACION){
@@ -156,6 +171,7 @@ void iniciar_cpu_interrupt(void* arg){
 
 	while (server_fd_kernel_interrupt != -1)
 	{
+		log_info(logger_kernel, "escuchando interrupt");
 		int cliente_fd = esperar_cliente(logger_kernel, "Kernel", server_fd_kernel_interrupt);
 		if(cliente_fd != -1){
 			pthread_t hilo_cliente;
@@ -203,9 +219,12 @@ void modificar_interrupt(t_cpu* una_cpu, int socket_fd){
 }
 
 void iniciar_servidor_io(void* arg){
+
+	log_info(logger_kernel, "entre io");
 	int server_fd_kernel_io = iniciar_servidor(logger_kernel, NULL, puerto_io);
 
 	while(server_fd_kernel_io != -1){
+		log_info(logger_kernel, "escuchando io");
 		int cliente_fd = esperar_cliente(logger_kernel, "Kernel", server_fd_kernel_io);
 		if(cliente_fd != -1){
 			pthread_t hilo_cliente;
@@ -227,7 +246,7 @@ void atender_io(void* arg){
 	int code_op = recibir_operacion(socket_fd);
 	switch(code_op){
 		case HANDSHAKE:
-		int respuesta = 1;
+			int respuesta = 1;
 			send(socket_fd, &respuesta, sizeof(int), 0);
 			int code_op = recibir_operacion(socket_fd);
 			if(code_op==IDENTIFICACION){
@@ -239,6 +258,7 @@ void atender_io(void* arg){
 				log_error(logger_kernel, "Esperaba IDENTIFICACION después de HANDSHAKE");
 				close(socket_fd);
 			}
+			break;
 		case -1:
 			log_error(logger_kernel, "Desconexion en el HANDSHAKE");
 			break;
