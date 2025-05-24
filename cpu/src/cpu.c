@@ -128,11 +128,14 @@ void atender_proceso_del_kernel(int fd, t_log* logger) {   //EJECUTA CICLO DE IN
 
 t_contexto* recibir_contexto(int fd) {
     t_contexto* contexto = malloc(sizeof(t_contexto));
-    contexto->program_counter = 0;
-    contexto->AX = 0;
-    contexto->BX = 0;
-    contexto->CX = 0;
-    contexto->DX = 0;
+    
+    recv(fd, &(contexto->pid), sizeof(uint32_t), 0);
+    recv(fd, &(contexto->program_counter), sizeof(uint32_t), 0);
+    recv(fd, &(contexto->AX), sizeof(uint32_t), 0);
+    recv(fd, &(contexto->BX), sizeof(uint32_t), 0);
+    recv(fd, &(contexto->CX), sizeof(uint32_t), 0);
+    recv(fd, &(contexto->DX), sizeof(uint32_t), 0);
+
     return contexto;
 }
 
@@ -251,10 +254,26 @@ void ciclo_de_instruccion_execute(t_instruccion_decodificada* instruccion, t_con
         contexto->program_counter = -1;
     }
     else if (string_equals_ignore_case(opcode, "IO")) {
-    log_info(logger, "PID: %d - Ejecutando: IO - Dispositivo: %s - Tiempo: %s", contexto->pid, instruccion->operandos[0], instruccion->operandos[1]);
-    enviar_contexto_a_kernel(contexto, CAUSA_IO, conexion_kernel_dispatch, logger);
+    int id_dispositivo = atoi(instruccion->operandos[0]);
+    int tiempo = atoi(instruccion->operandos[1]);
+
+    log_info(logger, "PID: %d - Ejecutando: IO - Dispositivo: %d - Tiempo: %d", contexto->pid, id_dispositivo, tiempo);
+
+    enviar_contexto_a_kernel_io(contexto, CAUSA_IO, conexion_kernel_dispatch, logger, id_dispositivo, tiempo);
     contexto->program_counter = -1;
 }
+
+else if (string_equals_ignore_case(opcode, "INIT_PROC")) {
+    char* archivo_instrucciones = instruccion->operandos[0];
+    int tamanio = atoi(instruccion->operandos[1]);
+
+    log_info(logger, "PID: %d - Ejecutando: INIT_PROC - Archivo: %s - Tamaño: %d", contexto->pid, archivo_instrucciones, tamanio);
+
+    enviar_contexto_a_kernel_init_proc(contexto, INIT_PROC, conexion_kernel_dispatch, logger, archivo_instrucciones, tamanio);
+    contexto->program_counter = -1;
+}
+
+
 else if (string_equals_ignore_case(opcode, "DUMP_MEMORY")) {
     log_info(logger, "PID: %d - Ejecutando: DUMP_MEMORY", contexto->pid);
     enviar_contexto_a_kernel(contexto, SIGNAL, conexion_kernel_dispatch, logger); // SEGUNDO PARAMETRO ES EL MOTIVO DE DESLOJO (PUSE SIGNAL XQ SI)
@@ -319,6 +338,45 @@ log_info(logger, "## PID: %d - Desalojado - Motivo: %s", contexto->pid, motivo_s
     enviar_paquete(paquete, fd);
     eliminar_paquete(paquete);
 }
+
+void enviar_contexto_a_kernel_init_proc(t_contexto* contexto, motivo_desalojo motivo, int fd, t_log* logger, char* archivo, int tamanio) {
+    t_paquete* paquete = crear_paquete(DEVOLVER_CONTEXTO);
+
+    agregar_a_paquete(paquete, &(contexto->pid), sizeof(uint32_t));
+    agregar_a_paquete(paquete, &(contexto->program_counter), sizeof(uint32_t));
+    agregar_a_paquete(paquete, &(contexto->AX), sizeof(uint32_t));
+    agregar_a_paquete(paquete, &(contexto->BX), sizeof(uint32_t));
+    agregar_a_paquete(paquete, &(contexto->CX), sizeof(uint32_t));
+    agregar_a_paquete(paquete, &(contexto->DX), sizeof(uint32_t));
+    agregar_a_paquete(paquete, &motivo, sizeof(int));
+    agregar_a_paquete(paquete, &tamanio, sizeof(int));
+    agregar_a_paquete(paquete, archivo, strlen(archivo) + 1); // string con '\0'
+
+    enviar_paquete(paquete, fd);
+    eliminar_paquete(paquete);
+
+    log_info(logger, "Se envio el contexto actualizado con motivo INIT_PROC al Kernel.");
+}
+
+void enviar_contexto_a_kernel_io(t_contexto* contexto, motivo_desalojo motivo, int fd, t_log* logger, int id_io, int tiempo_io) {
+    t_paquete* paquete = crear_paquete(DEVOLVER_CONTEXTO);
+
+    agregar_a_paquete(paquete, &(contexto->pid), sizeof(uint32_t));
+    agregar_a_paquete(paquete, &(contexto->program_counter), sizeof(uint32_t));
+    agregar_a_paquete(paquete, &(contexto->AX), sizeof(uint32_t));
+    agregar_a_paquete(paquete, &(contexto->BX), sizeof(uint32_t));
+    agregar_a_paquete(paquete, &(contexto->CX), sizeof(uint32_t));
+    agregar_a_paquete(paquete, &(contexto->DX), sizeof(uint32_t));
+    agregar_a_paquete(paquete, &motivo, sizeof(int));
+    agregar_a_paquete(paquete, &id_io, sizeof(int));
+    agregar_a_paquete(paquete, &tiempo_io, sizeof(int));
+
+    enviar_paquete(paquete, fd);
+    eliminar_paquete(paquete);
+
+    log_info(logger, "Se envio el contexto actualizado con motivo IO al Kernel.");
+}
+
 
 
 //esto va en archivo MMU.C
