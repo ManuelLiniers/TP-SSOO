@@ -30,6 +30,7 @@ typedef enum {
     SIGNAL,
     PAGE_FAULT,
     INTERRUPCION,
+    CAUSA_INIT_PROC,
     DESALOJO_POR_QUANTUM
 } motivo_desalojo;
 
