@@ -3,6 +3,8 @@
 int conexion_memoria;
 int conexion_kernel_dispatch;
 int conexion_kernel_interrupt;
+bool flag_interrupcion = false;
+
 
 int main(int argc, char* argv[]) {
     saludar("cpu");
@@ -12,7 +14,6 @@ int main(int argc, char* argv[]) {
 
 
     int TAMANIO_PAGINA = config_get_int_value(cpu_config, "TAMANIO_PAGINA");
-    bool flag_interrupcion = false;
     pthread_mutex_init(&mutex_interrupt, NULL);
 
 
@@ -168,6 +169,11 @@ bool hay_interrupcion() {
     pthread_mutex_unlock(&mutex_interrupt);
     return resultado;
 }
+
+void destruir_estructuras_del_contexto_actual(t_contexto* contexto) {
+    free(contexto);
+}
+
 ////////////////////////////////////////////////////////////////////   FETCH   ///////////////////////////////////////////////////////////////////////////////////
 char* ciclo_de_instruccion_fetch(int conexion_memoria, t_contexto* contexto) {
     log_info(logger, "## PID: %d - FETCH - Program Counter: %d", contexto->pid, contexto->program_counter);
@@ -206,36 +212,6 @@ char* recibir_instruccion(int socket_memoria) {
 //////////////////////////////////////////////////////////////////////   DECODE   ///////////////////////////////////////////////////////////////////////////////////
 t_instruccion_decodificada* ciclo_de_instruccion_decode(char* instruccion_cruda) {
     return decodificar_instruccion(instruccion_cruda);
-}
-
-t_instruccion_decodificada* decodificar_instruccion(char* instruccion_cruda) {
-    char** tokens = string_split(instruccion_cruda, " ");
-    if (!tokens) return NULL;
-
-    t_instruccion_decodificada* instruccion = malloc(sizeof(t_instruccion_decodificada));
-    instruccion->opcode = strdup(tokens[0]);
-
-    // Cuento cantidad de operandos
-    int cantidad = 0;
-    for (int i = 1; tokens[i] != NULL; i++) cantidad++;
-
-    instruccion->cantidad_operandos = cantidad;
-    instruccion->operandos = malloc(sizeof(char*) * cantidad);
-
-    for (int i = 0; i < cantidad; i++) {
-        instruccion->operandos[i] = strdup(tokens[i + 1]);
-    }
-
-    // Para ver si requiere traducción de dirección
-    if (string_equals_ignore_case(instruccion->opcode, "READ") ||
-        string_equals_ignore_case(instruccion->opcode, "WRITE")) {
-        instruccion->necesita_traduccion = true;
-    } else {
-        instruccion->necesita_traduccion = false;
-    }
-
-    string_array_destroy(tokens);
-    return instruccion;
 }
 
 //////////////////////////////////////////////////////////////EXECUTE///////////////////////////////////////////////////////
