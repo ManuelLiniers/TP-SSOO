@@ -41,16 +41,66 @@ pthread_create(&hilo_interrupt, NULL, escuchar_interrupt, &conexion_kernel_inter
 pthread_detach(hilo_interrupt);
 
     //espero PCBs del Kernel por dispatch
-while(1) {
-    int cliente_fd = esperar_cliente(logger, "KERNEL", conexion_kernel_dispatch); 
-    if(cliente_fd != -1) {
-        atender_proceso_del_kernel(cliente_fd, logger);
+while (1) {
+    log_info(logger, "Esperando op_code desde Kernel...");
+
+    op_code cod_op;
+    if (recv(conexion_kernel_dispatch, &cod_op, sizeof(op_code), MSG_WAITALL) <= 0) {
+        log_error(logger, "Fallo al recibir op_code del Kernel.");
+        break;
+    }
+
+    if (cod_op == CONTEXTO_PROCESO) {
+        log_info(logger, "Recibido CONTEXTO_PROCESO");
+        t_buffer* buffer = recibir_buffer_contexto(conexion_kernel_dispatch);
+        t_contexto* contexto = deserializar_contexto(buffer);
+        atender_proceso_del_kernel(contexto, logger);
+        free(buffer->stream);
+        free(buffer);
+    } else {
+        log_error(logger, "Código de operación desconocido: %d", cod_op);
     }
 }
     terminar_programa(conexion_memoria, conexion_kernel_dispatch, conexion_kernel_interrupt, logger, cpu_config);
 
     return 0;
 }
+
+t_buffer* recibir_buffer_contexto(int socket) {
+    t_buffer* buffer = malloc(sizeof(t_buffer));
+
+    recv(socket, &(buffer->size), sizeof(int), MSG_WAITALL);
+    buffer->stream = malloc(buffer->size);
+    recv(socket, buffer->stream, buffer->size, MSG_WAITALL);
+
+    return buffer;
+}
+
+t_contexto* deserializar_contexto(t_buffer* buffer) {
+    t_contexto* contexto = malloc(sizeof(t_contexto));
+
+    int offset = 0;
+    memcpy(&(contexto->pid), buffer->stream + offset, sizeof(uint32_t));
+    offset += sizeof(uint32_t);
+
+    memcpy(&(contexto->program_counter), buffer->stream + offset, sizeof(uint32_t));
+    offset += sizeof(uint32_t);
+
+    memcpy(&(contexto->AX), buffer->stream + offset, sizeof(uint32_t));
+    offset += sizeof(uint32_t);
+
+    memcpy(&(contexto->BX), buffer->stream + offset, sizeof(uint32_t));
+    offset += sizeof(uint32_t);
+
+    memcpy(&(contexto->CX), buffer->stream + offset, sizeof(uint32_t));
+    offset += sizeof(uint32_t);
+
+    memcpy(&(contexto->DX), buffer->stream + offset, sizeof(uint32_t));
+    offset += sizeof(uint32_t);
+
+    return contexto;
+}
+
 
 t_log* crear_log(){
 
@@ -88,62 +138,45 @@ void terminar_programa(int conexion_memoria, int conexion_kernel_dispatch, int c
     close(conexion_kernel_interrupt);
 }
 
-void atender_proceso_del_kernel(int fd, t_log* logger) {   //EJECUTA CICLO DE INSTRUCCION ENVIADA DESDE MEMORIA, fd es la conexion a memoria
-    log_info(logger, "Esperando contexto del proceso desde el Kernel...");
-
-    t_contexto* contexto = recibir_contexto(conexion_kernel_dispatch);  //recibo pcb (t_contexto) de kernel
-    if (!contexto) {
-        log_error(logger, "Fallo al recibir el contexto.");
-        return;
-    }
+void atender_proceso_del_kernel(t_contexto* contexto, t_log* logger) {
+    log_info(logger, "Comenzando ejecución del proceso con PID %d", contexto->pid);
 
     while (1) {
-    char* instruccion_cruda = ciclo_de_instruccion_fetch(fd, contexto); 
-    if (!instruccion_cruda) {
-        log_error(logger, "Fallo al recibir la instrucción desde Memoria.");
-        break;
+        char* instruccion_cruda = ciclo_de_instruccion_fetch(conexion_memoria, contexto);
+        if (!instruccion_cruda) {
+            log_error(logger, "Fallo al recibir la instrucción desde Memoria.");
+            break;
+        }
+
+        t_instruccion_decodificada* instruccion = ciclo_de_instruccion_decode(instruccion_cruda);
+        free(instruccion_cruda);
+
+        if (!instruccion) {
+            log_error(logger, "Fallo al decodificar la instrucción.");
+            break;
+        }
+
+        ciclo_de_instruccion_execute(instruccion, contexto, logger, conexion_memoria);
+
+        if (hay_interrupcion()) {
+            log_info(logger, "Se detectó una interrupción luego de ejecutar la instrucción");
+            enviar_contexto_a_kernel(contexto, INTERRUPCION, conexion_kernel_dispatch, logger);
+
+            pthread_mutex_lock(&mutex_interrupt);
+            flag_interrupcion = false;
+            pthread_mutex_unlock(&mutex_interrupt);
+            break;
+        }
+
+        if (contexto->program_counter == -1) break;
+
+        destruir_instruccion_decodificada(instruccion);
     }
 
-    t_instruccion_decodificada* instruccion = ciclo_de_instruccion_decode(instruccion_cruda);
-    free(instruccion_cruda); // Se libera la instrucción "cruda" después del decode
-
-    if (!instruccion) {
-        log_error(logger, "Fallo al decodificar la instrucción.");
-        break;
-    }
-
-    ciclo_de_instruccion_execute(instruccion, contexto, logger, fd); 
-    if (hay_interrupcion()) {
-        log_info(logger, "se detectó una interrupción luego de ejecutar la instrucción");
-        enviar_contexto_a_kernel(contexto, INTERRUPCION, conexion_kernel_dispatch, logger);  
-
-        pthread_mutex_lock(&mutex_interrupt);
-        flag_interrupcion = false;
-        pthread_mutex_unlock(&mutex_interrupt);
-
-        break;  // Se corta el ciclo
-    }
-
-    if (contexto->program_counter == -1) break;
-
-    destruir_instruccion_decodificada(instruccion); // libero mallocs
-}
     destruir_estructuras_del_contexto_actual(contexto);
 }
 
 
-t_contexto* recibir_contexto(int fd) {
-    t_contexto* contexto = malloc(sizeof(t_contexto));
-    
-    recv(fd, &(contexto->pid), sizeof(uint32_t), 0);
-    recv(fd, &(contexto->program_counter), sizeof(uint32_t), 0);
-    recv(fd, &(contexto->AX), sizeof(uint32_t), 0);
-    recv(fd, &(contexto->BX), sizeof(uint32_t), 0);
-    recv(fd, &(contexto->CX), sizeof(uint32_t), 0);
-    recv(fd, &(contexto->DX), sizeof(uint32_t), 0);
-
-    return contexto;
-}
 
 void* escuchar_interrupt(void* arg) {
     int fd = *(int*)arg;

@@ -27,10 +27,9 @@ typedef struct {
 } t_contexto;
 
 // Funciones que vamos a implementar en etapas
-void atender_proceso_del_kernel(int fd, t_log* logger);
+void atender_proceso_del_kernel(t_contexto* contexto, t_log* logger);
 void destruir_estructuras_del_contexto_actual(t_contexto* contexto);
 void* escuchar_interrupt(void* arg);
-t_contexto* recibir_contexto(int fd);
 char* ciclo_de_instruccion_fetch(int conexion_memoria, t_contexto* contexto);
 char* recibir_instruccion(int socket_memoria);
 t_instruccion_decodificada* ciclo_de_instruccion_decode(char* instruccion_cruda);
@@ -40,4 +39,8 @@ bool hay_interrupcion();
 void enviar_contexto_a_kernel(t_contexto* contexto, motivo_desalojo motivo, int fd, t_log* logger); 
 void enviar_contexto_a_kernel_io(t_contexto* contexto, motivo_desalojo motivo, int fd, t_log* logger, int id_io, int tiempo_io);
 void enviar_contexto_a_kernel_init_proc(t_contexto* contexto, motivo_desalojo motivo, int fd, t_log* logger, char* archivo, int tamanio);
+t_buffer* recibir_buffer_contexto(int socket);
+t_contexto* deserializar_contexto(t_buffer* buffer);
+
+
 
