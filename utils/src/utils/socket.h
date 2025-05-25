@@ -74,5 +74,6 @@ void eliminar_buffer(t_buffer* unBuffer);
 
 void hacer_handshake(t_log* logger, int conexion);
 void enviarCodigo(int conexion, int codigoOp);
+void saludar_cliente_generico(t_log* logger, void *void_args, void (*funcion_identificacion)(t_buffer*, int));
 
 #endif /* INCLUDE_SOCKET_H_ */

@@ -114,34 +114,7 @@ int servidor_escucha(int server_fd_memoria){
 */
 
 void saludar_cliente(void *void_args){
-	int* cliente_socket = (int*) void_args;
-	int socket_fd = *cliente_socket;
-	free(void_args);
-	
-	int code_op = recibir_operacion(socket_fd);
-
-	switch(code_op){
-		case HANDSHAKE:
-			int respuesta = 1;
-			send(socket_fd, &respuesta, sizeof(int), 0);
-
-			int op_code = recibir_operacion(socket_fd);
-			if (op_code == IDENTIFICACION) {
-				t_buffer* buffer = recibir_paquete(socket_fd);
-				identificar_modulo(buffer, socket_fd);
-				eliminar_buffer(buffer);
-			} else {
-				log_error(memoria_logger, "Esperaba IDENTIFICACION después de HANDSHAKE");
-				close(socket_fd);
-			}
-			break; 
-		case -1:
-			log_error(memoria_logger, "Desconexion en el HANDSHAKE");
-			break;
-		default:
-			log_error(memoria_logger, "Desconexion en el HANDSHAKE: Operacion Desconocida");
-			break;
-	} 
+	saludar_cliente_generico(memoria_logger, void_args, identificar_modulo);
 }
 
 
