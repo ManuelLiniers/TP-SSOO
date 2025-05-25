@@ -105,34 +105,13 @@ void iniciar_cpu_dispatch(void* arg){
 }
 
 void atender_dispatch(void* arg){
-	int* io_socket = (int*) arg;
-	int socket_fd = *io_socket;
-	free(arg);
-	
-	int code_op = recibir_operacion(socket_fd);
-	switch(code_op){
-		case HANDSHAKE:
-			int respuesta = 1;
-			send(socket_fd, &respuesta, sizeof(int), 0);
-			int code_op = recibir_operacion(socket_fd);
-			if(code_op == IDENTIFICACION){
-				t_buffer* buffer = recibir_paquete(socket_fd);
-				identificar_cpu(buffer, socket_fd, modificar_interrupt);
-				eliminar_buffer(buffer);
-			}
-			else{
-				log_error(logger_kernel, "Esperaba IDENTIFICACION después de HANDSHAKE");
-				close(socket_fd);
-			}
-			break; 
-		case -1:
-			log_error(logger_kernel, "Desconexion en el HANDSHAKE");
-			break;
-		default:
-			log_error(logger_kernel, "Desconexion en el HANDSHAKE: Operacion Desconocida");
-			break;
-	}
+	saludar_cliente_generico(logger_kernel, arg, (void*) identificar_cpu_distpatch);
 }
+
+void identificar_cpu_distpatch(t_buffer* buffer, int socket){
+	identificar_cpu(buffer, socket, modificar_dispatch);
+}
+
 
 bool comparar_cpu_id(t_cpu* existente, t_cpu* buscada){
 	return strcmp(existente->cpu_id, buscada->cpu_id) == 0;
@@ -178,40 +157,18 @@ void iniciar_cpu_interrupt(void* arg){
 			int *args = malloc(sizeof(int));
 			*args = cliente_fd;
 			pthread_create(&hilo_cliente, NULL, (void*) atender_interrupt, args);
-			log_info(logger_kernel, "[THREAD] Creo hilo para atender dispatch");
+			log_info(logger_kernel, "[THREAD] Creo hilo para atender interrupt");
 			pthread_detach(hilo_cliente);
 		}
 	}
 }
 
 void atender_interrupt(void* arg){
-	int* io_socket = (int*) arg;
-	int socket_fd = *io_socket;
-	free(arg);
-	
-	int code_op = recibir_operacion(socket_fd);
-	switch(code_op){
-		case HANDSHAKE:
-		int respuesta = 1;
-			send(socket_fd, &respuesta, sizeof(int), 0);
-			int code_op = recibir_operacion(socket_fd);
-			if(code_op == IDENTIFICACION){
-				t_buffer* buffer = recibir_paquete(socket_fd);
-				identificar_cpu(buffer, socket_fd, modificar_interrupt);
-				eliminar_buffer(buffer);
-			}
-			else{
-				log_error(logger_kernel, "Esperaba IDENTIFICACION después de HANDSHAKE");
-				close(socket_fd);
-			}
-			break; 
-		case -1:
-			log_error(logger_kernel, "Desconexion en el HANDSHAKE");
-			break;
-		default:
-			log_error(logger_kernel, "Desconexion en el HANDSHAKE: Operacion Desconocida");
-			break;
-	}
+	saludar_cliente_generico(logger_kernel, arg, (void*) identificar_cpu_interrupt);
+}
+
+void identificar_cpu_interrupt(t_buffer* buffer, int socket){
+	identificar_cpu(buffer, socket, modificar_interrupt);
 }
 
 void modificar_interrupt(t_cpu* una_cpu, int socket_fd){
@@ -239,38 +196,7 @@ void iniciar_servidor_io(void* arg){
 }
 
 void atender_io(void* arg){
-	int* io_socket = (int*) arg;
-	int socket_fd = *io_socket;
-	free(arg);
-	
-	int code_op = recibir_operacion(socket_fd);
-	log_info(logger_kernel, "Codigo operacion: %d", code_op);
-	switch(code_op){
-		case HANDSHAKE:
-			int respuesta = 1;
-			send(socket_fd, &respuesta, sizeof(int), 0);
-			log_info(logger_kernel, "HANDSHAKE exitoso");
-			
-
-			int code_operacion = recibir_operacion(socket_fd);
-			log_info(logger_kernel, "Codigo operacion: %d", code_operacion);
-			if(code_operacion==IDENTIFICACION){
-				t_buffer* buffer = recibir_paquete(socket_fd);
-				identificar_io(buffer, socket_fd);
-				eliminar_buffer(buffer);
-			}
-			else{
-				log_error(logger_kernel, "Esperaba IDENTIFICACION después de HANDSHAKE");
-				close(socket_fd);
-			}
-			break;
-		case -1:
-			log_error(logger_kernel, "Desconexion en el HANDSHAKE");
-			break;
-		default:
-			log_error(logger_kernel, "Desconexion en el HANDSHAKE: Operacion Desconocida");
-			break;
-	}
+	saludar_cliente_generico(logger_kernel, arg, (void*) identificar_io);
 }
 
 void identificar_io(t_buffer* unBuffer, int socket_fd){
