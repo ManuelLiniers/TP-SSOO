@@ -288,3 +288,35 @@ void enviarCodigo(int conexion, int codigoOp){
 	send(conexion, coso_a_enviar, sizeof(int),0);
 	free(coso_a_enviar);
 }
+
+void saludar_cliente_generico(void *void_args, void (*funcion_identificacion)(t_buffer*, int)) {
+    int* cliente_socket = (int*) void_args;
+    int socket_fd = *cliente_socket;
+    free(void_args);
+
+    int code_op = recibir_operacion(socket_fd);
+
+    switch(code_op){
+        case HANDSHAKE: {
+            int respuesta = 1;
+            send(socket_fd, &respuesta, sizeof(int), 0);
+
+            int op_code = recibir_operacion(socket_fd);
+            if (op_code == IDENTIFICACION) {
+                t_buffer* buffer = recibir_paquete(socket_fd);
+                funcion_identificacion(buffer, socket_fd); // función pasada como parámetro
+                eliminar_buffer(buffer);
+            } else {
+                log_error(memoria_logger, "Esperaba IDENTIFICACION después de HANDSHAKE");
+                close(socket_fd);
+            }
+            break;
+        }
+        case -1:
+            log_error(memoria_logger, "Desconexion en el HANDSHAKE");
+            break;
+        default:
+            log_error(memoria_logger, "Desconexion en el HANDSHAKE: Operacion Desconocida");
+            break;
+    }
+}
