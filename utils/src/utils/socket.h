@@ -73,5 +73,6 @@ void obtener_del_buffer(t_buffer *buffer, void *dest, int size);
 void eliminar_buffer(t_buffer* unBuffer);
 
 void hacer_handshake(t_log* logger, int conexion);
+void enviarCodigo(int conexion, int codigoOp);
 
 #endif /* INCLUDE_SOCKET_H_ */

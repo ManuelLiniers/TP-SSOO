@@ -44,13 +44,19 @@ int main(int argc, char* argv[]) {
         return EXIT_FAILURE;
     }
 
-    enviar_mensaje(nombre_dispositivo, conexion_kernel);
+
     log_info(logger, "Me conecto al kernel como: %s", nombre_dispositivo);
+    
     hacer_handshake(logger, conexion_kernel);
     t_paquete* paqueteID = crear_paquete(IDENTIFICACION);
-    // memcpy(paqueteID->buffer->stream, argv[1], sizeof(char[20]));
-    agregar_a_paquete(paqueteID, nombre_dispositivo, sizeof(char[20]));
+    int* longitud_nombre_disp = malloc(sizeof(int));
+    *longitud_nombre_disp = strlen(nombre_dispositivo) + 1;
+    agregar_a_paquete(paqueteID, longitud_nombre_disp, sizeof(int));
+    agregar_a_paquete(paqueteID, nombre_dispositivo, *longitud_nombre_disp);
+    
     enviar_paquete(paqueteID, conexion_kernel);
+    eliminar_paquete(paqueteID);
+    log_info(logger, "PAQUETE ID ENVIADO");
     int operacion = recibir_operacion(conexion_kernel);
     procesar_io(conexion_kernel, logger, operacion);
     terminar_programa(logger, config, conexion_kernel);

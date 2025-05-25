@@ -123,8 +123,8 @@ void recibir_mensaje(t_log* logger, int socket_cliente)
 
 int recibir_operacion(int socket_cliente)
 {
-	int cod_op;
-	if(recv(socket_cliente, &cod_op, sizeof(int), MSG_WAITALL) > 0)
+	op_code cod_op;
+	if(recv(socket_cliente, &cod_op, sizeof(op_code), MSG_WAITALL) > 0)
 		return cod_op;
 	else
 	{
@@ -223,50 +223,35 @@ void* recibir_buffer(int* size, int socket_cliente)
 }
 
 int recibir_int_del_buffer(t_buffer* unBuffer){
-	int* valor_a_devolver = (int*) recibir_informacion_del_buffer(unBuffer, sizeof(int)); 
-	return (*valor_a_devolver);
+	int* ptr = (int*) recibir_informacion_del_buffer(unBuffer, sizeof(int));
+	int valor = *ptr;
+	free(ptr);
+	return valor;
 }
 
+// se asume que el tamanio esta especificado antes de el string
+
 char* recibir_string_del_buffer(t_buffer* unBuffer){
-	char* valor_a_devolver = (char*) recibir_informacion_del_buffer(unBuffer, sizeof(char[20])); 
-	return valor_a_devolver;
+	int tamanio = recibir_int_del_buffer(unBuffer);
+	char* string = (char*) recibir_informacion_del_buffer(unBuffer, tamanio);
+	return string;
 }
 
 void* recibir_informacion_del_buffer(t_buffer* unBuffer, size_t tamanio){
-	if(unBuffer->size == 0){
-		printf("\n[ERROR] Al intentar extraer un INT de un t_buffer vacio\n\n");
-		exit(EXIT_FAILURE);
-	}
+	
+	void* valor_a_devolver = malloc(tamanio);
+	memcpy(valor_a_devolver, unBuffer->stream + sizeof(int), tamanio); 
 
-	if(unBuffer->size < 0){
-		printf("\n[ERROR] Esto es raro. El t_buffer contiene un size NEGATIVO \n\n");
-		exit(EXIT_FAILURE);
-	}
-
-	void* valor_a_devolver;
-	memcpy(&valor_a_devolver, unBuffer->stream, tamanio);
-
-	int nuevo_size = unBuffer->size - sizeof(int);
-	if(nuevo_size == 0){
-		free(unBuffer->stream);
-		unBuffer->stream = NULL;
-		unBuffer->size = 0;
-		return valor_a_devolver;
-	}
-	if(nuevo_size < 0){
-		printf("\n[ERROR_INT]: BUFFER CON TAMAÑO NEGATIVO\n\n");
-		//free(valor_a_devolver);
-		//return 0;
-		exit(EXIT_FAILURE);
-	}
-	void* nuevo_unBuffer = malloc(nuevo_size);
-	memcpy(nuevo_unBuffer, unBuffer->stream + sizeof(int), nuevo_size);
+	unBuffer->size -= (tamanio + sizeof(int));
+	void* nuevo_stream = malloc(unBuffer->size);
+	memcpy(nuevo_stream, unBuffer->stream + sizeof(int) + tamanio, unBuffer->size);
 	free(unBuffer->stream);
-	unBuffer->stream = nuevo_unBuffer;
-	unBuffer->size = nuevo_size;
+	unBuffer->stream = nuevo_stream;
 
 	return valor_a_devolver;
 }
+
+// revisar para que saltee el size cuando viene de un paquete
 
 uint32_t recibir_uint32_del_buffer(t_buffer* unBuffer){
 	uint32_t value;
@@ -286,13 +271,20 @@ void eliminar_buffer(t_buffer* unBuffer){
 }
 
 void hacer_handshake(t_log* logger, int conexion){
-    t_paquete* paquete = crear_paquete(HANDSHAKE);
-    enviar_paquete(paquete, conexion);
-    t_buffer* buffer = malloc(sizeof(t_buffer));
-    recv(conexion, buffer, sizeof(int), 0);
-	int resultado = recibir_int_del_buffer(buffer);
+	enviarCodigo(conexion, HANDSHAKE);
+	int resultado;
+    recv(conexion, &resultado, sizeof(int), MSG_WAITALL);
     if(resultado != 1){
         log_error(logger, "Error al hacer el handshake");
-    }
-	free(buffer);
+    } else {
+		log_info(logger, "Handshake correcto");
+	}
+}
+
+void enviarCodigo(int conexion, int codigoOp){
+	void* coso_a_enviar = malloc(sizeof(int));
+	int codigo = codigoOp;
+	memcpy(coso_a_enviar, &codigo, sizeof(int));
+	send(conexion, coso_a_enviar, sizeof(int),0);
+	free(coso_a_enviar);
 }

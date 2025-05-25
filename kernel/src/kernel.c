@@ -70,11 +70,11 @@ void inicializar_servidores(){
 	iniciar_dispositivos_io();
 	iniciar_cpus();
 
-	pthread_create(&cpu_dispatch, NULL, (void*) iniciar_cpu_dispatch, NULL);
-	pthread_detach(cpu_dispatch);
+	// pthread_create(&cpu_dispatch, NULL, (void*) iniciar_cpu_dispatch, NULL);
+	// pthread_detach(cpu_dispatch);
 	
 	pthread_create(&servidor_io, NULL, (void*) iniciar_servidor_io, NULL);
-	pthread_detach(servidor_io);
+	pthread_join(servidor_io, NULL);
 
 /* 	pthread_t cpu_interrupt;
 	pthread_create(&cpu_interrupt, NULL, (void*) iniciar_cpu_interrupt, NULL);
@@ -244,12 +244,17 @@ void atender_io(void* arg){
 	free(arg);
 	
 	int code_op = recibir_operacion(socket_fd);
+	log_info(logger_kernel, "Codigo operacion: %d", code_op);
 	switch(code_op){
 		case HANDSHAKE:
 			int respuesta = 1;
 			send(socket_fd, &respuesta, sizeof(int), 0);
-			int code_op = recibir_operacion(socket_fd);
-			if(code_op==IDENTIFICACION){
+			log_info(logger_kernel, "HANDSHAKE exitoso");
+			
+
+			int code_operacion = recibir_operacion(socket_fd);
+			log_info(logger_kernel, "Codigo operacion: %d", code_operacion);
+			if(code_operacion==IDENTIFICACION){
 				t_buffer* buffer = recibir_paquete(socket_fd);
 				identificar_io(buffer, socket_fd);
 				eliminar_buffer(buffer);
@@ -269,10 +274,13 @@ void atender_io(void* arg){
 }
 
 void identificar_io(t_buffer* unBuffer, int socket_fd){
+	int tamanio_nombre = recibir_int_del_buffer(unBuffer);
 	t_dispositivo_io* dispositivo = malloc(sizeof(t_dispositivo_io));
-	strcpy(dispositivo->nombre, recibir_string_del_buffer(unBuffer));
+	void* nombre_raw = recibir_informacion_del_buffer(unBuffer, tamanio_nombre);
+	memcpy(dispositivo->nombre, nombre_raw, tamanio_nombre);
 	dispositivo->id = id_io_incremental;
 	id_io_incremental++;
 	dispositivo->socket = socket_fd;
 	list_add(lista_dispositivos_io, dispositivo);
+	log_info(logger_kernel,"Se registro dispositivo: %s", dispositivo->nombre);
 }
