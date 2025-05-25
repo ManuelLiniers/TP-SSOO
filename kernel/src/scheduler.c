@@ -208,7 +208,11 @@ bool espacio_en_memoria(t_pcb* proceso){
     hacer_handshake(logger_kernel, conexion);
 
     t_paquete* paqueteID = crear_paquete(IDENTIFICACION);
-    agregar_a_paquete(paqueteID, KERNEL, sizeof(op_code));
+
+	void* coso_a_enviar = malloc(sizeof(int));
+	int codigo = KERNEL;
+	memcpy(coso_a_enviar, &codigo, sizeof(int));
+    agregar_a_paquete(paqueteID, coso_a_enviar, sizeof(op_code));
     enviar_paquete(paqueteID, conexion);
     eliminar_paquete(paqueteID);
 
