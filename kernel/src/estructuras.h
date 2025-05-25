@@ -3,7 +3,6 @@
 
 #include <commons/collections/list.h>
 #include "utils/commons.h"
-#include "scheduler.h"
 #include "semaforos.h"
 
 extern int pid_incremental;
@@ -19,6 +18,10 @@ typedef enum { NEW, READY, EXEC, BLOCKED, EXIT } t_estado;
 
 int id_estado(t_estado estado);
 
+extern t_queue* queue_new;
+extern t_queue* queue_ready;
+extern t_list* queue_block;
+extern t_queue* queue_exit;
 
 typedef struct{
     t_estado estado;
@@ -72,7 +75,7 @@ typedef struct{
 } t_dispositivo_io;
 
 typedef struct{
-    t_pcb pid;
+    t_pcb *pcb;
     int tiempo;
 } tiempo_en_io;
 

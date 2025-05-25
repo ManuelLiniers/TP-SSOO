@@ -1,33 +1,5 @@
 #include "scheduler.h"
 
-t_pcb* buscar_proceso_pid(uint32_t pid);
-
-void cambiarEstado(t_pcb* proceso,t_estado EXEC);
-bool espacio_en_memoria(t_pcb* proceso);
-void poner_en_ejecucion(t_pcb* proceso, t_cpu** cpu_encargada);
-t_dispositivo_io* buscar_io(int id_io);
-t_cpu* buscar_cpu_libre(t_list* lista_cpus);
-
-// Definición de las colas globales
-t_queue* queue_new;
-t_queue* queue_ready;
-t_list* queue_block;
-t_queue* queue_exit;
-
-void scheduler_init(void) {
-    queue_new   = queue_create();
-    queue_ready = queue_create();
-    queue_block = list_create();
-    queue_exit  = queue_create();
-    lista_procesos_ejecutando = list_create();
-}
-
-void scheduler_destroy(void) {
-    queue_destroy_and_destroy_elements(queue_new, pcb_destroy);
-    queue_destroy_and_destroy_elements(queue_ready, pcb_destroy);
-    list_destroy_and_destroy_elements(queue_block, pcb_destroy);
-    queue_destroy_and_destroy_elements(queue_exit, pcb_destroy);
-}
 
 void* planificar_corto_plazo(void* arg){
 	while(1){
@@ -92,18 +64,22 @@ void esperar_dispatch(void* arg){
             log_error(logger_kernel, "No se encontro la IO: %d", io_id);
             break;
         }
-        t_paquete* paquete = crear_paquete(PETICION_IO);
-        agregar_a_paquete(paquete, &pid, sizeof(int));
-        agregar_a_paquete(paquete, &io_tiempo,sizeof(int));
-        enviar_paquete(paquete, dispositivo->socket);
+
+        if(queue_is_empty(obtener_cola_io(io_id))){
+            enviar_proceso_a_io(proceso, io_id, io_tiempo);
+        }
+
+        tiempo_en_io proceso_bloqueado;
+        proceso_bloqueado.pcb = proceso;
+        proceso_bloqueado.tiempo = io_tiempo;
 
         wait_mutex(&mutex_queue_block);
-        queue_push(list_get(queue_block, io_id), proceso);
+        queue_push(obtener_cola_io(io_id), &proceso_bloqueado);
         signal_mutex(&mutex_queue_block);
 
         cambiarEstado(proceso, BLOCKED);
 
-        eliminar_paquete(paquete);
+        free(paquete);
         break;
 
     case SIGNAL:
@@ -228,7 +204,7 @@ bool espacio_en_memoria(t_pcb* proceso){
     t_buffer* buffer = malloc(sizeof(t_buffer));
     recv(conexion, buffer, sizeof(int), 0);
     int* tiene_espacio = malloc(sizeof(int));
-    memcpy(buffer, (void*) tiene_espacio, sizeof(int));
+    memcpy(tiene_espacio, buffer->stream,sizeof(int));
     int resultado = *tiene_espacio;
     free(buffer);
     free(tiene_espacio);
@@ -288,4 +264,59 @@ t_pcb* buscar_proceso_pid(uint32_t pid){
         }
     }
     return NULL;
+}
+
+void enviar_proceso_a_io(t_pcb* proceso, int io_id, int io_tiempo){
+
+    t_dispositivo_io* dispositivo = buscar_io(io_id);
+    
+    t_paquete* paquete = crear_paquete(PETICION_IO);
+    agregar_a_paquete(paquete, &(proceso->pid), sizeof(int));
+    agregar_a_paquete(paquete, &io_tiempo,sizeof(int));
+    enviar_paquete(paquete, dispositivo->socket);
+
+    int *args = malloc(sizeof(int));
+	*args = io_id;
+
+    pthread_t hilo_vuelta_io;
+    pthread_create(&hilo_vuelta_io, NULL, (void*) vuelta_proceso_io, args); // creo hilo para esperar la vuelta de la io
+    pthread_detach(hilo_vuelta_io);
+}
+
+void vuelta_proceso_io(void* args){
+    int *id_io = (int*) args;
+    t_dispositivo_io* io = buscar_io(*id_io);
+
+
+    t_buffer* buffer = malloc(sizeof(t_buffer));
+    int *pid = malloc(sizeof(int));
+    recv(io->socket, buffer, sizeof(int), 0);
+    memcpy(pid, buffer->stream, sizeof(int));
+
+    tiempo_en_io *proceso = queue_pop(obtener_cola_io(io->id));
+
+    cambiarEstado(proceso->pcb, READY);
+    wait_mutex(&mutex_queue_ready);
+    queue_push(queue_ready, &(proceso->pcb));
+    signal_mutex(&mutex_queue_ready);
+
+    comprobar_cola_bloqueados(io->id);
+
+    free(pid);
+    free(buffer);
+}
+
+void comprobar_cola_bloqueados(int io_id){
+
+    t_queue* cola_io = obtener_cola_io(io_id);
+
+    if(!queue_is_empty(cola_io)){
+        tiempo_en_io *proceso = queue_peek(cola_io);
+
+        enviar_proceso_a_io(proceso->pcb, io_id, proceso->tiempo);
+    }
+}
+
+t_queue* obtener_cola_io(int io_id){
+    return list_get(queue_block, io_id);
 }

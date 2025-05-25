@@ -6,11 +6,6 @@
 #include "semaforos.h"
 #include "conexion.h"
 
-extern t_queue* queue_new;
-extern t_queue* queue_ready;
-extern t_list* queue_block;
-extern t_queue* queue_exit;
-
 
 /**
  * @brief Inicializa las cuatro colas del scheduler
@@ -27,6 +22,19 @@ void esperar_devolucion_proceso(void* arg);
 void esperar_dispatch(void* arg);
 void esperar_interrupt(void* arg);
 void* planificar_corto_plazo(void* arg);
+
+void enviar_proceso_a_io(t_pcb* proceso, int io_id, int io_tiempo);
+void vuelta_proceso_io(void* args);
+t_queue* obtener_cola_io(int io_id);
+void comprobar_cola_bloqueados(int io_id);
+
+t_pcb* buscar_proceso_pid(uint32_t pid);
+
+void cambiarEstado(t_pcb* proceso,t_estado EXEC);
+bool espacio_en_memoria(t_pcb* proceso);
+void poner_en_ejecucion(t_pcb* proceso, t_cpu** cpu_encargada);
+t_dispositivo_io* buscar_io(int id_io);
+t_cpu* buscar_cpu_libre(t_list* lista_cpus);
 
 
 

@@ -70,11 +70,11 @@ void inicializar_servidores(){
 	iniciar_dispositivos_io();
 	iniciar_cpus();
 
-	// pthread_create(&cpu_dispatch, NULL, (void*) iniciar_cpu_dispatch, NULL);
-	// pthread_detach(cpu_dispatch);
+	pthread_create(&cpu_dispatch, NULL, (void*) iniciar_cpu_dispatch, NULL);
+	pthread_detach(cpu_dispatch);
 	
 	pthread_create(&servidor_io, NULL, (void*) iniciar_servidor_io, NULL);
-	pthread_join(servidor_io, NULL);
+	pthread_detach(servidor_io);
 
 /* 	pthread_t cpu_interrupt;
 	pthread_create(&cpu_interrupt, NULL, (void*) iniciar_cpu_interrupt, NULL);
@@ -201,12 +201,18 @@ void atender_io(void* arg){
 
 void identificar_io(t_buffer* unBuffer, int socket_fd){
 	int tamanio_nombre = recibir_int_del_buffer(unBuffer);
-	t_dispositivo_io* dispositivo = malloc(sizeof(t_dispositivo_io));
 	void* nombre_raw = recibir_informacion_del_buffer(unBuffer, tamanio_nombre);
+
+	t_dispositivo_io* dispositivo = malloc(sizeof(t_dispositivo_io));
 	memcpy(dispositivo->nombre, nombre_raw, tamanio_nombre);
 	dispositivo->id = id_io_incremental;
-	id_io_incremental++;
 	dispositivo->socket = socket_fd;
+
 	list_add(lista_dispositivos_io, dispositivo);
+
+	t_queue* cola_io = queue_create();
+	list_add_in_index(queue_block, id_io_incremental, cola_io);
+
+	id_io_incremental++;
 	log_info(logger_kernel,"Se registro dispositivo: %s", dispositivo->nombre);
 }
