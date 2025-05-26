@@ -2,6 +2,7 @@
 
 pthread_t servidor_io;
 pthread_t cpu_dispatch;
+pthread_t cpu_interrupt;
 
 int main(int argc, char* argv[]) {
     inicializar_kernel();
@@ -9,7 +10,7 @@ int main(int argc, char* argv[]) {
 	inicializar_servidores();
 
 
-	// crear_proceso(argv[1], argv[2]); // Creo proceso inicial con valores recibidos por parametro
+	crear_proceso(argv[1], argv[2]); // Creo proceso inicial con valores recibidos por parametro
 
 
     // log_info(logger_kernel,"Iniciando servidor Kernel");
@@ -58,13 +59,13 @@ void inicializar_planificacion(){
 
 	scheduler_init();
 
-	/* pthread_t* planificador_corto_plazo = malloc(sizeof(pthread_t));
+	pthread_t* planificador_corto_plazo = malloc(sizeof(pthread_t));
 	pthread_create(planificador_corto_plazo, NULL, planificar_corto_plazo, NULL);
 
 	pthread_t* planificador_largo_plazo = malloc(sizeof(pthread_t));
 	pthread_create(planificador_largo_plazo, NULL, planificar_largo_plazo, NULL);
 
-	log_info(logger_kernel, "planificacion inicializada"); */
+	log_info(logger_kernel, "planificacion inicializada");
 }
 
 void inicializar_servidores(){
@@ -72,14 +73,13 @@ void inicializar_servidores(){
 	iniciar_cpus();
 
 	pthread_create(&cpu_dispatch, NULL, (void*) iniciar_cpu_dispatch, NULL);
-	pthread_join(cpu_dispatch, NULL);
+	pthread_detach(cpu_dispatch);
 	
-	/* pthread_create(&servidor_io, NULL, (void*) iniciar_servidor_io, NULL);
-	pthread_join(servidor_io, NULL); */
+	pthread_create(&servidor_io, NULL, (void*) iniciar_servidor_io, NULL);
+	pthread_detach(servidor_io);
 
-/* 	pthread_t cpu_interrupt;
 	pthread_create(&cpu_interrupt, NULL, (void*) iniciar_cpu_interrupt, NULL);
-	pthread_detach(cpu_interrupt); */
+	pthread_detach(cpu_interrupt);
 
 	
 
