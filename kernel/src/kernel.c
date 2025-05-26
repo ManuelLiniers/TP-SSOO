@@ -8,7 +8,8 @@ int main(int argc, char* argv[]) {
 	inicializar_planificacion();
 	inicializar_servidores();
 
-	crear_proceso(argv[1], argv[2]); // Creo proceso inicial con valores recibidos por parametro
+
+	// crear_proceso(argv[1], argv[2]); // Creo proceso inicial con valores recibidos por parametro
 
 
     // log_info(logger_kernel,"Iniciando servidor Kernel");
@@ -57,13 +58,13 @@ void inicializar_planificacion(){
 
 	scheduler_init();
 
-	pthread_t* planificador_corto_plazo = malloc(sizeof(pthread_t));
+	/* pthread_t* planificador_corto_plazo = malloc(sizeof(pthread_t));
 	pthread_create(planificador_corto_plazo, NULL, planificar_corto_plazo, NULL);
 
 	pthread_t* planificador_largo_plazo = malloc(sizeof(pthread_t));
 	pthread_create(planificador_largo_plazo, NULL, planificar_largo_plazo, NULL);
 
-	log_info(logger_kernel, "planificacion inicializada");
+	log_info(logger_kernel, "planificacion inicializada"); */
 }
 
 void inicializar_servidores(){
@@ -71,10 +72,10 @@ void inicializar_servidores(){
 	iniciar_cpus();
 
 	pthread_create(&cpu_dispatch, NULL, (void*) iniciar_cpu_dispatch, NULL);
-	pthread_detach(cpu_dispatch);
+	pthread_join(cpu_dispatch, NULL);
 	
-	pthread_create(&servidor_io, NULL, (void*) iniciar_servidor_io, NULL);
-	pthread_detach(servidor_io);
+	/* pthread_create(&servidor_io, NULL, (void*) iniciar_servidor_io, NULL);
+	pthread_join(servidor_io, NULL); */
 
 /* 	pthread_t cpu_interrupt;
 	pthread_create(&cpu_interrupt, NULL, (void*) iniciar_cpu_interrupt, NULL);
@@ -128,12 +129,16 @@ t_cpu* cpu_ya_existe(t_list* lista, t_cpu* buscada){
 }
 
 void identificar_cpu(t_buffer* buffer, int socket_fd, void (*funcion)(t_cpu*, int)){
+	int tamanio_nombre = recibir_int_del_buffer(buffer);
+	void* nombre_raw = recibir_informacion_del_buffer(buffer, tamanio_nombre);
 	t_cpu* cpu_nueva = malloc(sizeof(t_cpu));
-	strcpy(cpu_nueva->cpu_id, recibir_string_del_buffer(buffer));
+	memcpy(cpu_nueva->cpu_id, nombre_raw, tamanio_nombre);
 	t_cpu* encontrada = cpu_ya_existe(lista_cpus, cpu_nueva);
 	if(encontrada == NULL){
 		funcion(cpu_nueva, socket_fd);
 		list_add(lista_cpus, cpu_nueva);
+		log_info(logger_kernel, "Tamanio del nombre: %d", tamanio_nombre);
+		log_info(logger_kernel, "Se identifico la CPU: %s", cpu_nueva->cpu_id);
 	}
 	else{ 
 		funcion(encontrada, socket_fd);
@@ -211,7 +216,7 @@ void identificar_io(t_buffer* unBuffer, int socket_fd){
 	list_add(lista_dispositivos_io, dispositivo);
 
 	t_queue* cola_io = queue_create();
-	list_add_in_index(queue_block, id_io_incremental, cola_io);
+	list_add_in_index(queue_block, id_io_incremental, (void*) cola_io);
 
 	id_io_incremental++;
 	log_info(logger_kernel,"Se registro dispositivo: %s", dispositivo->nombre);
