@@ -193,8 +193,7 @@ t_buffer* recibir_paquete(int cliente_fd){
 
 void eliminar_paquete(t_paquete* paquete)
 {
-	free(paquete->buffer->stream);
-	free(paquete->buffer);
+	eliminar_buffer(paquete->buffer);
 	free(paquete);
 }
 
@@ -267,7 +266,8 @@ void obtener_del_buffer(t_buffer *buffer, void *dest, int size){
 }
 
 void eliminar_buffer(t_buffer* unBuffer){
-	free(unBuffer);
+	free(unBuffer->stream);
+    free(unBuffer);
 }
 
 void hacer_handshake(t_log* logger, int conexion){

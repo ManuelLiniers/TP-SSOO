@@ -4,6 +4,7 @@ int conexion_memoria;
 int conexion_kernel_dispatch;
 int conexion_kernel_interrupt;
 bool flag_interrupcion = false;
+int TAMANIO_PAGINA;
 
 
 int main(int argc, char* argv[]) {
@@ -13,7 +14,7 @@ int main(int argc, char* argv[]) {
     t_config* cpu_config = crear_config(logger);
 
 
-    int TAMANIO_PAGINA = config_get_int_value(cpu_config, "TAMANIO_PAGINA");
+    TAMANIO_PAGINA = config_get_int_value(cpu_config, "TAMANIO_PAGINA");
     pthread_mutex_init(&mutex_interrupt, NULL);
 
 
@@ -31,38 +32,38 @@ int main(int argc, char* argv[]) {
     enviarCodigo(conexion_kernel_dispatch,HANDSHAKE);
     hacer_handshake(logger, conexion_kernel_interrupt);
     enviarCodigo(conexion_kernel_interrupt,HANDSHAKE);
-    hacer_handshake(logger, conexion_memoria);
-    enviarCodigo(conexion_memoria,HANDSHAKE);
+
+    abrir_conexion_memoria(ip_memoria, puerto_memoria);
+    
+
+    // mensaje_inicial(conexion_memoria, conexion_kernel_dispatch, conexion_kernel_interrupt);
 
 
-    mensaje_inicial(conexion_memoria, conexion_kernel_dispatch, conexion_kernel_interrupt);
-
-
-pthread_t hilo_interrupt;
-pthread_create(&hilo_interrupt, NULL, escuchar_interrupt, &conexion_kernel_interrupt);
-pthread_detach(hilo_interrupt);
+    pthread_t hilo_interrupt;
+    pthread_create(&hilo_interrupt, NULL, escuchar_interrupt, &conexion_kernel_interrupt);
+    pthread_detach(hilo_interrupt);
 
     //espero PCBs del Kernel por dispatch
-while (1) {
-    log_info(logger, "Esperando op_code desde Kernel...");
+    while (1) {
+        log_info(logger, "Esperando op_code desde Kernel...");
 
-    op_code cod_op;
-    if (recv(conexion_kernel_dispatch, &cod_op, sizeof(op_code), MSG_WAITALL) <= 0) {
-        log_error(logger, "Fallo al recibir op_code del Kernel.");
-        break;
-    }
+        op_code cod_op;
+        if (recv(conexion_kernel_dispatch, &cod_op, sizeof(op_code), MSG_WAITALL) <= 0) {
+            log_error(logger, "Fallo al recibir op_code del Kernel.");
+            break;
+        }
 
-    if (cod_op == CONTEXTO_PROCESO) {
-        log_info(logger, "Recibido CONTEXTO_PROCESO");
-        t_buffer* buffer = recibir_buffer_contexto(conexion_kernel_dispatch);
-        t_contexto* contexto = deserializar_contexto(buffer);
-        atender_proceso_del_kernel(contexto, logger);
-        free(buffer->stream);
-        free(buffer);
-    } else {
-        log_error(logger, "Código de operación desconocido: %d", cod_op);
+        if (cod_op == CONTEXTO_PROCESO) {
+            log_info(logger, "Recibido CONTEXTO_PROCESO");
+            t_buffer* buffer = recibir_buffer_contexto(conexion_kernel_dispatch);
+            t_contexto* contexto = deserializar_contexto(buffer);
+            atender_proceso_del_kernel(contexto, logger);
+            free(buffer->stream);
+            free(buffer);
+        } else {
+            log_error(logger, "Código de operación desconocido: %d", cod_op);
+        }
     }
-}
     terminar_programa(conexion_memoria, conexion_kernel_dispatch, conexion_kernel_interrupt, logger, cpu_config);
 
     return 0;
@@ -319,7 +320,8 @@ else if (string_equals_ignore_case(opcode, "WRITE")) {
     uint32_t direccion_logica = atoi(instruccion->operandos[0]);  //el primer parametro de WRITE es la dir logica, el segundo son los datos
     char* valor = instruccion->operandos[1];
 
-    uint32_t direccion_fisica = traducir_direccion_logica(direccion_logica, 256, contexto, conexion_memoria);
+    // si da error cambiar por 256 el tamanio de pagina
+    uint32_t direccion_fisica = traducir_direccion_logica(direccion_logica, TAMANIO_PAGINA, contexto, conexion_memoria);
 
     log_info(logger, "PID: %d - Acción: ESCRIBIR - Dirección Física: %d - Valor: %s", contexto->pid, direccion_fisica, valor);
 
@@ -419,3 +421,18 @@ uint32_t traducir_direccion_logica(uint32_t direccion_logica, int tamanio_pagina
     return marco * tamanio_pagina + desplazamiento;
 }
 
+void abrir_conexion_memoria(char* ip_memoria, char* puerto_memoria){
+    conexion_memoria = crear_conexion(logger, ip_memoria, puerto_memoria);
+
+    hacer_handshake(logger, conexion_memoria);
+    
+    t_paquete* paqueteID = crear_paquete(IDENTIFICACION);
+
+	void* coso_a_enviar = malloc(sizeof(int));
+	int codigo = CPU;
+	memcpy(coso_a_enviar, &codigo, sizeof(int));
+    agregar_a_paquete(paqueteID, coso_a_enviar, sizeof(op_code));
+    free(coso_a_enviar);
+    enviar_paquete(paqueteID, conexion_memoria);
+    eliminar_paquete(paqueteID);
+}

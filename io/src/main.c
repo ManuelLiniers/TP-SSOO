@@ -53,6 +53,7 @@ int main(int argc, char* argv[]) {
     *longitud_nombre_disp = strlen(nombre_dispositivo) + 1;
     agregar_a_paquete(paqueteID, longitud_nombre_disp, sizeof(int));
     agregar_a_paquete(paqueteID, nombre_dispositivo, *longitud_nombre_disp);
+    free(longitud_nombre_disp);
     
     enviar_paquete(paqueteID, conexion_kernel);
     eliminar_paquete(paqueteID);
