@@ -28,9 +28,11 @@ int main(int argc, char* argv[]) {
     conexion_kernel_dispatch = crear_conexion(logger, ip_kernel, puerto_kernel_dispatch);
     conexion_kernel_interrupt = crear_conexion(logger, ip_kernel, puerto_kernel_interrupt);
     hacer_handshake(logger, conexion_kernel_dispatch);
+    enviarCodigo(conexion_kernel_dispatch,HANDSHAKE);
     hacer_handshake(logger, conexion_kernel_interrupt);
+    enviarCodigo(conexion_kernel_interrupt,HANDSHAKE);
     hacer_handshake(logger, conexion_memoria);
-
+    enviarCodigo(conexion_memoria,HANDSHAKE);
 
 
     mensaje_inicial(conexion_memoria, conexion_kernel_dispatch, conexion_kernel_interrupt);
