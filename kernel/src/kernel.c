@@ -56,26 +56,19 @@ void inicializar_planificacion(){
 	pthread_create(&planificador_corto_plazo, NULL, (void*) planificar_corto_plazo, NULL);
 	pthread_detach(planificador_corto_plazo);
 
-	switch (algoritmo_largo_plazo)
-	{
-	case "FIFO":
+	if(strcmp(algoritmo_largo_plazo,"FIFO") == 0){
 
 		log_info(logger_kernel, "Planificacion largo plazo con FIFO");
 		pthread_t planificador_largo_plazo_FIFO;
-		pthread_create(&planificador_largo_plazo_FIFO, NULL, (void*) planificar_largo_plazo_FIFO, NULL);
+		pthread_create(&planificador_largo_plazo_FIFO, NULL, (void *) planificar_largo_plazo_FIFO, NULL);
 		pthread_detach(planificador_largo_plazo_FIFO);
-		break;
-
-	case "PMCP":
+	}
+	if(strcmp(algoritmo_largo_plazo,"PMCP") == 0){
 
 		log_info(logger_kernel, "Planificacion largo plazo con PMCP");
 		pthread_t planificador_largo_plazo_PMCP;
-		pthread_create(&planificador_largo_plazo_PMCP, NULL, (void*) planificar_largo_plazo_PMCP, NULL);
+		pthread_create(&planificador_largo_plazo_PMCP, NULL, (void *) planificar_largo_plazo_PMCP, NULL);
 		pthread_detach(planificador_largo_plazo_PMCP);
-		break;
-
-	default:
-		break;
 	}
 
 	log_info(logger_kernel, "planificacion inicializada");
@@ -233,4 +226,23 @@ void identificar_io(t_buffer* unBuffer, int socket_fd){
 
 	id_io_incremental++;
 	log_info(logger_kernel,"Se registro dispositivo: %s", dispositivo->nombre);
+}
+
+// Se crea un proceso y se pushea a new
+void crear_proceso(char* instrucciones, char* tamanio_proceso){
+    t_pcb* pcb_nuevo = pcb_create();
+    pcb_nuevo->instrucciones = instrucciones;
+    pcb_nuevo->tamanio_proceso = atoi(tamanio_proceso);
+    if(strcmp(algoritmo_largo_plazo,"FIFO") == 0){
+		wait_mutex(&mutex_queue_new);
+		queue_push(queue_new, pcb_nuevo);
+		signal_mutex(&mutex_queue_new);
+		signal_sem(&nuevo_proceso);
+	}
+    if(strcmp(algoritmo_largo_plazo,"PMCP") == 0){
+		wait_mutex(&mutex_queue_new);
+		list_add_in_index(queue_new_PMCP, 0, pcb_nuevo);
+		signal_mutex(&mutex_queue_new);
+		signal_sem(&nuevo_proceso);
+    }
 }

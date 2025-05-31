@@ -9,15 +9,17 @@ t_list* lista_procesos_ejecutando;
 
 // Definición de las colas globales
 t_queue* queue_new;
+t_list* queue_new_PMCP;
 t_queue* queue_ready;
 t_list* queue_block;
 t_queue* queue_exit;
 
 void scheduler_init(void) {
-    queue_new   = queue_create();
+    queue_new  = queue_create();
+    queue_new_PMCP = list_create();
     queue_ready = queue_create();
     queue_block = list_create();
-    queue_exit  = queue_create();
+    queue_exit = queue_create();
     lista_procesos_ejecutando = list_create();
 }
 
@@ -34,18 +36,6 @@ void iniciar_dispositivos_io(){
 
 void iniciar_cpus(){
     lista_cpus = list_create();
-}
-
-// Se crea un proceso y se pushea a new
-void crear_proceso(char* instrucciones, char* tamanio_proceso){
-    t_pcb* pcb_nuevo = pcb_create();
-    pcb_nuevo->instrucciones = instrucciones;
-    pcb_nuevo->tamanio_proceso = atoi(tamanio_proceso);
-    
-    wait_mutex(&mutex_queue_new);
-    queue_push(queue_new, pcb_nuevo);
-    signal_mutex(&mutex_queue_new);
-    signal_sem(&nuevo_proceso);
 }
 
 // Se crea un PCB con contador en 0 y en NEW
