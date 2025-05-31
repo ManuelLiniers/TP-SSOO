@@ -54,22 +54,29 @@ void inicializar_memoria(){
 	leer_config(memoria_config);
 	//  leer_log(memoria_logger);  		(Para pruebas)
 
+
+	espacio_usuario = malloc(TAM_MEMORIA);
+	if(espacio_usuario == NULL){
+    	log_error(memoria_logger, "Error al crear memoria de usuario");
+    	exit(1);
+	}
+
+	// Inicializar lista para administración de marcos libres
+	int cantidad_marcos = TAM_MEMORIA / TAM_PAGINA;
+	lst_marcos = list_create();
+	for(int i = 0; i < cantidad_marcos; i++) {
+		t_marco* marco_nuevo  = crear_marco(TAM_PAGINA*i, true, i);
+    	
+		list_add(lst_marcos, marco_nuevo); // Todos los marcos libres inicialmente
+	}
+
+
 	log_info(memoria_logger,"Iniciando servidor Memoria");
 
 	// Aca se almacenan los procesos que llegan,  
 	procesos_memoria = list_create();
 
 	server_fd_memoria = iniciar_servidor(memoria_logger, NULL, PUERTO_ESCUCHA);
-
-
-	/*
-	espacio_usuario = malloc(TAM_MEMORIA);
-	if(espacio_usuario == NULL){
-		log_error(memoria_logger, "Error al crear memoria de usuario");
-		exit(1);
-	}
-	log_info(memoria_logger, "Se inicia memoria con Paginacion.");
-	*/
 }
 
 

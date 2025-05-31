@@ -12,6 +12,7 @@
 #include "atencion_a_cpu.h"
 #include "proceso.h"
 #include "variables_memoria.h"
+#include "marcos.h"
 
 
 void leer_config();

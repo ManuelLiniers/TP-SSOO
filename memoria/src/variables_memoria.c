@@ -21,3 +21,5 @@ t_list* procesos_memoria;
 
 t_log* memoria_logger;
 t_config* memoria_config;
+
+t_list* lst_marcos;

@@ -31,4 +31,7 @@ extern t_list* procesos_memoria;
 extern t_log* memoria_logger;
 extern t_config* memoria_config;
 
+// Paginas
+extern t_list* lst_marcos;
+
 #endif
