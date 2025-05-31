@@ -5,6 +5,7 @@ int conexion_kernel_dispatch;
 int conexion_kernel_interrupt;
 bool flag_interrupcion = false;
 int TAMANIO_PAGINA;
+int ENTRADAS_CACHE;
 
 
 int main(int argc, char* argv[]) {
@@ -13,8 +14,11 @@ int main(int argc, char* argv[]) {
     t_log* logger = crear_log();
     t_config* cpu_config = crear_config(logger);
 
+    inicializar_tlb(logger);
+
 
     TAMANIO_PAGINA = config_get_int_value(cpu_config, "TAMANIO_PAGINA");
+    ENTRADAS_CACHE = config_get_int_value(cpu_config, "ENTRADAS_CACHE");
     pthread_mutex_init(&mutex_interrupt, NULL);
 
 
@@ -208,6 +212,9 @@ bool hay_interrupcion() {
 
 void destruir_estructuras_del_contexto_actual(t_contexto* contexto) {
     free(contexto);
+    limpiar_tlb_por_pid(contexto->pid);   //REVEER
+    limpiar_cache_por_pid(contexto->pid, conexion_memoria, TAMANIO_PAGINA, logger);  //REVEER
+
 }
 
 ////////////////////////////////////////////////////////////////////   FETCH   ///////////////////////////////////////////////////////////////////////////////////
@@ -397,29 +404,43 @@ void enviar_contexto_a_kernel_io(t_contexto* contexto, motivo_desalojo motivo, i
 
 
 
-//esto va en archivo MMU.C
+//PONER EN MMU.C
 uint32_t traducir_direccion_logica(uint32_t direccion_logica, int tamanio_pagina, t_contexto* contexto, int conexion_memoria) {
-    uint32_t nro_pagina     = direccion_logica / tamanio_pagina;
+    uint32_t nro_pagina = direccion_logica / tamanio_pagina;
     uint32_t desplazamiento = direccion_logica % tamanio_pagina;
 
-    // Log obligatorio
+    char* contenido_cache = NULL;
+    if (entradas_cache > 0 && buscar_en_cache(contexto->pid, nro_pagina, &contenido_cache, logger)) {
+        // Solo necesitás el marco si querés calcular la dirección física
+        uint32_t marco = nro_pagina;  // asumimos mapeo directo página-marco
+        free(contenido_cache);
+        return marco * tamanio_pagina + desplazamiento;
+    }
+
+    uint32_t marco;   //EN BUSCAR_EN_TLB PASAMOS MARCO COMO REFERENCIA XQ LA FUNCION DEVUELVE UN INT Y PARA QUE TOME EL VALOR DEL MARCO ENCONTRADO
+    //XQ LO NECESITO PARA CALCULAR LA D.FISICA sin tener que ir a Memoria otra vez
+
+    if (buscar_en_tlb(contexto->pid, nro_pagina, &marco, logger)) {
+        return marco * tamanio_pagina + desplazamiento;
+    }
+
     log_info(logger, "PID: %d - OBTENER MARCO - Página: %d", contexto->pid, nro_pagina);
 
-    // Enviar solicitud de marco a Memoria
     t_paquete* paquete = crear_paquete(PEDIR_MARCO);
     agregar_a_paquete(paquete, &(contexto->pid), sizeof(uint32_t));
     agregar_a_paquete(paquete, &nro_pagina, sizeof(uint32_t));
     enviar_paquete(paquete, conexion_memoria);
     eliminar_paquete(paquete);
 
-    // Recibir respuesta con num de marco
-    uint32_t marco;
     recv(conexion_memoria, &marco, sizeof(uint32_t), 0);
-
     log_info(logger, "PID: %d - Marco recibido: %d", contexto->pid, marco);
+
+    agregar_a_tlb(contexto->pid, nro_pagina, marco, logger);
 
     return marco * tamanio_pagina + desplazamiento;
 }
+
+
 
 void abrir_conexion_memoria(char* ip_memoria, char* puerto_memoria){
     conexion_memoria = crear_conexion(logger, ip_memoria, puerto_memoria);

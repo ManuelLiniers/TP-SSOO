@@ -2,10 +2,12 @@
 #include "utils/commons.h"
 #include "utils/socket.h"
 #include "instruccion.h"
+#include "tlb.h"
 
 extern int conexion_memoria;
 extern int conexion_kernel_dispatch;
 extern int conexion_kernel_interrupt;
+extern t_config* cpu_config;
 
 t_log* crear_log();
 t_log* logger;
@@ -25,6 +27,16 @@ typedef struct {
     uint32_t CX;
     uint32_t DX;
 } t_contexto;
+
+
+//esto va en tlb.h
+typedef struct {
+    int pid;              
+    uint32_t pagina;
+    uint32_t marco;
+    uint64_t timestamp;   // Para algoritmo LRU
+} t_entrada_tlb;
+
 
 // Funciones que vamos a implementar en etapas
 void atender_proceso_del_kernel(t_contexto* contexto, t_log* logger);
