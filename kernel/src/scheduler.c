@@ -1,7 +1,7 @@
 #include "scheduler.h"
 
 
-void* planificar_corto_plazo(void* arg){
+void planificar_corto_plazo(void* arg){
 	while(1){
         wait_sem(&proceso_ready);
         // wait de cpu libre?
@@ -145,7 +145,7 @@ t_dispositivo_io* buscar_io(int id_io){
 }
 
 
-void* planificar_largo_plazo(void* arg){
+void planificar_largo_plazo_FIFO(void* arg){
 	while(1){
         wait_sem(&nuevo_proceso);
         wait_mutex(&mutex_queue_new);
@@ -177,6 +177,10 @@ void* planificar_largo_plazo(void* arg){
 		}
 	}
 
+}
+
+void planificar_largo_plazo_PMCP(void* arg){
+    
 }
 
 bool espacio_en_memoria(t_pcb* proceso){

@@ -42,28 +42,41 @@ void inicializar_kernel(char* instrucciones, char* tamanio_proceso){
 	puerto_dispatch = config_get_string_value(config_kernel, "PUERTO_ESCUCHA_DISPATCH");
 	puerto_interrupt = config_get_string_value(config_kernel, "PUERTO_ESCUCHA_INTERRUPT");
 	puerto_io = config_get_string_value(config_kernel, "PUERTO_ESCUCHA_IO");
+	algoritmo_corto_plazo = config_get_string_value(config_kernel, "ALGORITMO_PLANIFICACION");
+	algoritmo_largo_plazo = config_get_string_value(config_kernel, "ALGORITMO_INGRESO_A_READY");
 
 	log_info(logger_kernel, "kernel inicializado");
-    
-	// int conexion = crear_conexion(logger_kernel, ip_memoria, puerto_memoria);
-	// enviar_mensaje("Conexion desde kernel", conexion);
 }
 
 void inicializar_planificacion(){
 
-	/* 
-	Incializar la planificacion creando las colas y entiendo que crear hilo 
-	para cada una de las planificaciones.
-	Ver si hacer eso aca o derivarlo en el archivo scheduler.c
-	*/
-
 	scheduler_init();
 
-	pthread_t* planificador_corto_plazo = malloc(sizeof(pthread_t));
-	pthread_create(planificador_corto_plazo, NULL, planificar_corto_plazo, NULL);
+	pthread_t planificador_corto_plazo;
+	pthread_create(&planificador_corto_plazo, NULL, (void*) planificar_corto_plazo, NULL);
+	pthread_detach(planificador_corto_plazo);
 
-	pthread_t* planificador_largo_plazo = malloc(sizeof(pthread_t));
-	pthread_create(planificador_largo_plazo, NULL, planificar_largo_plazo, NULL);
+	switch (algoritmo_largo_plazo)
+	{
+	case "FIFO":
+
+		log_info(logger_kernel, "Planificacion largo plazo con FIFO");
+		pthread_t planificador_largo_plazo_FIFO;
+		pthread_create(&planificador_largo_plazo_FIFO, NULL, (void*) planificar_largo_plazo_FIFO, NULL);
+		pthread_detach(planificador_largo_plazo_FIFO);
+		break;
+
+	case "PMCP":
+
+		log_info(logger_kernel, "Planificacion largo plazo con PMCP");
+		pthread_t planificador_largo_plazo_PMCP;
+		pthread_create(&planificador_largo_plazo_PMCP, NULL, (void*) planificar_largo_plazo_PMCP, NULL);
+		pthread_detach(planificador_largo_plazo_PMCP);
+		break;
+
+	default:
+		break;
+	}
 
 	log_info(logger_kernel, "planificacion inicializada");
 }
