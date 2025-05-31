@@ -1,5 +1,7 @@
 #include "scheduler.h"
 
+char* algoritmo_corto_plazo;
+char* algoritmo_largo_plazo;
 
 void *planificar_corto_plazo(void* arg){
 	while(1){
