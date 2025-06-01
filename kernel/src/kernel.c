@@ -44,6 +44,8 @@ void inicializar_kernel(char* instrucciones, char* tamanio_proceso){
 	puerto_io = config_get_string_value(config_kernel, "PUERTO_ESCUCHA_IO");
 	algoritmo_corto_plazo = config_get_string_value(config_kernel, "ALGORITMO_PLANIFICACION");
 	algoritmo_largo_plazo = config_get_string_value(config_kernel, "ALGORITMO_INGRESO_A_READY");
+	estimacion_inicial = config_get_int_value(config_kernel, "ESTIMACION_INICIAL");
+	estimador_alfa = config_get_double_value(config_kernel, "ALFA");
 
 	log_info(logger_kernel, "kernel inicializado");
 }
@@ -233,6 +235,7 @@ void crear_proceso(char* instrucciones, char* tamanio_proceso){
     t_pcb* pcb_nuevo = pcb_create();
     pcb_nuevo->instrucciones = instrucciones;
     pcb_nuevo->tamanio_proceso = atoi(tamanio_proceso);
+	pcb_nuevo->estimacion_anterior = estimacion_inicial;
     if(strcmp(algoritmo_largo_plazo,"FIFO") == 0){
 		wait_mutex(&mutex_queue_new);
 		queue_push(queue_new, pcb_nuevo);
@@ -243,6 +246,7 @@ void crear_proceso(char* instrucciones, char* tamanio_proceso){
 		wait_mutex(&mutex_queue_new);
 		list_add_in_index(queue_new_PMCP, 0, pcb_nuevo); 
 		// pusheo el nuevo proceso adelante de todo para poder sacarlo en el planificador y verificar primero con este
+		cambiarEstado(pcb_nuevo, NEW);
 		signal_mutex(&mutex_queue_new);
 		signal_sem(&nuevo_proceso);
     }

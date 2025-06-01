@@ -2,6 +2,8 @@
 
 char* algoritmo_corto_plazo;
 char* algoritmo_largo_plazo;
+int estimacion_inicial;
+double estimador_alfa;
 
 void *planificar_corto_plazo(void* arg){
 	while(1){
@@ -238,32 +240,56 @@ bool espacio_en_memoria(t_pcb* proceso){
     enviar_paquete(paqueteInfo, conexion);
 
     eliminar_paquete(paqueteInfo);
-    // falta recibir y analizar respuesta de memoria
 
     t_buffer* buffer = malloc(sizeof(t_buffer));
     recv(conexion, buffer, sizeof(int), 0);
-    int* tiene_espacio = malloc(sizeof(int));
-    memcpy(tiene_espacio, buffer->stream,sizeof(int));
-    int resultado = *tiene_espacio;
+    int resultado = recibir_int_del_buffer(buffer);
     free(buffer);
-    free(tiene_espacio);
     return resultado==OK;
 }
 
 
 void cambiarEstado(t_pcb* proceso, t_estado estado){
 
+    t_metricas_estado_tiempo* metrica_anterior = obtener_ultima_metrica(proceso);
+    if(metrica_anterior != NULL){
+        metrica_anterior->tiempo_fin = clock(); // o se puede cambiar por time()
+        if(metrica_anterior->estado == EXEC && estado == BLOCKED){
+            proceso->rafaga_real = calcular_rafaga(proceso->metricas_tiempo);
+        }
+    }
+
     proceso->estado = estado;
     proceso->metricas_estado[id_estado(estado)]++;
 
-    // falta las metricas del tiempo
 
     t_metricas_estado_tiempo* metrica = malloc(sizeof(t_metricas_estado_tiempo));
     metrica->estado = estado;
-    // metrica->tiempo_inicio = tiempo_ahora;
+    metrica->tiempo_inicio = clock();
 
     list_add(proceso->metricas_tiempo, metrica);
 }
+
+t_metricas_estado_tiempo* obtener_ultima_metrica(t_pcb* proceso){
+    if(proceso->metricas_tiempo == NULL)
+    {
+        return NULL;
+    }
+    t_metricas_estado_tiempo* ultimo_elemento = list_get(proceso->metricas_tiempo, list_size(proceso->metricas_tiempo)-1);
+        return ultimo_elemento;
+}
+
+int calcular_rafaga(t_list* metricas_tiempo){
+    t_metricas_estado_tiempo* ultima_metrica = list_get(metricas_tiempo, sizeof(metricas_tiempo)-1); 
+    t_metricas_estado_tiempo* metrica = list_get(metricas_tiempo, sizeof(metricas_tiempo)-3);
+    if(metrica->estado == EXEC){
+        return ultima_metrica->tiempo_fin - metrica->tiempo_inicio - (ultima_metrica->tiempo_inicio - metrica->tiempo_fin);
+    }
+    else{
+        return ultima_metrica->tiempo_fin - ultima_metrica->tiempo_inicio;
+    }
+}
+
 void poner_en_ready(t_pcb* proceso){
 
     cambiarEstado(proceso, READY);
@@ -275,6 +301,15 @@ void poner_en_ready(t_pcb* proceso){
 bool proceso_es_mas_chico(void* a, void* b){
     t_pcb* proceso_a = (t_pcb*) a;
     t_pcb* proceso_b = (t_pcb*) b;
+    
+    /* En un futuro sera:
+
+    double estimacion_a = proceso_a->rafaga_real * estimador_alfa + proceso_a->estimacion_anterior * (1-estimador_alfa);
+    double estimacion_b = proceso_b->rafaga_real * estimador_alfa + proceso_b->estimacion_anterior * (1-estimador_alfa);
+    return estimacion_a <= estimacion_b;
+
+    */
+
     return proceso_a->tamanio_proceso <= proceso_b->tamanio_proceso;
 }
 void poner_en_ejecucion(t_pcb* proceso, t_cpu** cpu_encargada){

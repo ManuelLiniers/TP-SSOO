@@ -13,6 +13,7 @@
 #include <netdb.h>
 #include <string.h>
 #include <pthread.h>
+#include <time.h>
 #include </home/utnso/tp-2025-1c-queCompileALaPrimera/utils/src/utils/socket.h>
 
 typedef enum {

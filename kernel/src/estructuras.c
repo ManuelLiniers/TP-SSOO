@@ -52,7 +52,7 @@ t_pcb* pcb_create() {
 
     int metricas_estado[5] = {0, 0, 0, 0, 0};
     memcpy(pcb->metricas_estado, metricas_estado, sizeof(int[5]));
-    pcb->metricas_tiempo = list_create();
+    pcb->metricas_tiempo = NULL;
 
     /* tengo una idea para implementar las metricas que capaz es mas simple
     no lo pense tanto en codigo pero capaz que sea un vector con 5 espacios

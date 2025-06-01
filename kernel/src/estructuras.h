@@ -26,8 +26,8 @@ extern t_queue* queue_exit;
 
 typedef struct{
     t_estado estado;
-    int tiempo_inicio;
-    int tiempo_fin;
+    long tiempo_inicio;
+    long tiempo_fin;
  } t_metricas_estado_tiempo;
 
 // Control Block de un proceso
@@ -40,6 +40,8 @@ typedef struct {
     int metricas_estado[5];         // Lista de veces que estuvo en cada estado
     t_list* metricas_tiempo;  // Lista de tiempo que estuvo en cada estado
     int registros[4];
+    long estimacion_anterior;
+    long rafaga_real;
     // Más campos opcionales: tamaño de memoria, registros, métricas, etc.
 } t_pcb;
 
