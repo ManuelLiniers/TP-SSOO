@@ -62,13 +62,14 @@ void inicializar_memoria(){
 	}
 
 	// Inicializar lista para administración de marcos libres
-	int cantidad_marcos = TAM_MEMORIA / TAM_PAGINA;
+	marcos_totales = TAM_MEMORIA / TAM_PAGINA;
 	lst_marcos = list_create();
-	for(int i = 0; i < cantidad_marcos; i++) {
-		t_marco* marco_nuevo  = crear_marco(TAM_PAGINA*i, true, i);
+	for(int i = 0; i < marcos_totales; i++) {
+		t_marco* marco_nuevo  = crear_marco(TAM_PAGINA * i, true, i);
     	
 		list_add(lst_marcos, marco_nuevo); // Todos los marcos libres inicialmente
 	}
+	
 
 
 	log_info(memoria_logger,"Iniciando servidor Memoria");

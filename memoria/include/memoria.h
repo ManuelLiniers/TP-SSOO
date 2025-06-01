@@ -8,11 +8,13 @@
 #include <commons/config.h>
 #include <readline/readline.h>
 #include "utils/socket.h"
+#include "variables_memoria.h"
 #include "atencion_a_kernel.h"
 #include "atencion_a_cpu.h"
 #include "proceso.h"
-#include "variables_memoria.h"
 #include "marcos.h"
+#include "tablas.h"
+
 
 
 void leer_config();

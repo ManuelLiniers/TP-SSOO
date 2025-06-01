@@ -12,26 +12,6 @@
 #include "atencion_a_kernel.h"
 #include "memoria.h"
 
-typedef struct {
-    int accesos_tablas_paginas;
-    int instrucciones_solicitadas;
-    int bajadas_swap;
-    int subidas_memoria;
-    int lecturas_memoria;
-    int escrituras_memoria;
-} t_metricas_proceso;
-
-typedef struct{
-	int pid;
-	int size;
-	t_metricas_proceso metricas;
-	char* pathInstrucciones;
-	t_list* instrucciones;
-	// t_list* tabla_paginas;
-	// pthread_mutex_t mutex_TP;
-}t_proceso;
-
-
 
 t_proceso* crear_proceso(int pid, int size, char* path_instruc);
 void agregar_proceso_a_lista(t_proceso* un_proceso ,t_list* una_lista);

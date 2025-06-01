@@ -2,57 +2,94 @@
 
 t_marco* crear_marco(int base, bool libre, int index){
     t_marco* nuevo_marco = malloc(sizeof(t_marco));
+
 	nuevo_marco->nro_marco = index;
 	nuevo_marco->base = base;
 	nuevo_marco->libre = libre;
-//	nuevo_marco->info_new = NULL;
-//	nuevo_marco->info_old = NULL;
+    
+    nuevo_marco->info = malloc(sizeof(marco_info));
+    if (!nuevo_marco->info) {
+        free(nuevo_marco);
+        return NULL;
+    }
 
-//	nuevo_marco->orden_carga = 0;
-//	nuevo_marco->ultimo_uso = NULL;
+    // Valores por defecto para info
+    nuevo_marco->info->pid_proceso = -1;
+    nuevo_marco->info->nro_pagina = -1;
 
 	return nuevo_marco;
 }
 
 void liberar_marco(t_marco* un_marco){
+    if (!un_marco) return;
+
+    pthread_mutex_lock(&mutex_lst_marco);
     un_marco->libre = true;
-	/*un_marco->orden_carga = 0;
-	if(un_marco->info_new != NULL){
-		free(un_marco->info_new);
-		un_marco->info_new = NULL;
-	}
-	if(un_marco->info_old != NULL){
-		free(un_marco->info_old);
-		un_marco->info_old = NULL;
-	}
-	if(un_marco->ultimo_uso != NULL){
-		temporal_destroy(un_marco->ultimo_uso);
-		un_marco->ultimo_uso = NULL;
-	}*/
+    
+//  Resetear la información 
+    if (un_marco->info) {
+        un_marco->info->pid_proceso = -1;
+        un_marco->info->nro_pagina = -1;
+    }
+    pthread_mutex_unlock(&mutex_lst_marco);
+}
+
+t_marco* obtener_marco_libre(){
+    t_marco* marco_libre = NULL;
+
+    pthread_mutex_lock(&mutex_lst_marco);
+    for (int i = 0; i < list_size(lst_marcos); i++) {
+        t_marco* marco = list_get(lst_marcos, i);
+        if (marco->libre) {
+            marco_libre = marco;
+            break;
+        }
+    }
+    pthread_mutex_unlock(&mutex_lst_marco);
+    
+    return marco_libre;
+}
+
+bool hay_marcos_libres() {
+    bool resultado = false;
+    
+    pthread_mutex_lock(&mutex_lst_marco);
+    for (int i = 0; i < list_size(lst_marcos); i++) {
+        t_marco* marco = list_get(lst_marcos, i);
+        if (marco->libre) {
+            resultado = true;
+            break;
+        }
+    }
+    pthread_mutex_unlock(&mutex_lst_marco);
+    
+    return resultado;
 }
 
 t_marco* obtener_marco_por_nro_marco(int nro_marco){
-    t_marco* un_marco;
-//	pthread_mutex_lock(&mutex_lst_marco);
-	un_marco = list_get(lst_marcos, nro_marco);
-//	pthread_mutex_unlock(&mutex_lst_marco);
-
-	return un_marco;
+    t_marco* marco = NULL;
+    
+    pthread_mutex_lock(&mutex_lst_marco);
+    if (nro_marco >= 0 && nro_marco < list_size(lst_marcos)) {
+        marco = list_get(lst_marcos, nro_marco);
+    }
+    pthread_mutex_unlock(&mutex_lst_marco);
+    
+    return marco;
 }
 
-void destruir_list_marcos_y_todos_los_marcos(){
-    void _destruir_un_marco(t_marco* un_marco){
-		/*if(un_marco->info_new != NULL){
-			free(un_marco->info_new);
-		}
-		if(un_marco->info_old != NULL){
-			free(un_marco->info_old);
-		}
-		if(un_marco->ultimo_uso != NULL){
-			temporal_destroy(un_marco->ultimo_uso);
-		}*/
-		free(un_marco);
-	}
-	list_destroy_and_destroy_elements(lst_marcos, (void*)_destruir_un_marco);
+void destruir_todos_los_marcos() {
+    pthread_mutex_lock(&mutex_lst_marco);
+    if (lst_marcos) {
+        for (int i = 0; i < list_size(lst_marcos); i++) {
+            t_marco* marco = list_get(lst_marcos, i);
+            if (marco->info) {
+                free(marco->info);
+            }
+            free(marco);
+        }
+        list_destroy(lst_marcos);
+        lst_marcos = NULL;
+    }
+    pthread_mutex_unlock(&mutex_lst_marco);
 }
-

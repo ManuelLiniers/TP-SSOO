@@ -23,3 +23,8 @@ t_log* memoria_logger;
 t_config* memoria_config;
 
 t_list* lst_marcos;
+int marcos_totales;
+
+pthread_mutex_t m_tablas;
+pthread_mutex_t mutex_lst_marco;
+pthread_mutex_t mutex_espacio_usuario;
