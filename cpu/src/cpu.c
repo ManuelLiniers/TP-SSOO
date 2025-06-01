@@ -191,7 +191,7 @@ void* escuchar_interrupt(void* arg) {
     while (1) {
         op_code codigo;
         if (recv(fd, &codigo, sizeof(op_code), 0) > 0) {
-            if (codigo == MENSAJE) {  
+            if (codigo == INTERRUPCION_CPU) {  
                 pthread_mutex_lock(&mutex_interrupt);
                 flag_interrupcion = true;
                 pthread_mutex_unlock(&mutex_interrupt);

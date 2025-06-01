@@ -29,6 +29,7 @@ typedef enum
 	INIT_PROC,
 	DEVOLVER_CONTEXTO,
 	OK,
+	INTERRUPCION_CPU,
 	CONTEXTO_PROCESO
 } op_code; 
 

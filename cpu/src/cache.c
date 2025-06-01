@@ -32,7 +32,14 @@ void reemplazar_con_clock(t_entrada_cache* nueva, t_log* logger) {
         t_entrada_cache* actual = list_get(cache_paginas, puntero_clock);
         if (!actual->bit_uso) {
             if (actual->bit_modificado) {
-      //VER SI SE ENVIA O NO A MEMORIA
+                t_paquete* paquete = crear_paquete(ESCRIBIR_MEMORIA); // ENVIO A MEMORIA EL CONTENIDO ACTUALIZADO
+                agregar_a_paquete(paquete, &(actual->marco), sizeof(uint32_t));
+                agregar_a_paquete(paquete, actual->contenido, strlen(actual->contenido) + 1);
+                enviar_paquete(paquete, conexion_memoria);
+                eliminar_paquete(paquete);
+
+                log_info(logger, "PID: %d - Memory Update - Página: %d - Frame: %d", actual->pid, actual->pagina, actual->marco);
+
                 log_info(logger, "PID: %d - Memory Update - Página: %d", actual->pid, actual->pagina);
             }
             list_replace_and_destroy_element(cache_paginas, puntero_clock, nueva, free);
