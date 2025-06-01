@@ -12,7 +12,7 @@ extern pthread_mutex_t mutex_queue_exit;
 
 extern sem_t nuevo_proceso;
 extern sem_t proceso_ready;
-extern sem_t proceso_terminado;
+extern sem_t espacio_memoria;
 
 void iniciar_semaforos();
 void signal_sem(sem_t *sem);
