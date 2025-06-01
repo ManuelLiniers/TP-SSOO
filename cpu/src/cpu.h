@@ -3,6 +3,7 @@
 #include "utils/socket.h"
 #include "instruccion.h"
 #include "tlb.h"
+#include "cache.h"
 
 extern int conexion_memoria;
 extern int conexion_kernel_dispatch;

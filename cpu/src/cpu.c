@@ -211,9 +211,10 @@ bool hay_interrupcion() {
 }
 
 void destruir_estructuras_del_contexto_actual(t_contexto* contexto) {
+    limpiar_tlb_por_pid(contexto->pid);  
+    limpiar_cache_por_pid(contexto->pid, conexion_memoria, TAMANIO_PAGINA, logger); 
     free(contexto);
-    limpiar_tlb_por_pid(contexto->pid);   //REVEER
-    limpiar_cache_por_pid(contexto->pid, conexion_memoria, TAMANIO_PAGINA, logger);  //REVEER
+    
 
 }
 
@@ -411,8 +412,8 @@ uint32_t traducir_direccion_logica(uint32_t direccion_logica, int tamanio_pagina
 
     char* contenido_cache = NULL;
     if (entradas_cache > 0 && buscar_en_cache(contexto->pid, nro_pagina, &contenido_cache, logger)) {
-        // Solo necesitás el marco si querés calcular la dirección física
-        uint32_t marco = nro_pagina;  // asumimos mapeo directo página-marco
+        // Solo necesito el marco si quiero calcular la dirección física
+        uint32_t marco = entrada_encontrada->marco;   //NO HAY MAPEO DIRECTO
         free(contenido_cache);
         return marco * tamanio_pagina + desplazamiento;
     }
@@ -427,7 +428,7 @@ uint32_t traducir_direccion_logica(uint32_t direccion_logica, int tamanio_pagina
     log_info(logger, "PID: %d - OBTENER MARCO - Página: %d", contexto->pid, nro_pagina);
 
     t_paquete* paquete = crear_paquete(PEDIR_MARCO);
-    agregar_a_paquete(paquete, &(contexto->pid), sizeof(uint32_t));
+    agregar_a_paquete(paquete, &(contexto->pid), sizeof(uint32_t));  
     agregar_a_paquete(paquete, &nro_pagina, sizeof(uint32_t));
     enviar_paquete(paquete, conexion_memoria);
     eliminar_paquete(paquete);
@@ -439,7 +440,8 @@ uint32_t traducir_direccion_logica(uint32_t direccion_logica, int tamanio_pagina
 
     return marco * tamanio_pagina + desplazamiento;
 }
-
+//CPU no traduce la página en todos los niveles (siendo paginacion multinibvel),
+// sino que le delega esa lógica a Memoria. Y Memoria, a partir del PID y la página, accede a las tablas de páginas y responde con el marco correspondiente.
 
 
 void abrir_conexion_memoria(char* ip_memoria, char* puerto_memoria){
