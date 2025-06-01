@@ -241,7 +241,8 @@ void crear_proceso(char* instrucciones, char* tamanio_proceso){
 	}
     if(strcmp(algoritmo_largo_plazo,"PMCP") == 0){
 		wait_mutex(&mutex_queue_new);
-		list_add_in_index(queue_new_PMCP, 0, pcb_nuevo);
+		list_add_in_index(queue_new_PMCP, 0, pcb_nuevo); 
+		// pusheo el nuevo proceso adelante de todo para poder sacarlo en el planificador y verificar primero con este
 		signal_mutex(&mutex_queue_new);
 		signal_sem(&nuevo_proceso);
     }

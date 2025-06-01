@@ -8,7 +8,7 @@ pthread_mutex_t mutex_queue_exit;
 
 // Semáforos
 sem_t nuevo_proceso;
-sem_t proceso_terminado;
+sem_t espacio_memoria;
 sem_t proceso_ready;
 
 
@@ -37,7 +37,7 @@ void iniciar_semaforos(){
 
     sem_init(&nuevo_proceso, 0, 0);
     sem_init(&proceso_ready, 0, 0);
-    sem_init(&proceso_terminado, 0, 0);
+    sem_init(&espacio_memoria, 0, 0);
 };
 
 void destruir_semaforos() {
@@ -48,5 +48,5 @@ void destruir_semaforos() {
 
     sem_destroy(&nuevo_proceso);
     sem_destroy(&proceso_ready);
-    sem_destroy(&proceso_terminado);
+    sem_destroy(&espacio_memoria);
 };

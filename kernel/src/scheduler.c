@@ -57,7 +57,7 @@ void esperar_dispatch(void* arg){
         queue_push(queue_exit, proceso);
         signal_mutex(&mutex_queue_exit);
 
-        signal_sem(&proceso_terminado);
+        signal_sem(&espacio_memoria);
         break;
     case CAUSA_IO:
 
@@ -158,18 +158,15 @@ void *planificar_largo_plazo_FIFO(void* arg){
 
                 wait_mutex(&mutex_queue_new);
 				queue_pop(queue_new);
-                cambiarEstado(proceso, READY);
                 signal_mutex(&mutex_queue_new);
 
-                wait_mutex(&mutex_queue_ready);
-				queue_push(queue_ready, proceso);
-                signal_mutex(&mutex_queue_ready);
+                poner_en_ready(proceso);
 
                 signal_sem(&proceso_ready);
 			}
             else{
                 signal_sem(&nuevo_proceso); // el proceso nuevo sigue en NEW, hago signal de vuelta
-                wait_sem(&proceso_terminado); // espero que algun proceso finalice 
+                wait_sem(&espacio_memoria); // espero que algun proceso finalice 
 
                 // HACER SIGNAL EN FINALIZACION
             }
@@ -182,11 +179,43 @@ void *planificar_largo_plazo_FIFO(void* arg){
 }
 
 void *planificar_largo_plazo_PMCP(void* arg){
-    /* while(1){
-        wait_sem(&nuevo_proceso);
-        
+    pthread_t hilo_comprobar_espacio;
+    pthread_create(&hilo_comprobar_espacio, NULL, (void*) comprobar_espacio_memoria, NULL);
+    pthread_detach(hilo_comprobar_espacio);
 
-    } */
+    while(1){
+        wait_sem(&nuevo_proceso);
+        wait_mutex(&mutex_queue_new);
+        t_pcb *proceso = list_get(queue_new_PMCP, 0);
+        signal_mutex(&mutex_queue_new);
+        if(espacio_en_memoria(proceso)){
+            wait_mutex(&mutex_queue_new);
+            list_remove_element(queue_new_PMCP, proceso);
+            signal_mutex(&mutex_queue_new);
+
+            poner_en_ready(proceso);
+            
+            signal_sem(&proceso_ready);
+        }
+        else{
+            list_sort(queue_new_PMCP, proceso_es_mas_chico);
+        }
+    }
+}
+
+void *comprobar_espacio_memoria(void* arg){
+    while(1){
+        wait_sem(&espacio_memoria);
+
+        wait_mutex(&mutex_queue_new);
+        list_sort(queue_new_PMCP, proceso_es_mas_chico); // no se si hay q ordenar otra vez, lo puse x las dudas
+        t_pcb* proceso = list_get(queue_new_PMCP, 0);
+        signal_mutex(&mutex_queue_new);
+
+        if(espacio_en_memoria(proceso)){
+            poner_en_ready(proceso);
+        }
+    }
 }
 
 bool espacio_en_memoria(t_pcb* proceso){
@@ -235,7 +264,19 @@ void cambiarEstado(t_pcb* proceso, t_estado estado){
 
     list_add(proceso->metricas_tiempo, metrica);
 }
+void poner_en_ready(t_pcb* proceso){
 
+    cambiarEstado(proceso, READY);
+    wait_mutex(&mutex_queue_ready);
+	queue_push(queue_ready, proceso);
+    signal_mutex(&mutex_queue_ready);
+}
+
+bool proceso_es_mas_chico(void* a, void* b){
+    t_pcb* proceso_a = (t_pcb*) a;
+    t_pcb* proceso_b = (t_pcb*) b;
+    return proceso_a->tamanio_proceso <= proceso_b->tamanio_proceso;
+}
 void poner_en_ejecucion(t_pcb* proceso, t_cpu** cpu_encargada){
 
     t_cpu* cpu_libre = buscar_cpu_libre(lista_cpus);
