@@ -49,6 +49,8 @@ void mock_aceptacion(t_buffer* unBuffer, int kernel_fd){
 	path_instrucciones = recibir_informacion_del_buffer(unBuffer, sizeof(char*));
 
 	t_proceso* procesoNuevo = crear_proceso(pid, tamanio, path_instrucciones);
+	
+	log_info(memoria_logger, "## PID: <%d> - Proceso Creado - Tamaño: <%d>", pid, tamanio);
 
 	agregar_proceso_a_lista(procesoNuevo, procesos_memoria);
 }

@@ -1,5 +1,6 @@
 #include "../include/proceso.h"
 
+//Falta una funcion y un log que indique la destruccion de un proceso
 
 t_proceso* crear_proceso(int pid, int size, char* path_instruc){
 	t_proceso* proceso_nuevo = malloc(sizeof(t_proceso));
