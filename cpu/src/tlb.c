@@ -5,6 +5,10 @@ t_list* tlb;
 int entradas_tlb;
 char* algoritmo_tlb;
 
+uint64_t get_timestamp() {
+    return (uint64_t) time(NULL);
+}
+
 void inicializar_tlb(t_log* logger,  t_config* cpu_config) {
     entradas_tlb = config_get_int_value(cpu_config, "ENTRADAS_TLB");
     algoritmo_tlb = strdup(config_get_string_value(cpu_config, "REEMPLAZO_TLB"));

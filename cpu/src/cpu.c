@@ -406,16 +406,16 @@ uint32_t traducir_direccion_logica(uint32_t direccion_logica, int tamanio_pagina
     uint32_t nro_pagina = direccion_logica / tamanio_pagina;
     uint32_t desplazamiento = direccion_logica % tamanio_pagina;
 
+    uint32_t marco = 0;   //EN BUSCAR_EN_TLB PASAMOS MARCO COMO REFERENCIA XQ LA FUNCION DEVUELVE UN INT Y PARA QUE TOME EL VALOR DEL MARCO ENCONTRADO
+    //XQ LO NECESITO PARA CALCULAR LA D.FISICA sin tener que ir a Memoria otra vez
+
     char* contenido_cache = NULL;
-    if (entradas_cache > 0 && buscar_en_cache(contexto->pid, nro_pagina, &contenido_cache, logger)) {
+    if (entradas_cache > 0 && buscar_en_cache(contexto->pid, nro_pagina, &contenido_cache, &marco, logger)) {
         // Solo necesito el marco si quiero calcular la dirección física
-        uint32_t marco = entrada_encontrada->marco;   //NO HAY MAPEO DIRECTO
         free(contenido_cache);
         return marco * tamanio_pagina + desplazamiento;
     }
 
-    uint32_t marco;   //EN BUSCAR_EN_TLB PASAMOS MARCO COMO REFERENCIA XQ LA FUNCION DEVUELVE UN INT Y PARA QUE TOME EL VALOR DEL MARCO ENCONTRADO
-    //XQ LO NECESITO PARA CALCULAR LA D.FISICA sin tener que ir a Memoria otra vez
 
     if (buscar_en_tlb(contexto->pid, nro_pagina, &marco, logger)) {
         return marco * tamanio_pagina + desplazamiento;
@@ -431,6 +431,12 @@ uint32_t traducir_direccion_logica(uint32_t direccion_logica, int tamanio_pagina
 
     recv(conexion_memoria, &marco, sizeof(uint32_t), 0);
     log_debug(logger, "PID: %d - Marco recibido: %d", contexto->pid, marco);
+
+    if (entradas_cache > 0) {
+    char* contenido_simulado = strdup("pagina_sin_datos");  // contenido simulado
+    agregar_a_cache(contexto->pid, nro_pagina, contenido_simulado, false, logger, conexion_memoria);
+    free(contenido_simulado);
+}
 
     agregar_a_tlb(contexto->pid, nro_pagina, marco, logger);
 

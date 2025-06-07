@@ -24,8 +24,8 @@ typedef struct {
     uint32_t marco;
 } t_entrada_cache;
 
-void inicializar_cache(t_log* logger);
-bool buscar_en_cache(int pid, uint32_t pagina, char** contenido_resultado, t_log* logger);
+void inicializar_cache(t_log* logger, t_config* cpu_config);
+bool buscar_en_cache(int pid, uint32_t pagina, char** contenido_resultado, uint32_t* marco_resultado, t_log* logger);
 void reemplazar_con_clock(t_entrada_cache* nueva, t_log* logger, int conexion_memoria);
 void agregar_a_cache(int pid, uint32_t pagina, char* contenido, bool fue_modificado, t_log* logger, int conexion_memoria);
 void limpiar_cache_por_pid(int pid, int conexion_memoria, int tamanio_pagina, t_log* logger);

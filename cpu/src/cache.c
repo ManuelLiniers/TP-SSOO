@@ -6,19 +6,20 @@ int entradas_cache;
 char* algoritmo_cache;
 int puntero_clock = 0;
 
-void inicializar_cache(t_log* logger) {
+void inicializar_cache(t_log* logger, t_config* cpu_config) {
     entradas_cache = config_get_int_value(cpu_config, "ENTRADAS_CACHE");
     algoritmo_cache = strdup(config_get_string_value(cpu_config, "REEMPLAZO_CACHE"));
     cache_paginas = list_create();
     puntero_clock = 0;
 }
 
-bool buscar_en_cache(int pid, uint32_t pagina, char** contenido_resultado, t_log* logger) {
+bool buscar_en_cache(int pid, uint32_t pagina, char** contenido_resultado, uint32_t* marco_resultado, t_log* logger) {
     for (int i = 0; i < list_size(cache_paginas); i++) {
         t_entrada_cache* entrada = list_get(cache_paginas, i);
         if (entrada->pid == pid && entrada->pagina == pagina) {
             entrada->bit_uso = true;
             *contenido_resultado = strdup(entrada->contenido);
+            *marco_resultado = entrada->marco; // encuentra marco correspondiente
             log_info(logger, "PID: %d - Cache Hit - Pagina: %d", pid, pagina);
             return true;
         }
@@ -26,6 +27,7 @@ bool buscar_en_cache(int pid, uint32_t pagina, char** contenido_resultado, t_log
     log_info(logger, "PID: %d - Cache Miss - Pagina: %d", pid, pagina);
     return false;
 }
+
 
 void reemplazar_con_clock(t_entrada_cache* nueva, t_log* logger, int conexion_memoria) {
     while (1) {

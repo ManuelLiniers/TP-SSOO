@@ -30,15 +30,6 @@ typedef struct {
 } t_contexto;
 
 
-//esto va en tlb.h
-typedef struct {
-    int pid;              
-    uint32_t pagina;
-    uint32_t marco;
-    uint64_t timestamp;   // Para algoritmo LRU
-} t_entrada_tlb;
-
-
 // Funciones que vamos a implementar en etapas
 void atender_proceso_del_kernel(t_contexto* contexto, t_log* logger);
 void destruir_estructuras_del_contexto_actual(t_contexto* contexto);

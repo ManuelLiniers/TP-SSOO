@@ -8,10 +8,9 @@
 #include <commons/temporal.h>
 #include <stdlib.h>
 #include <time.h>
+#include <commons/config.h>
 
-uint64_t get_timestamp() {
-    return (uint64_t) time(NULL);
-}
+
 
 extern t_list* tlb;
 extern int entradas_tlb;
@@ -29,5 +28,7 @@ void inicializar_tlb(t_log* logger, t_config* cpu_config);
 int buscar_en_tlb(int pid, uint32_t pagina, uint32_t* marco_resultado, t_log* logger);
 void agregar_a_tlb(int pid, uint32_t pagina, uint32_t marco, t_log* logger);
 void limpiar_tlb_por_pid(int pid);
+uint64_t get_timestamp();
+
 
 #endif
