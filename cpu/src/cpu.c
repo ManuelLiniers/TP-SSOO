@@ -14,7 +14,7 @@ int main(int argc, char* argv[]) {
     t_log* logger = crear_log();
     t_config* cpu_config = crear_config(logger);
 
-    inicializar_tlb(logger);
+    inicializar_tlb(logger, cpu_config);
 
 
     TAMANIO_PAGINA = config_get_int_value(cpu_config, "TAMANIO_PAGINA");

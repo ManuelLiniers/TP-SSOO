@@ -74,8 +74,8 @@ void limpiar_cache_por_pid(int pid, int conexion_memoria, int tamanio_pagina, t_
         t_entrada_cache* entrada = list_get(cache_paginas, i);
         if (entrada->pid == pid) {
             if (entrada->bit_modificado) {  // Calcular dir fisica y enviar write
-                uint32_t direccion_fisica = entrada->pagina * tamanio_pagina;
-                t_paquete* paquete = crear_paquete(ESCRIBIR_MEMORIA);
+                uint32_t direccion_fisica = entrada->pagina * tamanio_pagina;  //??
+                t_paquete* paquete = crear_paquete(ESCRIBIR_MEMORIA);  //se reemplaza una pagina modificada
                 agregar_a_paquete(paquete, &direccion_fisica, sizeof(uint32_t));
                 agregar_a_paquete(paquete, entrada->contenido, strlen(entrada->contenido) + 1);
                 enviar_paquete(paquete, conexion_memoria);

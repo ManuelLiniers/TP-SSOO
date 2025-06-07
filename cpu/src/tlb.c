@@ -1,10 +1,11 @@
 #include "tlb.h"
+#include "utils/socket.h"
 
 t_list* tlb;
 int entradas_tlb;
 char* algoritmo_tlb;
 
-void inicializar_tlb(t_log* logger) {
+void inicializar_tlb(t_log* logger,  t_config* cpu_config) {
     entradas_tlb = config_get_int_value(cpu_config, "ENTRADAS_TLB");
     algoritmo_tlb = strdup(config_get_string_value(cpu_config, "REEMPLAZO_TLB"));
     if (entradas_tlb == 0) {  //PARA QUE LA TLB NO ESTÉ HABILITADA SI LAS ENTRADAS SON 0
@@ -19,7 +20,7 @@ int buscar_en_tlb(int pid, uint32_t pagina, uint32_t* marco_resultado, t_log* lo
         t_entrada_tlb* entrada = list_get(tlb, i);
         if (entrada->pid == pid && entrada->pagina == pagina) {
             *marco_resultado = entrada->marco;
-            entrada->timestamp = temporal_gettime();
+            entrada->timestamp = get_timestamp();
             log_info(logger, "PID: %d - TLB HIT - Pagina: %d", pid, pagina);
             return 1;  //HUBO UN HIT Y TERMINA LA EJECUCUIÓN
         }
@@ -50,10 +51,17 @@ void agregar_a_tlb(int pid, uint32_t pagina, uint32_t marco, t_log* logger) {
     nueva->pid = pid;
     nueva->pagina = pagina;
     nueva->marco = marco;
-    nueva->timestamp = temporal_gettime();
+    nueva->timestamp = get_timestamp();
     list_add(tlb, nueva);
 }
 
 void limpiar_tlb_por_pid(int pid) {
-    list_remove_and_destroy_all(tlb, (void*) free);
+for (int i = 0; i < list_size(tlb);) {
+        t_entrada_tlb* entrada = list_get(tlb, i);
+        if (entrada->pid == pid) {
+            list_remove_and_destroy_element(tlb, i, free);
+        } else {
+            i++;
+        }
+    }
 }
