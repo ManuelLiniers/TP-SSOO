@@ -27,11 +27,12 @@ bool buscar_en_cache(int pid, uint32_t pagina, char** contenido_resultado, t_log
     return false;
 }
 
-void reemplazar_con_clock(t_entrada_cache* nueva, t_log* logger) {
+void reemplazar_con_clock(t_entrada_cache* nueva, t_log* logger, int conexion_memoria) {
     while (1) {
         t_entrada_cache* actual = list_get(cache_paginas, puntero_clock);
-        if (!actual->bit_uso) {
-            if (actual->bit_modificado) {
+        if (!actual->bit_uso) { //Si el bit de uso esta en falso (0), esta entrada es candidata a ser reemplazada
+            if (actual->bit_modificado) { 
+
                 t_paquete* paquete = crear_paquete(ESCRIBIR_MEMORIA); // ENVIO A MEMORIA EL CONTENIDO ACTUALIZADO
                 agregar_a_paquete(paquete, &(actual->marco), sizeof(uint32_t));
                 agregar_a_paquete(paquete, actual->contenido, strlen(actual->contenido) + 1);
@@ -52,7 +53,7 @@ void reemplazar_con_clock(t_entrada_cache* nueva, t_log* logger) {
     }
 }
 
-void agregar_a_cache(int pid, uint32_t pagina, char* contenido, bool fue_modificado, t_log* logger) {
+void agregar_a_cache(int pid, uint32_t pagina, char* contenido, bool fue_modificado, t_log* logger, int conexion_memoria) {
     t_entrada_cache* nueva = malloc(sizeof(t_entrada_cache));
     nueva->pid = pid;
     nueva->pagina = pagina;
@@ -64,7 +65,7 @@ void agregar_a_cache(int pid, uint32_t pagina, char* contenido, bool fue_modific
         list_add(cache_paginas, nueva);
         log_info(logger, "PID: %d - Cache Add - Pagina: %d", pid, pagina);
     } else {
-        reemplazar_con_clock(nueva, logger);
+        reemplazar_con_clock(nueva, logger, conexion_memoria);
     }
 }
 
