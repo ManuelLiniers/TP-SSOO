@@ -423,7 +423,7 @@ uint32_t traducir_direccion_logica(uint32_t direccion_logica, int tamanio_pagina
 
     log_info(logger, "PID: %d - OBTENER MARCO - Página: %d", contexto->pid, nro_pagina);
 
-    t_paquete* paquete = crear_paquete(PEDIR_MARCO);
+    t_paquete* paquete = crear_paquete(PEDIR_MARCO); //segun el issue 4702: "Pueden enviar un solo mensaje desde CPU con PID y nro de página, y eso representa los N accesos a memoria
     agregar_a_paquete(paquete, &(contexto->pid), sizeof(uint32_t));  
     agregar_a_paquete(paquete, &nro_pagina, sizeof(uint32_t));
     enviar_paquete(paquete, conexion_memoria);
@@ -438,6 +438,7 @@ uint32_t traducir_direccion_logica(uint32_t direccion_logica, int tamanio_pagina
 }
 //CPU no traduce la página en todos los niveles (siendo paginacion multinibvel),
 // sino que le delega esa lógica a Memoria. Y Memoria, a partir del PID y la página, accede a las tablas de páginas y responde con el marco correspondiente.
+//La idea es reflejar los N accesos en los retardos, y entender la ventaja de usar TLB y caché
 
 
 void abrir_conexion_memoria(char* ip_memoria, char* puerto_memoria){
