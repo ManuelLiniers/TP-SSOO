@@ -16,11 +16,7 @@ int main(int argc, char* argv[]) {
 
     t_log* crear_log();
 
-    t_log* logger = log_create("io.log", "[IO]", 1, LOG_LEVEL_INFO);
-    if(logger == NULL){
-        perror("error al crear el logger");
-        abort();
-    } 
+    t_log* logger = log_create("io.log", "[IO]", 1, LOG_LEVEL_DEBUG);
 
 
 
@@ -34,9 +30,9 @@ int main(int argc, char* argv[]) {
     puerto = config_get_string_value(config, "PUERTO_KERNEL");
     log_level = config_get_string_value(config, "LOG_LEVEL");
 
-    printf("El valor de la ip es: %s", ip);
-    printf("\nEl valor del puerto es: %s", puerto);
-    printf("\nEl valor del log level es: %s\n", log_level);
+    log_debug(logger, "El valor de la ip es: %s", ip);
+    log_debug(logger, "El valor del puerto es: %s", puerto);
+    log_debug(logger, "El valor del log level es: %s", log_level);
 
     int conexion_kernel = crear_conexion(logger, ip, puerto);
     if (conexion_kernel == -1) {
@@ -45,7 +41,7 @@ int main(int argc, char* argv[]) {
     }
 
 
-    log_info(logger, "Me conecto al kernel como: %s", nombre_dispositivo);
+    log_debug(logger, "Me conecto al kernel como: %s", nombre_dispositivo);
     
     hacer_handshake(logger, conexion_kernel);
     t_paquete* paqueteID = crear_paquete(IDENTIFICACION);
@@ -57,7 +53,7 @@ int main(int argc, char* argv[]) {
     
     enviar_paquete(paqueteID, conexion_kernel);
     eliminar_paquete(paqueteID);
-    log_info(logger, "PAQUETE ID ENVIADO");
+    log_debug(logger, "PAQUETE ID ENVIADO");
     int operacion = recibir_operacion(conexion_kernel);
     procesar_io(conexion_kernel, logger, operacion);
     terminar_programa(logger, config, conexion_kernel);

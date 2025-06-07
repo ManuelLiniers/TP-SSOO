@@ -8,9 +8,9 @@ void inicializar_tlb(t_log* logger) {
     entradas_tlb = config_get_int_value(cpu_config, "ENTRADAS_TLB");
     algoritmo_tlb = strdup(config_get_string_value(cpu_config, "REEMPLAZO_TLB"));
     if (entradas_tlb == 0) {  //PARA QUE LA TLB NO ESTÉ HABILITADA SI LAS ENTRADAS SON 0
-    log_info(logger, "La TLB está deshabilitada");
+    log_debug(logger, "La TLB está deshabilitada");
 }   tlb = list_create();
-    log_info(logger, "TLB inicializada con %d entradas y reemplazo %s", entradas_tlb, algoritmo_tlb);
+    log_debug(logger, "TLB inicializada con %d entradas y reemplazo %s", entradas_tlb, algoritmo_tlb);
 }
 
 int buscar_en_tlb(int pid, uint32_t pagina, uint32_t* marco_resultado, t_log* logger) {

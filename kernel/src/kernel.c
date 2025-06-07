@@ -13,7 +13,7 @@ int main(int argc, char* argv[]) {
 	crear_proceso(argv[1], argv[2]); // Creo proceso inicial con valores recibidos por parametro
 
 
-    // log_info(logger_kernel,"Iniciando servidor Kernel");
+    // log_debug(logger_kernel,"Iniciando servidor Kernel");
 	// int server_fd_kernel_io = iniciar_servidor(logger_kernel, ip_kernel, puerto_kernel); 
 	// Si esta ESCUCHANDO en PUERTO KERNEL -> SE CONECTA CON IO PORQUE IO ES CLIENTE NADA MÁS DE ESTE PUERTO. SI ESCUCHA OTRO PUERTO, SE CONECTA A ALGUNO DE CPU
 
@@ -23,15 +23,14 @@ int main(int argc, char* argv[]) {
 void iniciar_config(){
     config_kernel = config_create("/home/utnso/tp-2025-1c-queCompileALaPrimera/kernel/kernel.config");
     if(config_kernel == NULL){
-        perror("Error al crear el config del Kernel");
-        exit(EXIT_FAILURE);
+        log_error(logger_kernel, "Error al crear el config del Kernel");
     }
-	log_info(logger_kernel, "Config creada existosamente");
+	log_debug(logger_kernel, "Config creada existosamente");
 }
 
 
 void inicializar_kernel(char* instrucciones, char* tamanio_proceso){
-	logger_kernel = log_create("kernel.log", "[Kernel]", 1, LOG_LEVEL_INFO);
+	logger_kernel = log_create("kernel.log", "[Kernel]", 1, LOG_LEVEL_DEBUG);
     iniciar_config();
 	iniciar_semaforos();
 	
@@ -47,7 +46,7 @@ void inicializar_kernel(char* instrucciones, char* tamanio_proceso){
 	estimacion_inicial = config_get_int_value(config_kernel, "ESTIMACION_INICIAL");
 	estimador_alfa = config_get_double_value(config_kernel, "ALFA");
 
-	log_info(logger_kernel, "kernel inicializado");
+	log_debug(logger_kernel, "kernel inicializado");
 }
 
 void inicializar_planificacion(){
@@ -60,20 +59,20 @@ void inicializar_planificacion(){
 
 	if(strcmp(algoritmo_largo_plazo,"FIFO") == 0){
 
-		log_info(logger_kernel, "Planificacion largo plazo con FIFO");
+		log_debug(logger_kernel, "Planificacion largo plazo con FIFO");
 		pthread_t planificador_largo_plazo_FIFO;
 		pthread_create(&planificador_largo_plazo_FIFO, NULL, (void *) planificar_largo_plazo_FIFO, NULL);
 		pthread_detach(planificador_largo_plazo_FIFO);
 	}
 	if(strcmp(algoritmo_largo_plazo,"PMCP") == 0){
 
-		log_info(logger_kernel, "Planificacion largo plazo con PMCP");
+		log_debug(logger_kernel, "Planificacion largo plazo con PMCP");
 		pthread_t planificador_largo_plazo_PMCP;
 		pthread_create(&planificador_largo_plazo_PMCP, NULL, (void *) planificar_largo_plazo_PMCP, NULL);
 		pthread_detach(planificador_largo_plazo_PMCP);
 	}
 
-	log_info(logger_kernel, "planificacion inicializada");
+	log_debug(logger_kernel, "Planificacion inicializada");
 }
 
 void inicializar_servidores(){
@@ -91,23 +90,23 @@ void inicializar_servidores(){
 
 	
 
-	log_info(logger_kernel, "servidores iniciados");
+	log_debug(logger_kernel, "servidores iniciados");
 }
 
 void iniciar_cpu_dispatch(void* arg){
-	log_info(logger_kernel, "entre dispatch");
+	log_debug(logger_kernel, "entre dispatch");
 	int server_fd_kernel_dispatch = iniciar_servidor(logger_kernel, NULL, puerto_dispatch);
 
 	while (server_fd_kernel_dispatch != -1)
 	{
-		log_info(logger_kernel, "escuchando dispatch");
+		log_debug(logger_kernel, "escuchando dispatch");
 		int cliente_fd = esperar_cliente(logger_kernel, "Kernel", server_fd_kernel_dispatch);
 		if(cliente_fd != -1){
 			pthread_t hilo_cliente;
 			int *args = malloc(sizeof(int));
 			*args = cliente_fd;
 			pthread_create(&hilo_cliente, NULL, (void*) atender_dispatch, args);
-			log_info(logger_kernel, "[THREAD] Creo hilo para atender dispatch");
+			log_debug(logger_kernel, "[THREAD] Creo hilo para atender dispatch");
 			pthread_detach(hilo_cliente);
 		}
 	}
@@ -145,8 +144,8 @@ void identificar_cpu(t_buffer* buffer, int socket_fd, void (*funcion)(t_cpu*, in
 	if(encontrada == NULL){
 		funcion(cpu_nueva, socket_fd);
 		list_add(lista_cpus, cpu_nueva);
-		log_info(logger_kernel, "Tamanio del nombre: %d", tamanio_nombre);
-		log_info(logger_kernel, "Se identifico la CPU: %s", cpu_nueva->cpu_id);
+		log_debug(logger_kernel, "Tamanio del nombre: %d", tamanio_nombre);
+		log_debug(logger_kernel, "Se identifico la CPU: %s", cpu_nueva->cpu_id);
 	}
 	else{ 
 		funcion(encontrada, socket_fd);
@@ -163,14 +162,14 @@ void iniciar_cpu_interrupt(void* arg){
 
 	while (server_fd_kernel_interrupt != -1)
 	{
-		log_info(logger_kernel, "escuchando interrupt");
+		log_debug(logger_kernel, "escuchando interrupt");
 		int cliente_fd = esperar_cliente(logger_kernel, "Kernel", server_fd_kernel_interrupt);
 		if(cliente_fd != -1){
 			pthread_t hilo_cliente;
 			int *args = malloc(sizeof(int));
 			*args = cliente_fd;
 			pthread_create(&hilo_cliente, NULL, (void*) atender_interrupt, args);
-			log_info(logger_kernel, "[THREAD] Creo hilo para atender interrupt");
+			log_debug(logger_kernel, "[THREAD] Creo hilo para atender interrupt");
 			pthread_detach(hilo_cliente);
 		}
 	}
@@ -190,18 +189,18 @@ void modificar_interrupt(t_cpu* una_cpu, int socket_fd){
 
 void iniciar_servidor_io(void* arg){
 
-	log_info(logger_kernel, "entre io");
+	log_debug(logger_kernel, "entre io");
 	int server_fd_kernel_io = iniciar_servidor(logger_kernel, NULL, puerto_io);
 
 	while(server_fd_kernel_io != -1){
-		log_info(logger_kernel, "escuchando io");
+		log_debug(logger_kernel, "escuchando io");
 		int cliente_fd = esperar_cliente(logger_kernel, "Kernel", server_fd_kernel_io);
 		if(cliente_fd != -1){
 			pthread_t hilo_cliente;
 			int *args = malloc(sizeof(int));
 			*args = cliente_fd;
 			pthread_create(&hilo_cliente, NULL, (void*) atender_io, args);
-			log_info(logger_kernel, "[THREAD] Creo hilo para atender io");
+			log_debug(logger_kernel, "[THREAD] Creo hilo para atender io");
 			pthread_detach(hilo_cliente);
 		}
 	}
@@ -227,7 +226,7 @@ void identificar_io(t_buffer* unBuffer, int socket_fd){
 	list_add_in_index(queue_block, id_io_incremental, (void*) cola_io);
 
 	id_io_incremental++;
-	log_info(logger_kernel,"Se registro dispositivo: %s", dispositivo->nombre);
+	log_debug(logger_kernel,"Se registro dispositivo: %s", dispositivo->nombre);
 }
 
 // Se crea un proceso y se pushea a new

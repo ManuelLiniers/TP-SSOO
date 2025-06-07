@@ -49,7 +49,7 @@ int main(int argc, char* argv[]) {
 
     //espero PCBs del Kernel por dispatch
     while (1) {
-        log_info(logger, "Esperando op_code desde Kernel...");
+        log_debug(logger, "Esperando op_code desde Kernel...");
 
         op_code cod_op;
         if (recv(conexion_kernel_dispatch, &cod_op, sizeof(op_code), MSG_WAITALL) <= 0) {
@@ -58,7 +58,7 @@ int main(int argc, char* argv[]) {
         }
 
         if (cod_op == CONTEXTO_PROCESO) {
-            log_info(logger, "Recibido CONTEXTO_PROCESO");
+            log_debug(logger, "Recibido CONTEXTO_PROCESO");
             t_buffer* buffer = recibir_buffer_contexto(conexion_kernel_dispatch);
             t_contexto* contexto = deserializar_contexto(buffer);
             atender_proceso_del_kernel(contexto, logger);
@@ -112,10 +112,6 @@ t_contexto* deserializar_contexto(t_buffer* buffer) {
 t_log* crear_log(){
 
     t_log* logger = log_create("cpu.log", "[CPU]", 1, LOG_LEVEL_DEBUG);
-    if(logger == NULL){
-        perror("error al crear el logger");
-        abort();
-    } 
     return logger;
 }
 
@@ -137,7 +133,7 @@ void mensaje_inicial(int conexion_memoria, int conexion_kernel_dispatch, int con
 
 void terminar_programa(int conexion_memoria, int conexion_kernel_dispatch, int conexion_kernel_interrupt, t_log* logger, t_config* cpu_config)
 {
-    log_info(logger, "cliente cpu terminado");
+    log_debug(logger, "cliente cpu terminado");
 	log_destroy(logger);
     config_destroy(cpu_config);
     close(conexion_memoria);
@@ -146,7 +142,7 @@ void terminar_programa(int conexion_memoria, int conexion_kernel_dispatch, int c
 }
 
 void atender_proceso_del_kernel(t_contexto* contexto, t_log* logger) {
-    log_info(logger, "Comenzando ejecución del proceso con PID %d", contexto->pid);
+    log_debug(logger, "Comenzando ejecución del proceso con PID %d", contexto->pid);
 
     while (1) {
         char* instruccion_cruda = ciclo_de_instruccion_fetch(conexion_memoria, contexto);
@@ -166,7 +162,7 @@ void atender_proceso_del_kernel(t_contexto* contexto, t_log* logger) {
         ciclo_de_instruccion_execute(instruccion, contexto, logger, conexion_memoria);
 
         if (hay_interrupcion()) {
-            log_info(logger, "Se detectó una interrupción luego de ejecutar la instrucción");
+            log_debug(logger, "Se detectó una interrupción luego de ejecutar la instrucción");
             enviar_contexto_a_kernel(contexto, INTERRUPCION, conexion_kernel_dispatch, logger);
 
             pthread_mutex_lock(&mutex_interrupt);
@@ -196,7 +192,7 @@ void* escuchar_interrupt(void* arg) {
                 flag_interrupcion = true;
                 pthread_mutex_unlock(&mutex_interrupt);
 
-                log_info(logger, "Llega interrupción al puerto Interrupt");
+                log_debug(logger, "Llega interrupción al puerto Interrupt");
             }
         }
     }
@@ -231,7 +227,7 @@ char* ciclo_de_instruccion_fetch(int conexion_memoria, t_contexto* contexto) {
 
     // RECIBO LA RTA AL PEDIDO
     char* instruccion = recibir_instruccion(conexion_memoria); 
-    log_info(logger, "Instrucción recibida: %s", instruccion);
+    log_debug(logger, "Instrucción recibida: %s", instruccion);
     return instruccion;
 }
 
@@ -322,7 +318,7 @@ else if (string_equals_ignore_case(opcode, "DUMP_MEMORY")) {
     uint32_t valor;
     recv(conexion_memoria, &valor, sizeof(uint32_t), 0);
 
-    log_info(logger, "Valor leído: %d", valor);
+    log_debug(logger, "Valor leído: %d", valor);
 }
 else if (string_equals_ignore_case(opcode, "WRITE")) {
     uint32_t direccion_logica = atoi(instruccion->operandos[0]);  //el primer parametro de WRITE es la dir logica, el segundo son los datos
@@ -350,7 +346,7 @@ else if (string_equals_ignore_case(opcode, "WRITE")) {
 void enviar_contexto_a_kernel(t_contexto* contexto, motivo_desalojo motivo, int fd, t_log* logger) {
     char* motivo_str[] = {
     "EXIT", "CAUSA_IO", "WAIT", "SIGNAL", "PAGE_FAULT", "INTERRUPCION", "DESALOJO_POR_QUANTUM"}; //mismo orden que el enum de motivodesalojo
-log_info(logger, "## PID: %d - Desalojado - Motivo: %s", contexto->pid, motivo_str[motivo]);
+    log_debug(logger, "## PID: %d - Desalojado - Motivo: %s", contexto->pid, motivo_str[motivo]);
 
     t_paquete* paquete = crear_paquete(CONTEXTO_PROCESO); // contxtoproceso es opcode
 
@@ -381,7 +377,7 @@ void enviar_contexto_a_kernel_init_proc(t_contexto* contexto, motivo_desalojo mo
     enviar_paquete(paquete, fd);
     eliminar_paquete(paquete);
 
-    log_info(logger, "Se envio el contexto actualizado con motivo INIT_PROC al Kernel.");
+    log_debug(logger, "Se envio el contexto actualizado con motivo INIT_PROC al Kernel.");
 }
 
 void enviar_contexto_a_kernel_io(t_contexto* contexto, motivo_desalojo motivo, int fd, t_log* logger, int id_io, int tiempo_io) {
@@ -400,7 +396,7 @@ void enviar_contexto_a_kernel_io(t_contexto* contexto, motivo_desalojo motivo, i
     enviar_paquete(paquete, fd);
     eliminar_paquete(paquete);
 
-    log_info(logger, "Se envio el contexto actualizado con motivo IO al Kernel.");
+    log_debug(logger, "Se envio el contexto actualizado con motivo IO al Kernel.");
 }
 
 
@@ -434,7 +430,7 @@ uint32_t traducir_direccion_logica(uint32_t direccion_logica, int tamanio_pagina
     eliminar_paquete(paquete);
 
     recv(conexion_memoria, &marco, sizeof(uint32_t), 0);
-    log_info(logger, "PID: %d - Marco recibido: %d", contexto->pid, marco);
+    log_debug(logger, "PID: %d - Marco recibido: %d", contexto->pid, marco);
 
     agregar_a_tlb(contexto->pid, nro_pagina, marco, logger);
 

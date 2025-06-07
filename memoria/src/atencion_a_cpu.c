@@ -21,7 +21,7 @@ void atender_cpu(int cpu_fd){
 				break;
 			}
 			case -1:{
-				log_info(memoria_logger, "[CPU] se desconecto. Terminando consulta");
+				log_debug(memoria_logger, "[CPU] se desconecto. Terminando consulta");
 				exit(0);
 			}
             default: {
@@ -40,7 +40,7 @@ void atender_peticion_de_instruccion(t_buffer* unBuffer, int cpu_fd){
 	pid = recibir_uint32_del_buffer(unBuffer);
 	pc = recibir_uint32_del_buffer(unBuffer);
 
-	log_info(memoria_logger, "CPU pide instrucción para PID %d, PC %d", pid, pc);
+	log_debug(memoria_logger, "CPU pide instrucción para PID %d, PC %d", pid, pc);
 
 	t_proceso* un_proceso = obtener_proceso_por_id(pid);
 
@@ -64,5 +64,5 @@ void enviar_instruccion_a_cpu(char* instruccion, int cpu_fd){
 	// Enviar instrucción
 	send(cpu_fd, instruccion, size, 0);
 
-	log_info(memoria_logger, "Instrucción enviada: %s", instruccion);
+	log_debug(memoria_logger, "Instrucción enviada: %s", instruccion);
 }

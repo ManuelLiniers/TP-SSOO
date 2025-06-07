@@ -18,7 +18,7 @@ void atender_kernel(int kernel_fd){ // agregar que reciba el buffer
 				break;
 			}
 			case -1:{
-				log_info(memoria_logger, "[KERNEL] se desconecto. Terminando consulta");
+				log_debug(memoria_logger, "[KERNEL] se desconecto. Terminando consulta");
 				exit(0);
 			}
             default: {
@@ -38,12 +38,12 @@ void mock_aceptacion(t_buffer* unBuffer, int kernel_fd){
 	tamanio = recibir_int_del_buffer(unBuffer);
 // 	Espero a verificar si hay espacio para asignar el path
 
-    log_info(memoria_logger, "Pedido de crear proceso PID %d con tamaño %d", pid, tamanio);
+    log_debug(memoria_logger, "Pedido de crear proceso PID %d con tamaño %d", pid, tamanio);
 
 
     int respuesta = OK; // En un futuro indica cuanto espacio de memoria hay libre
     send(kernel_fd, &respuesta, sizeof(int), 0);
-	log_info(memoria_logger, "Creando proceso PID %d", pid);
+	log_debug(memoria_logger, "Creando proceso PID %d", pid);
 
 	char* path_instrucciones;
 	path_instrucciones = recibir_informacion_del_buffer(unBuffer, sizeof(char*));

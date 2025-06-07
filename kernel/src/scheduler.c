@@ -59,6 +59,8 @@ void esperar_dispatch(void* arg){
         queue_push(queue_exit, proceso);
         signal_mutex(&mutex_queue_exit);
 
+        log_info(logger_kernel, "## %d - Finaliza el proceso", proceso->pid);
+
         signal_sem(&espacio_memoria);
         break;
     case CAUSA_IO:
@@ -361,6 +363,8 @@ void enviar_proceso_a_io(t_pcb* proceso, int io_id, int io_tiempo){
     agregar_a_paquete(paquete, &io_tiempo,sizeof(int));
     enviar_paquete(paquete, dispositivo->socket);
 
+    log_info(logger_kernel, "## %d - Bloqueado por IO: %s", proceso->pid, dispositivo->nombre);
+
     int *args = malloc(sizeof(int));
 	*args = io_id;
 
@@ -385,6 +389,8 @@ void vuelta_proceso_io(void* args){
     wait_mutex(&mutex_queue_ready);
     queue_push(queue_ready, &(proceso->pcb));
     signal_mutex(&mutex_queue_ready);
+
+    log_info(logger_kernel, "## %d finalizó IO y pasa a READY", *pid);
 
     comprobar_cola_bloqueados(io->id);
 

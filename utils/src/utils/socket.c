@@ -38,7 +38,7 @@ int iniciar_servidor(t_log* logger, char* ip, char* puerto)
 	}
 
     freeaddrinfo(server_info);
-    // log_info(logger, "Listo para escuchar");
+    // log_debug(logger, "Listo para escuchar");
 	
 	return server_socket;
 }
@@ -53,7 +53,7 @@ int esperar_cliente(t_log* logger, const char* name, int socket_servidor) {
         return -1;
     }
 
-    log_info(logger, "Cliente conectado a %s", name);
+    log_debug(logger, "Cliente conectado a %s", name);
 
     return socket_cliente;
 }
@@ -81,7 +81,7 @@ int crear_conexion(t_log* logger, char *ip, char* puerto)
         return -1;
     }
 
-	log_info(logger, "Se conecto exitosamente \n");
+	log_debug(logger, "Se conecto exitosamente \n");
 
 	freeaddrinfo(server_info);
 
@@ -117,7 +117,7 @@ void recibir_mensaje(t_log* logger, int socket_cliente)
 {
 	int size;
 	char* buffer = recibir_buffer(&size, socket_cliente);
-	log_info(logger, "Me llego el mensaje %s", buffer);
+	log_debug(logger, "Me llego el mensaje %s", buffer);
 	free(buffer);
 }
 
@@ -277,7 +277,7 @@ void hacer_handshake(t_log* logger, int conexion){
     if(resultado != 1){
         log_error(logger, "Error al hacer el handshake");
     } else {
-		log_info(logger, "Handshake correcto");
+		log_debug(logger, "Handshake correcto");
 	}
 }
 

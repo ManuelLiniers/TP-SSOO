@@ -40,7 +40,7 @@ void reemplazar_con_clock(t_entrada_cache* nueva, t_log* logger) {
 
                 log_info(logger, "PID: %d - Memory Update - Página: %d - Frame: %d", actual->pid, actual->pagina, actual->marco);
 
-                log_info(logger, "PID: %d - Memory Update - Página: %d", actual->pid, actual->pagina);
+                log_debug(logger, "PID: %d - Memory Update - Página: %d", actual->pid, actual->pagina);
             }
             list_replace_and_destroy_element(cache_paginas, puntero_clock, nueva, free);
             log_info(logger, "PID: %d - Cache Add - Pagina: %d", nueva->pid, nueva->pagina);

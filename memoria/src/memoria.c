@@ -26,23 +26,23 @@ void leer_config(t_config* config){
 }
 
 void leer_log(t_log* logger){
-	log_info(memoria_logger, "PUERTO_ESCUCHA: %s", PUERTO_ESCUCHA);
-	log_info(memoria_logger, "TAM_MEMORIA: %d", TAM_MEMORIA);
-	log_info(memoria_logger, "TAM_PAGINA: %d", TAM_PAGINA);
-	log_info(memoria_logger, "ENTRADAS_POR_TABLA: %d", ENTRADAS_POR_TABLA);
-	log_info(memoria_logger, "CANTIDAD_NIVELES: %d", CANTIDAD_NIVELES);
-	log_info(memoria_logger, "RETARDO_MEMORIA: %d", RETARDO_MEMORIA);
-	log_info(memoria_logger, "PATH_SWAPFILE: %s", PATH_SWAPFILE);
-	log_info(memoria_logger, "RETARDO_SWAP: %d", RETARDO_SWAP);
-	log_info(memoria_logger, "LOG_LEVEL: %s", LOG_LEVEL);
-	log_info(memoria_logger, "DUMP_PATH: %s", DUMP_PATH);
-	log_info(memoria_logger, "PATH_INSTRUCCIONES: %s", PATH_INSTRUCCIONES);
+	log_debug(memoria_logger, "PUERTO_ESCUCHA: %s", PUERTO_ESCUCHA);
+	log_debug(memoria_logger, "TAM_MEMORIA: %d", TAM_MEMORIA);
+	log_debug(memoria_logger, "TAM_PAGINA: %d", TAM_PAGINA);
+	log_debug(memoria_logger, "ENTRADAS_POR_TABLA: %d", ENTRADAS_POR_TABLA);
+	log_debug(memoria_logger, "CANTIDAD_NIVELES: %d", CANTIDAD_NIVELES);
+	log_debug(memoria_logger, "RETARDO_MEMORIA: %d", RETARDO_MEMORIA);
+	log_debug(memoria_logger, "PATH_SWAPFILE: %s", PATH_SWAPFILE);
+	log_debug(memoria_logger, "RETARDO_SWAP: %d", RETARDO_SWAP);
+	log_debug(memoria_logger, "LOG_LEVEL: %s", LOG_LEVEL);
+	log_debug(memoria_logger, "DUMP_PATH: %s", DUMP_PATH);
+	log_debug(memoria_logger, "PATH_INSTRUCCIONES: %s", PATH_INSTRUCCIONES);
 }
 
 
 void inicializar_memoria(){
 	
-	memoria_logger = log_create("Memoria.log", "[Memoria]", 1, LOG_LEVEL_INFO);
+	memoria_logger = log_create("Memoria.log", "[Memoria]", 1, LOG_LEVEL_DEBUG);
 	
     memoria_config = config_create("/home/utnso/tp-2025-1c-queCompileALaPrimera/memoria/Memoria.config");
 
@@ -72,7 +72,7 @@ void inicializar_memoria(){
 	
 
 
-	log_info(memoria_logger,"Iniciando servidor Memoria");
+	log_debug(memoria_logger,"Iniciando servidor Memoria");
 
 	// Aca se almacenan los procesos que llegan,  
 	procesos_memoria = list_create();
@@ -83,7 +83,7 @@ void inicializar_memoria(){
 
 void finalizar_memoria(){
 	//free(espacio_usuario);
-	log_info(memoria_logger, "Memoria terminada correctamente");
+	log_debug(memoria_logger, "Memoria terminada correctamente");
 	log_destroy(memoria_logger);
 	config_destroy(memoria_config);
 	list_destroy(procesos_memoria);
@@ -105,7 +105,7 @@ int servidor_escucha(int server_fd_memoria){
 			int *args = malloc(sizeof(int));
 			*args = cliente_fd;
 			pthread_create(&hilo_cliente, NULL, (void*) saludar_cliente, args);
-			log_info(memoria_logger, "[THREAD] Creo hilo para atender cliente");
+			log_debug(memoria_logger, "[THREAD] Creo hilo para atender cliente");
 			pthread_detach(hilo_cliente);
 		}
 	}
@@ -135,13 +135,13 @@ void identificar_modulo(t_buffer* unBuffer, int cliente_fd){
 	switch (modulo_id) {
 		case KERNEL:
 			int kernel_fd = cliente_fd;
-			log_info(memoria_logger, "[[[[[KERNEL CONECTADO]]]]]");
+			log_debug(memoria_logger, "[[[[[KERNEL CONECTADO]]]]]");
 			atender_kernel(kernel_fd);
 
 			break;
 		case CPU:
 			int cpu_fd = cliente_fd;
-			log_info(memoria_logger, "[[[[[CPU CONECTADO]]]]]");
+			log_debug(memoria_logger, "[[[[[CPU CONECTADO]]]]]");
 			atender_cpu(cpu_fd);
 			break;
 		default:

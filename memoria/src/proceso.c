@@ -33,7 +33,7 @@ t_list* leer_archivo_y_cargar_instrucciones(char* path_archivo) {
         // Remover salto de línea si lo hay
         linea_instruccion[strcspn(linea_instruccion, "\n")] = '\0';
 
-        log_info(memoria_logger, "Instrucción: [%s]", linea_instruccion);
+        log_debug(memoria_logger, "Instrucción: [%s]", linea_instruccion);
 
         char** tokens = string_split(linea_instruccion, " ");
 
