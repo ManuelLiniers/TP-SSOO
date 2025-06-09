@@ -107,3 +107,49 @@ void liberar_tablas(t_tabla_nivel* tabla) {
     pthread_mutex_destroy(&tabla->mutex);
     free(tabla);
 }
+
+// Traduce una dirección lógica a dirección física para un proceso dado
+// Si la página no tiene marco asignado, lo asigna si hay uno libre
+uint32_t traducir_direccion_logica(t_proceso* proceso, uint32_t direccion_logica) {
+    uint32_t pagina = direccion_logica / TAM_PAGINA;
+    uint32_t desplazamiento = direccion_logica % TAM_PAGINA;
+
+    pthread_mutex_lock(&proceso->mutex_TP);
+    t_pagina* pagina_virtual = buscar_pagina_en_tabla((t_tabla_nivel*)proceso->tabla_paginas_raiz, pagina);
+
+    if (pagina_virtual == NULL) {
+        log_error(memoria_logger, "PID: %d - Error: página virtual no encontrada", proceso->pid);
+        pthread_mutex_unlock(&proceso->mutex_TP);
+        return -1;
+    }
+
+    // Si no tiene marco asignado
+    if (pagina_virtual->marco_asignado == -1) {
+        t_marco* marco_libre = obtener_marco_libre();
+        if (marco_libre == NULL) {
+            log_error(memoria_logger, "PID: %d - No hay marcos libres para asignar página %d", proceso->pid, pagina);
+            pthread_mutex_unlock(&proceso->mutex_TP);
+            return -1;
+        }
+
+        marco_libre->libre = false;
+        marco_libre->info->pid_proceso = proceso->pid;
+        marco_libre->info->nro_pagina = pagina;
+
+        pagina_virtual->marco_asignado = marco_libre->nro_marco;
+        list_add(proceso->marcos_asignados, marco_libre);
+
+        proceso->metricas.subidas_memoria++;
+    }
+
+    proceso->metricas.accesos_tablas_paginas++;
+    pthread_mutex_unlock(&proceso->mutex_TP);
+
+    t_marco* marco = obtener_marco_por_nro_marco(pagina_virtual->marco_asignado);
+    if (!marco) {
+        log_error(memoria_logger, "PID: %d - Error al obtener marco %d", proceso->pid, pagina_virtual->marco_asignado);
+        return -1;
+    }
+
+    return marco->base + desplazamiento;
+}
