@@ -33,6 +33,7 @@ void* planificar_corto_plazo(void* arg);
 
 void enviar_proceso_a_io(t_pcb* proceso, int io_id, int io_tiempo);
 void vuelta_proceso_io(void* args);
+void comprobar_cola_bloqueados(int io_id);
 
 bool espacio_en_memoria(t_pcb* proceso);
 void poner_en_ready(t_pcb* proceso);

@@ -47,9 +47,13 @@ typedef struct {
 } t_pcb;
 
 void crear_proceso(char* instrucciones, char* tamanio_proceso);
+
 t_pcb* buscar_proceso_pid(uint32_t pid);
 void cambiarEstado(t_pcb* proceso,t_estado EXEC);
+
 extern t_list* lista_procesos_ejecutando;
+void sacar_proceso_ejecucion(t_pcb* proceso);
+
 t_metricas_estado_tiempo* obtener_ultima_metrica(t_pcb* proceso);
 int calcular_rafaga(t_list* metricas_tiempo);
 
@@ -86,7 +90,6 @@ typedef struct{
 
 t_dispositivo_io* buscar_io(int id_io);
 t_queue* obtener_cola_io(int io_id);
-void comprobar_cola_bloqueados(int io_id);
 
 typedef struct{
     t_pcb *pcb;

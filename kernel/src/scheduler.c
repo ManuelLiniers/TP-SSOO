@@ -40,8 +40,6 @@ void esperar_dispatch(void* arg){
         proceso->registros[i] = recibir_uint32_del_buffer(paquete);
     };
     int motivo = recibir_int_del_buffer(paquete);
-    int io_id = recibir_int_del_buffer(paquete);
-    int io_tiempo = recibir_int_del_buffer(paquete);
 
     proceso->program_counter = pc;
     
@@ -54,12 +52,16 @@ void esperar_dispatch(void* arg){
         queue_push(queue_exit, proceso);
         signal_mutex(&mutex_queue_exit);
 
-        log_info(logger_kernel, "## %d - Finaliza el proceso", proceso->pid);
+        sacar_proceso_ejecucion(proceso);
 
-        signal_sem(&espacio_memoria);
+        log_info(logger_kernel, "## (<%d>) - Solicito syscall: <%s>", proceso->pid, "EXIT");
+
+        log_info(logger_kernel, "## %d - Finaliza el proceso", proceso->pid);
         break;
     case CAUSA_IO:
 
+        int io_id = recibir_int_del_buffer(paquete);
+        int io_tiempo = recibir_int_del_buffer(paquete);
         t_dispositivo_io* dispositivo = buscar_io(io_id);
         if(dispositivo == NULL){
             log_error(logger_kernel, "No se encontro la IO: %d", io_id);
@@ -74,6 +76,8 @@ void esperar_dispatch(void* arg){
         proceso_bloqueado.pcb = proceso;
         proceso_bloqueado.tiempo = io_tiempo;
 
+        sacar_proceso_ejecucion(proceso);
+
         wait_mutex(&mutex_queue_block);
         queue_push(obtener_cola_io(io_id), &proceso_bloqueado);
         signal_mutex(&mutex_queue_block);
@@ -83,8 +87,13 @@ void esperar_dispatch(void* arg){
         free(paquete);
         break;
 
-    case SIGNAL:
-        // ver que hacer con este motivo que envia cpu
+    case INIT_PROC:
+        int tamanio_proceso = recibir_int_del_buffer(paquete);
+        char* archivo = recibir_string_del_buffer(paquete);
+
+        log_info(logger_kernel, "## (<%d>) - Solicito syscall: <%s>", proceso->pid, "INIT_PROC");
+
+        crear_proceso(archivo, tamanio_proceso);
         break;
     
     default:
@@ -317,4 +326,15 @@ void vuelta_proceso_io(void* args){
 
     free(pid);
     free(buffer);
+}
+
+void comprobar_cola_bloqueados(int io_id){
+
+    t_queue* cola_io = obtener_cola_io(io_id);
+
+    if(!queue_is_empty(cola_io)){
+        tiempo_en_io *proceso = queue_peek(cola_io);
+
+        enviar_proceso_a_io(proceso->pcb, io_id, proceso->tiempo);
+    }
 }

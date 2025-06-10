@@ -249,4 +249,6 @@ void crear_proceso(char* instrucciones, char* tamanio_proceso){
 		signal_mutex(&mutex_queue_new);
 		signal_sem(&nuevo_proceso);
     }
+	log_info(logger_kernel, "## (<%d>) Se crea el proceso - Estado: NEW", pcb_nuevo->pid);
 }
+

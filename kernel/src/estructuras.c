@@ -124,11 +124,17 @@ t_pcb* buscar_proceso_pid(uint32_t pid){
     for(int i=0; i<list_size(lista_procesos_ejecutando); i++){
         t_pcb* actual = list_get(lista_procesos_ejecutando, i);
         if(actual->pid == (uint32_t)pid){
-            list_remove(lista_procesos_ejecutando, i);
+            //list_remove(lista_procesos_ejecutando, i); 
+            // no eliminar aca porque hay respuestas que no necesariamente sacan al proceso de ejecucion, ejemplo INIT_PROC
             return actual;
         }
     }
     return NULL;
+}
+
+void sacar_proceso_ejecucion(t_pcb* proceso){
+    list_remove_element(lista_procesos_ejecutando, proceso);
+    signal_sem(&espacio_memoria);
 }
 
 void cambiarEstado(t_pcb* proceso, t_estado estado){
@@ -150,6 +156,7 @@ void cambiarEstado(t_pcb* proceso, t_estado estado){
     metrica->tiempo_inicio = clock();
 
     list_add(proceso->metricas_tiempo, metrica);
+    log_info(logger_kernel, "## (<%d>) Pasa del estado <%s> al estado <%s>", proceso->pid, metrica_anterior->estado, estado);
 }
 
 t_metricas_estado_tiempo* obtener_ultima_metrica(t_pcb* proceso){
@@ -172,17 +179,6 @@ int calcular_rafaga(t_list* metricas_tiempo){
     }
     else{
         return ultima_metrica->tiempo_fin - ultima_metrica->tiempo_inicio;
-    }
-}
-
-void comprobar_cola_bloqueados(int io_id){
-
-    t_queue* cola_io = obtener_cola_io(io_id);
-
-    if(!queue_is_empty(cola_io)){
-        tiempo_en_io *proceso = queue_peek(cola_io);
-
-        enviar_proceso_a_io(proceso->pcb, io_id, proceso->tiempo);
     }
 }
 
