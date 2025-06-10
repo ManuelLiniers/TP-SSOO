@@ -33,19 +33,11 @@ void* planificar_corto_plazo(void* arg);
 
 void enviar_proceso_a_io(t_pcb* proceso, int io_id, int io_tiempo);
 void vuelta_proceso_io(void* args);
-t_queue* obtener_cola_io(int io_id);
-void comprobar_cola_bloqueados(int io_id);
 
-t_pcb* buscar_proceso_pid(uint32_t pid);
-
-void cambiarEstado(t_pcb* proceso,t_estado EXEC);
-t_metricas_estado_tiempo* obtener_ultima_metrica(t_pcb* proceso);
-int calcular_rafaga(t_list* metricas_tiempo);
 bool espacio_en_memoria(t_pcb* proceso);
 void poner_en_ready(t_pcb* proceso);
 void poner_en_ejecucion(t_pcb* proceso, t_cpu** cpu_encargada);
-t_dispositivo_io* buscar_io(int id_io);
-t_cpu* buscar_cpu_libre(t_list* lista_cpus);
+
 
 
 

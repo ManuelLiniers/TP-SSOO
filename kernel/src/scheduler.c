@@ -29,11 +29,6 @@ void *planificar_corto_plazo(void* arg){
 
 }
 
-/* void esperar_devolucion_proceso(void* arg){
-    pthread_t* dispatch = malloc(sizeof(pthread_t));
-    pthread_create(dispatch, NULL, (void*) esperar_dispatch, arg);
-} */
-
 void esperar_dispatch(void* arg){
     t_cpu* cpu_encargada = (t_cpu*) arg;
     t_buffer* paquete = recibir_paquete(cpu_encargada->socket_dispatch);
@@ -140,16 +135,6 @@ void esperar_interrupt(void* arg){
     free(id_io_a_usar);
 }
 
-t_dispositivo_io* buscar_io(int id_io){
-    for(int i = 0; i<list_size(lista_dispositivos_io); i++){
-        t_dispositivo_io* actual = (t_dispositivo_io*) list_get(lista_dispositivos_io, i);
-        if(actual->id == id_io){
-            return actual;
-        }
-    }
-    return NULL;
-}
-
 
 void *planificar_largo_plazo_FIFO(void* arg){
 	while(1){
@@ -250,48 +235,6 @@ bool espacio_en_memoria(t_pcb* proceso){
     return resultado==OK;
 }
 
-
-void cambiarEstado(t_pcb* proceso, t_estado estado){
-
-    t_metricas_estado_tiempo* metrica_anterior = obtener_ultima_metrica(proceso);
-    if(metrica_anterior != NULL){
-        metrica_anterior->tiempo_fin = clock(); // o se puede cambiar por time()
-        if(metrica_anterior->estado == EXEC && estado == BLOCKED){
-            proceso->rafaga_real = calcular_rafaga(proceso->metricas_tiempo);
-        }
-    }
-
-    proceso->estado = estado;
-    proceso->metricas_estado[id_estado(estado)]++;
-
-
-    t_metricas_estado_tiempo* metrica = malloc(sizeof(t_metricas_estado_tiempo));
-    metrica->estado = estado;
-    metrica->tiempo_inicio = clock();
-
-    list_add(proceso->metricas_tiempo, metrica);
-}
-
-t_metricas_estado_tiempo* obtener_ultima_metrica(t_pcb* proceso){
-    if(proceso->metricas_tiempo == NULL)
-    {
-        return NULL;
-    }
-    t_metricas_estado_tiempo* ultimo_elemento = list_get(proceso->metricas_tiempo, list_size(proceso->metricas_tiempo)-1);
-        return ultimo_elemento;
-}
-
-int calcular_rafaga(t_list* metricas_tiempo){
-    t_metricas_estado_tiempo* ultima_metrica = list_get(metricas_tiempo, sizeof(metricas_tiempo)-1); 
-    t_metricas_estado_tiempo* metrica = list_get(metricas_tiempo, sizeof(metricas_tiempo)-3);
-    if(metrica->estado == EXEC){
-        return ultima_metrica->tiempo_fin - metrica->tiempo_inicio - (ultima_metrica->tiempo_inicio - metrica->tiempo_fin);
-    }
-    else{
-        return ultima_metrica->tiempo_fin - ultima_metrica->tiempo_inicio;
-    }
-}
-
 void poner_en_ready(t_pcb* proceso){
 
     cambiarEstado(proceso, READY);
@@ -330,28 +273,6 @@ void poner_en_ejecucion(t_pcb* proceso, t_cpu** cpu_encargada){
     //
     *cpu_encargada = cpu_libre;
 
-}
-
-t_cpu* buscar_cpu_libre(t_list* lista_cpus){
-    for(int i = 0; i<list_size(lista_cpus); i++){
-        t_cpu* actual = list_get(lista_cpus, i);
-        if(actual->esta_libre){
-            return actual;
-        }
-    }
-    log_error(logger_kernel, "No se hay CPUs libres");
-    return NULL;
-}
-
-t_pcb* buscar_proceso_pid(uint32_t pid){
-    for(int i=0; i<list_size(lista_procesos_ejecutando); i++){
-        t_pcb* actual = list_get(lista_procesos_ejecutando, i);
-        if(actual->pid == (uint32_t)pid){
-            list_remove(lista_procesos_ejecutando, i);
-            return actual;
-        }
-    }
-    return NULL;
 }
 
 void enviar_proceso_a_io(t_pcb* proceso, int io_id, int io_tiempo){
@@ -396,19 +317,4 @@ void vuelta_proceso_io(void* args){
 
     free(pid);
     free(buffer);
-}
-
-void comprobar_cola_bloqueados(int io_id){
-
-    t_queue* cola_io = obtener_cola_io(io_id);
-
-    if(!queue_is_empty(cola_io)){
-        tiempo_en_io *proceso = queue_peek(cola_io);
-
-        enviar_proceso_a_io(proceso->pcb, io_id, proceso->tiempo);
-    }
-}
-
-t_queue* obtener_cola_io(int io_id){
-    return list_get(queue_block, io_id);
 }

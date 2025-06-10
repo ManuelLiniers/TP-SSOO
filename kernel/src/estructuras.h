@@ -4,6 +4,7 @@
 #include <commons/collections/list.h>
 #include "utils/commons.h"
 #include "semaforos.h"
+#include "conexion.h"
 
 extern int pid_incremental;
 extern int id_io_incremental;
@@ -45,7 +46,12 @@ typedef struct {
     // Más campos opcionales: tamaño de memoria, registros, métricas, etc.
 } t_pcb;
 
+void crear_proceso(char* instrucciones, char* tamanio_proceso);
+t_pcb* buscar_proceso_pid(uint32_t pid);
+void cambiarEstado(t_pcb* proceso,t_estado EXEC);
 extern t_list* lista_procesos_ejecutando;
+t_metricas_estado_tiempo* obtener_ultima_metrica(t_pcb* proceso);
+int calcular_rafaga(t_list* metricas_tiempo);
 
 
 /**
@@ -62,7 +68,6 @@ t_pcb* pcb_create();
  */
 void pcb_destroy(void* pcb_void);
 
-void crear_proceso(char* instrucciones, char* tamanio_proceso);
 
 typedef struct{
     char cpu_id[20];
@@ -71,11 +76,17 @@ typedef struct{
     bool esta_libre;
 } t_cpu;
 
+t_cpu* buscar_cpu_libre(t_list* lista_cpus);
+
 typedef struct{
     char nombre[20];
     int id;
     int socket;
 } t_dispositivo_io;
+
+t_dispositivo_io* buscar_io(int id_io);
+t_queue* obtener_cola_io(int io_id);
+void comprobar_cola_bloqueados(int io_id);
 
 typedef struct{
     t_pcb *pcb;
