@@ -76,6 +76,11 @@ t_pagina* buscar_pagina_en_tabla(t_tabla_nivel* raiz, uint32_t nro_pagina_logica
         if (i == CANTIDAD_NIVELES - 1) {
             // Último nivel → obtenemos página
             t_entrada_tabla* entrada = list_get(actual->entradas, idx);
+
+////////////////////////
+        //Agregar Retardo de tabla de paginas
+/////////
+
             t_pagina* pag = (t_pagina*) entrada->siguiente_nivel;
             list_destroy(indices);
             return pag;
@@ -108,6 +113,10 @@ void liberar_tablas(t_tabla_nivel* tabla) {
     free(tabla);
 }
 
+// No se si va esto porque la MMU de cpu es la que se encarga de la traduccion, 
+// ademas de que no se asignan los marcos libres porque los procesos se cargan
+// enteros en memoria (pq no hay memoria virtual)
+/*
 // Traduce una dirección lógica a dirección física para un proceso dado
 // Si la página no tiene marco asignado, lo asigna si hay uno libre
 uint32_t traducir_direccion_logica(t_proceso* proceso, uint32_t direccion_logica) {
@@ -153,3 +162,4 @@ uint32_t traducir_direccion_logica(t_proceso* proceso, uint32_t direccion_logica
 
     return marco->base + desplazamiento;
 }
+*/

@@ -4,14 +4,10 @@
 #include "utils/commons.h"
 #include "memoria.h"
 
-//============RECIBIDOS DE CPU=======================
 void atender_peticion_de_instruccion(t_buffer* un_buffer, int cpu_fd);
-
-
-
-//============ENVIOS A CPU=======================
-
 void enviar_instruccion_a_cpu(char* instruccion, int cpu_fd);
+
+void atender_peticion_marco(t_buffer* unBuffer, int cpu_fd);
 
 
 

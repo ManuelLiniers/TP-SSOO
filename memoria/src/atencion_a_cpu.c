@@ -20,6 +20,12 @@ void atender_cpu(int cpu_fd){
 
 				break;
 			}
+			case PEDIR_MARCO: {
+				unBuffer = recibir_paquete(cpu_fd);
+				atender_peticion_marco(unBuffer, cpu_fd);
+
+				break;
+			}
 			case -1:{
 				log_debug(memoria_logger, "[CPU] se desconecto. Terminando consulta");
 				exit(0);
@@ -53,16 +59,44 @@ void atender_peticion_de_instruccion(t_buffer* unBuffer, int cpu_fd){
 }
 
 void enviar_instruccion_a_cpu(char* instruccion, int cpu_fd){
-    // Enviar op_code primero
-	op_code codigo = DEVOLVER_INSTRUCCION;
-	send(cpu_fd, &codigo, sizeof(op_code), 0);
+    if (instruccion == NULL || cpu_fd < 0) {
+        log_error(memoria_logger, "Parámetros inválidos");
+        return;
+    }
 
-	// Enviar tamaño
-	uint32_t size = strlen(instruccion) + 1;
-	send(cpu_fd, &size, sizeof(uint32_t), 0);
+    op_code codigo = DEVOLVER_INSTRUCCION;
+    send(cpu_fd, &codigo, sizeof(op_code), 0);
 
-	// Enviar instrucción
-	send(cpu_fd, instruccion, size, 0);
+    uint32_t size = strlen(instruccion) + 1;
+    send(cpu_fd, &size, sizeof(uint32_t), 0);
 
-	log_debug(memoria_logger, "Instrucción enviada: %s", instruccion);
+    send(cpu_fd, instruccion, size, 0);
+
+    log_debug(memoria_logger, "Instrucción enviada: %s", instruccion);
+}
+
+void atender_peticion_marco(t_buffer* unBuffer, int cpu_fd){
+	uint32_t pid;
+	uint32_t nro_pagina_logica;
+	void* tabla;
+
+	pid = recibir_uint32_del_buffer(unBuffer);
+	nro_pagina_logica = recibir_uint32_del_buffer(unBuffer);
+
+	tabla = obtener_tabla_por_pid(pid);
+	if (tabla == NULL) {
+        log_error(memoria_logger, "Tabla no encontrada para PID: %d", pid);
+        int marco_invalido = -1;
+        send(cpu_fd, &marco_invalido, sizeof(int), 0);
+        return;
+    }
+
+	t_pagina* pagina = buscar_pagina_en_tabla(tabla, nro_pagina_logica);
+
+	int marco = pagina->marco_asignado; 
+	log_debug(memoria_logger, "Marco obtenido: %d", marco);
+
+	send(cpu_fd, &marco, sizeof(int), 0);
+
+	log_debug(memoria_logger, "Marco Enviado");
 }

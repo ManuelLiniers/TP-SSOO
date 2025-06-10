@@ -24,8 +24,6 @@ typedef struct{
 
 	void* tabla_paginas_raiz;  // Puntero a la tabla de nivel 1
 	pthread_mutex_t mutex_TP;
-
-	t_list* marcos_asignados; // Marcos que esta utilizando para q sea mas facil finalizar proceso
 } t_proceso;
 
 typedef struct {

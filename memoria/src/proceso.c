@@ -75,15 +75,23 @@ t_proceso* obtener_proceso_por_id(int pid){
 	return un_proceso;
 }
 
+void* obtener_tabla_por_pid(int pid){
+    t_proceso* proceso = obtener_proceso_por_id(pid);
+
+    return proceso->tabla_paginas_raiz;
+}
+
 char* obtener_instruccion_por_indice(t_proceso* un_proceso, int indice_instruccion){
-	char* instruccion_actual;
+	if (un_proceso == NULL || un_proceso->instrucciones == NULL) {
+        log_error(memoria_logger, "Proceso o lista de instrucciones es NULL");
+        exit(EXIT_FAILURE);
+    }
+
 	if(indice_instruccion >= 0 && indice_instruccion < list_size(un_proceso->instrucciones)){
-		instruccion_actual = list_get(un_proceso->instrucciones, indice_instruccion);
-		return instruccion_actual;
+		return list_get(un_proceso->instrucciones, indice_instruccion);
 	}
 	else{
 		log_error(memoria_logger, "PID<%d> - Nro de Instruccion <%d> NO VALIDA", un_proceso->pid, indice_instruccion);
 		exit(EXIT_FAILURE);
-		return NULL;
 	}
 }
