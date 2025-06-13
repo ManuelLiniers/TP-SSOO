@@ -50,6 +50,21 @@ t_marco* obtener_marco_libre(){
     return marco_libre;
 }
 
+uint32_t cantidad_de_marcos_libres(){
+    uint32_t contador = 0;
+    
+    pthread_mutex_lock(&mutex_lst_marco);
+    for (int i = 0; i < list_size(lst_marcos); i++) {
+        t_marco* marco = list_get(lst_marcos, i);
+        if (marco->libre) {
+            contador++;
+        }
+    }
+    pthread_mutex_unlock(&mutex_lst_marco);
+    
+    return contador;
+}
+
 bool hay_marcos_libres() {
     bool resultado = false;
     

@@ -7,7 +7,6 @@ t_proceso* crear_proceso(int pid, int size, char* path_instruc){
 	proceso_nuevo->pid = pid;
 	proceso_nuevo->size = size;
 	proceso_nuevo->pathInstrucciones = path_instruc;
-	proceso_nuevo->instrucciones = NULL;
 
 //  Cargo las instrucciones del proceso
 	proceso_nuevo->instrucciones = leer_archivo_y_cargar_instrucciones(proceso_nuevo->pathInstrucciones);

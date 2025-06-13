@@ -11,7 +11,7 @@
 
 //============ENVIOS A KERNEL=======================
 
-void mock_aceptacion(t_buffer* unBuffer, int kernel_fd);
+void iniciar_proceso(t_buffer* unBuffer, int kernel_fd);
 
 
 
