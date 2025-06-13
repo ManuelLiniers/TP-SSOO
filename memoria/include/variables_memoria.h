@@ -14,15 +14,33 @@ typedef struct {
     int escrituras_memoria;
 } t_metricas_proceso;
 
+// Entrada de tabla de páginas
+typedef struct {
+    int numero_entrada;
+    void* siguiente_nivel; // t_tabla_nivel* o t_pagina*
+    bool es_ultimo_nivel;
+} t_entrada_tabla;
+
+// Estructura de una tabla de nivel
+typedef struct {
+    int nivel;                // 1 = raíz, 2 = segundo nivel, etc.
+    t_list* entradas;             // Lista de t_entrada_tabla*
+} t_tabla_nivel;
+
+// Página virtual de un proceso
+typedef struct {
+    int nro_pagina;
+    int marco_asignado; // En caso de que este en swap el valor es -1
+} t_pagina;
+
 typedef struct{
 	int pid;
 	int size;
-	t_metricas_proceso metricas;
+	t_metricas_proceso* metricas;
 
-	char* pathInstrucciones;
 	t_list* instrucciones;
 
-	void* tabla_paginas_raiz;  // Puntero a la tabla de nivel 1
+	t_tabla_nivel* tabla_paginas_raiz;  // Puntero a la tabla de nivel 1
 	pthread_mutex_t mutex_TP;
 } t_proceso;
 
@@ -37,26 +55,6 @@ typedef struct {
     bool libre;
     marco_info* info;
 } t_marco;
-
-// Entrada de tabla de páginas
-typedef struct {
-    int numero_entrada;
-    void* siguiente_nivel; // t_tabla_nivel* o t_pagina*
-    bool es_ultimo_nivel;
-} t_entrada_tabla;
-
-// Estructura de una tabla de nivel
-typedef struct {
-    int nivel;                // 1 = raíz, 2 = segundo nivel, etc.
-    t_list* entradas;             // Lista de t_entrada_tabla*
-    pthread_mutex_t mutex;        // Sincronización
-} t_tabla_nivel;
-
-// Página virtual de un proceso
-typedef struct {
-    int nro_pagina;
-    int marco_asignado; // En caso de que este en swap el valor es -1
-} t_pagina;
 
 // Variables de configuración
 extern char* PUERTO_ESCUCHA;

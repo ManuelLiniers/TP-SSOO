@@ -10,7 +10,6 @@ t_tabla_nivel* crear_tabla_multinivel(int nivel_actual, int nivel_final) {
     t_tabla_nivel* tabla = malloc(sizeof(t_tabla_nivel));
     tabla->nivel = nivel_actual;
     tabla->entradas = list_create();
-    pthread_mutex_init(&tabla->mutex, NULL);
 
     for (int i = 0; i < ENTRADAS_POR_TABLA; i++) {
         t_entrada_tabla* entrada = malloc(sizeof(t_entrada_tabla));
@@ -58,14 +57,6 @@ t_list* calcular_indices_por_nivel(uint32_t nro_pagina_logica) {
 // raiz: tabla de nivel 1
 // nro_pagina_logica: index completo de la direccion
 
-
-
-
-
-
-
-
-
 t_pagina* buscar_pagina_en_tabla(t_tabla_nivel* raiz, uint32_t nro_pagina_logica) {
     t_list* indices = calcular_indices_por_nivel(nro_pagina_logica);
     t_tabla_nivel* actual = raiz;
@@ -109,7 +100,6 @@ void liberar_tablas(t_tabla_nivel* tabla) {
     }
 
     list_destroy(tabla->entradas);
-    pthread_mutex_destroy(&tabla->mutex);
     free(tabla);
 }
 

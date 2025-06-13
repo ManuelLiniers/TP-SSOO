@@ -40,8 +40,8 @@ void iniciar_proceso(t_buffer* unBuffer, int kernel_fd){
 
     log_debug(memoria_logger, "Pedido de crear proceso PID %d con tamaño %d", pid, tamanio);
 
-	uint32_t cantidad_de_marcos_libres = cantidad_de_marcos_libres();
-	uint32_t espacio_disponible = cantidad_de_marcos_libres * TAM_PAGINA;
+	uint32_t marcos_libres = cantidad_de_marcos_libres();
+	uint32_t espacio_disponible = marcos_libres * ((uint32_t) TAM_PAGINA);
 
 	if(espacio_disponible >= tamanio){
     	int respuesta = OK;
@@ -52,6 +52,10 @@ void iniciar_proceso(t_buffer* unBuffer, int kernel_fd){
 		path_instrucciones = recibir_informacion_del_buffer(unBuffer, sizeof(char*));
 
 		t_proceso* procesoNuevo = crear_proceso(pid, tamanio, path_instrucciones);
+
+		pthread_mutex_lock(&procesoNuevo->mutex_TP); // no es necesario pero para mas seguridad
+		asignar_marcos_a_tabla(procesoNuevo->tabla_paginas_raiz, procesoNuevo->pid);
+		pthread_mutex_unlock(&procesoNuevo->mutex_TP);
 	
 		log_info(memoria_logger, "## PID: <%d> - Proceso Creado - Tamaño: <%d>", pid, tamanio);
 

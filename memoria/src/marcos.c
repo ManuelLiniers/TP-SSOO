@@ -108,3 +108,29 @@ void destruir_todos_los_marcos() {
     }
     pthread_mutex_unlock(&mutex_lst_marco);
 }
+
+void asignar_marcos_a_tabla(t_tabla_nivel* tabla, int pid) {
+    for (int i = 0; i < ENTRADAS_POR_TABLA; i++) {
+        t_entrada_tabla* entrada = list_get(tabla->entradas, i);
+
+        if (entrada->es_ultimo_nivel) {
+            t_pagina* pagina = (t_pagina*) entrada->siguiente_nivel;
+            if (pagina->marco_asignado == -1) {
+                t_marco* marco = obtener_marco_libre();
+                if (marco != NULL) {
+                    marco->libre = false;
+
+                    marco->info->pid_proceso = pid;
+                    marco->info->nro_pagina = pagina->nro_pagina;
+                    pagina->marco_asignado = marco->nro_marco;
+                } else {
+                    // No hay más marcos libres (No deberia pasar)
+                    log_error(memoria_logger, "No hay marcos libres disponibles para la página %d\n", pagina->nro_pagina);
+                }
+            }
+        } else {
+            t_tabla_nivel* subtabla = (t_tabla_nivel*) entrada->siguiente_nivel;
+            asignar_marcos_a_tabla(subtabla, pid);  // llamada recursiva
+        }
+    }
+}

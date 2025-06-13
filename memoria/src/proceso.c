@@ -6,10 +6,14 @@ t_proceso* crear_proceso(int pid, int size, char* path_instruc){
 	t_proceso* proceso_nuevo = malloc(sizeof(t_proceso));
 	proceso_nuevo->pid = pid;
 	proceso_nuevo->size = size;
-	proceso_nuevo->pathInstrucciones = path_instruc;
+    t_metricas_proceso* metricas = malloc(sizeof(t_metricas_proceso));
+    proceso_nuevo->metricas = metricas; 
 
 //  Cargo las instrucciones del proceso
-	proceso_nuevo->instrucciones = leer_archivo_y_cargar_instrucciones(proceso_nuevo->pathInstrucciones);
+	proceso_nuevo->instrucciones = leer_archivo_y_cargar_instrucciones(path_instruc);
+
+    proceso_nuevo->tabla_paginas_raiz = crear_tabla_multinivel(1, CANTIDAD_NIVELES);
+    pthread_mutex_init(&proceso_nuevo->mutex_TP, NULL);
 
 	return proceso_nuevo;
 }
