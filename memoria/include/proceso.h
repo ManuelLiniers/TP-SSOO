@@ -19,5 +19,7 @@ t_list* leer_archivo_y_cargar_instrucciones(char* path_archivo);
 t_proceso* obtener_proceso_por_id(int pid);
 void* obtener_tabla_por_pid(int pid);
 char* obtener_instruccion_por_indice(t_proceso* un_proceso, int indice_instruccion);
+void exponer_metricas(t_metricas_proceso* metricas, uint32_t pid);
+void finalizar_proceso(t_proceso* proceso);
 
 #endif /* PROCESO_H_ */

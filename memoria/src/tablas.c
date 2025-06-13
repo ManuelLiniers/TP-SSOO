@@ -91,7 +91,7 @@ void liberar_tablas(t_tabla_nivel* tabla) {
         t_entrada_tabla* entrada = list_get(tabla->entradas, i);
 
         if (entrada->es_ultimo_nivel) {
-            free((t_pagina*)entrada->siguiente_nivel);
+            liberar_pagina_y_marcos((t_pagina*)entrada->siguiente_nivel);
         } else {
             liberar_tablas((t_tabla_nivel*)entrada->siguiente_nivel);
         }
@@ -101,6 +101,15 @@ void liberar_tablas(t_tabla_nivel* tabla) {
 
     list_destroy(tabla->entradas);
     free(tabla);
+}
+
+void liberar_pagina_y_marcos(t_pagina* pagina){
+    if(pagina->marco_asignado != -1){
+        t_marco* marco = obtener_marco_por_nro_marco(pagina->marco_asignado);
+        marco->libre = true;
+        marco->info->pid_proceso = -1;
+    }
+    free(pagina);
 }
 
 // No se si va esto porque la MMU de cpu es la que se encarga de la traduccion, 

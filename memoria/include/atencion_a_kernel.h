@@ -12,6 +12,7 @@
 //============ENVIOS A KERNEL=======================
 
 void iniciar_proceso(t_buffer* unBuffer, int kernel_fd);
+void fin_proceso(t_buffer* unBuffer, int kernel_fd);
 
 
 

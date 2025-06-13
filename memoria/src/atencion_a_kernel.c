@@ -17,6 +17,13 @@ void atender_kernel(int kernel_fd){ // agregar que reciba el buffer
 
 				break;
 			}
+			case FINALIZAR_PROCESO: {
+				unBuffer = recibir_paquete(kernel_fd);
+				
+				fin_proceso(unBuffer, kernel_fd);
+
+				break;
+			}
 			case -1:{
 				log_debug(memoria_logger, "[KERNEL] se desconecto. Terminando consulta");
 				exit(0);
@@ -65,4 +72,20 @@ void iniciar_proceso(t_buffer* unBuffer, int kernel_fd){
     	send(kernel_fd, &respuesta, sizeof(int), 0);
 		log_debug(memoria_logger, "No hay espacio para proceso PID %d", pid);
 	}
+}
+
+void fin_proceso(t_buffer* unBuffer, int kernel_fd){
+	uint32_t pid;
+
+	pid = recibir_int_del_buffer(unBuffer);
+
+	t_proceso* proceso = obtener_proceso_por_id(pid);
+
+	exponer_metricas(proceso->metricas, pid);
+
+	// 
+//		Liberar SWAP
+	//
+
+	finalizar_proceso(proceso);
 }

@@ -6,7 +6,7 @@ t_proceso* crear_proceso(int pid, int size, char* path_instruc){
 	t_proceso* proceso_nuevo = malloc(sizeof(t_proceso));
 	proceso_nuevo->pid = pid;
 	proceso_nuevo->size = size;
-    t_metricas_proceso* metricas = malloc(sizeof(t_metricas_proceso));
+    t_metricas_proceso* metricas = calloc(1, sizeof(t_metricas_proceso));
     proceso_nuevo->metricas = metricas; 
 
 //  Cargo las instrucciones del proceso
@@ -97,4 +97,24 @@ char* obtener_instruccion_por_indice(t_proceso* un_proceso, int indice_instrucci
 		log_error(memoria_logger, "PID<%d> - Nro de Instruccion <%d> NO VALIDA", un_proceso->pid, indice_instruccion);
 		exit(EXIT_FAILURE);
 	}
+}
+
+void exponer_metricas(t_metricas_proceso* metricas, uint32_t pid){
+    log_info(memoria_logger, "## PID: %d - Proceso Destruido - Métricas - Acc.T.Pag: %d; Inst.Sol.: %d; SWAP: %d; Mem.Prin.: %d; Lec.Mem.: %d; Esc.Mem.: %d", 
+          pid, metricas->accesos_tablas_paginas, metricas->instrucciones_solicitadas, 
+          metricas->bajadas_swap, metricas->subidas_memoria,
+          metricas->lecturas_memoria, metricas->escrituras_memoria);
+}
+
+void finalizar_proceso(t_proceso* proceso){
+    pthread_mutex_lock(&proceso->mutex_TP);
+
+    liberar_tablas(proceso->tabla_paginas_raiz);
+
+    list_destroy_and_destroy_elements(proceso->instrucciones, free);
+    free(proceso->metricas);
+
+    pthread_mutex_unlock(&proceso->mutex_TP);
+    pthread_mutex_destroy(&proceso->mutex_TP);
+    free(proceso);
 }
