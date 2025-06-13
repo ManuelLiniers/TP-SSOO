@@ -57,21 +57,19 @@ t_list* calcular_indices_por_nivel(uint32_t nro_pagina_logica) {
 // raiz: tabla de nivel 1
 // nro_pagina_logica: index completo de la direccion
 
-t_pagina* buscar_pagina_en_tabla(t_tabla_nivel* raiz, uint32_t nro_pagina_logica) {
+t_pagina* buscar_pagina_en_tabla(t_tabla_nivel* raiz, uint32_t nro_pagina_logica, t_metricas_proceso* metricas) {
     t_list* indices = calcular_indices_por_nivel(nro_pagina_logica);
     t_tabla_nivel* actual = raiz;
 
     for (int i = 0; i < list_size(indices); i++) {
         int idx = (int)(intptr_t)list_get(indices, i);
 
+        usleep(RETARDO_MEMORIA);
+        metricas->accesos_tablas_paginas++; // METRICAS
+
         if (i == CANTIDAD_NIVELES - 1) {
             // Último nivel → obtenemos página
             t_entrada_tabla* entrada = list_get(actual->entradas, idx);
-
-////////////////////////
-        //Agregar Retardo de tabla de paginas
-/////////
-
             t_pagina* pag = (t_pagina*) entrada->siguiente_nivel;
             list_destroy(indices);
             return pag;

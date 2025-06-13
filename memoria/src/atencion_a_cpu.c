@@ -78,12 +78,13 @@ void enviar_instruccion_a_cpu(char* instruccion, int cpu_fd){
 void atender_peticion_marco(t_buffer* unBuffer, int cpu_fd){
 	uint32_t pid;
 	uint32_t nro_pagina_logica;
-	void* tabla;
 
 	pid = recibir_uint32_del_buffer(unBuffer);
 	nro_pagina_logica = recibir_uint32_del_buffer(unBuffer);
 
-	tabla = obtener_tabla_por_pid(pid);
+	t_proceso* proceso = obtener_proceso_por_id(pid);
+
+	t_tabla_nivel* tabla = proceso->tabla_paginas_raiz;
 	if (tabla == NULL) {
         log_error(memoria_logger, "Tabla no encontrada para PID: %d", pid);
         int marco_invalido = -1;
@@ -91,7 +92,7 @@ void atender_peticion_marco(t_buffer* unBuffer, int cpu_fd){
         return;
     }
 
-	t_pagina* pagina = buscar_pagina_en_tabla(tabla, nro_pagina_logica);
+	t_pagina* pagina = buscar_pagina_en_tabla(tabla, nro_pagina_logica, proceso->metricas);
 
 	int marco = pagina->marco_asignado; 
 	log_debug(memoria_logger, "Marco obtenido: %d", marco);

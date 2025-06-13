@@ -78,11 +78,6 @@ t_proceso* obtener_proceso_por_id(int pid){
 	return un_proceso;
 }
 
-void* obtener_tabla_por_pid(int pid){
-    t_proceso* proceso = obtener_proceso_por_id(pid);
-
-    return proceso->tabla_paginas_raiz;
-}
 
 char* obtener_instruccion_por_indice(t_proceso* un_proceso, int indice_instruccion){
 	if (un_proceso == NULL || un_proceso->instrucciones == NULL) {
@@ -91,6 +86,7 @@ char* obtener_instruccion_por_indice(t_proceso* un_proceso, int indice_instrucci
     }
 
 	if(indice_instruccion >= 0 && indice_instruccion < list_size(un_proceso->instrucciones)){
+        un_proceso->metricas->instrucciones_solicitadas++;
 		return list_get(un_proceso->instrucciones, indice_instruccion);
 	}
 	else{
