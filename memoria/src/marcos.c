@@ -134,3 +134,11 @@ void asignar_marcos_a_tabla(t_tabla_nivel* tabla, int pid) {
         }
     }
 }
+
+int obtener_pid_por_dir_fisica(uint32_t direccion_fisica){
+    int nro_marco = ((int) direccion_fisica) / TAM_PAGINA;
+
+    t_marco* marco = obtener_marco_por_nro_marco(nro_marco);
+
+    return marco->info->pid_proceso;
+}

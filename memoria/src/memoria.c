@@ -60,6 +60,7 @@ void inicializar_memoria(){
     	log_error(memoria_logger, "Error al crear memoria de usuario");
     	exit(1);
 	}
+	pthread_mutex_init(&mutex_espacio_usuario, NULL);
 
 	// Inicializar lista para administración de marcos libres
 	marcos_totales = TAM_MEMORIA / TAM_PAGINA;

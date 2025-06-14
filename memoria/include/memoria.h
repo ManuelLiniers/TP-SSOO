@@ -14,6 +14,7 @@
 #include "proceso.h"
 #include "marcos.h"
 #include "tablas.h"
+#include "lectura_escritura.h"
 
 
 

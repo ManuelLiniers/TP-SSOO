@@ -26,6 +26,12 @@ void atender_cpu(int cpu_fd){
 
 				break;
 			}
+			case LEER_MEMORIA: {
+				unBuffer = recibir_paquete(cpu_fd);
+				atender_lectura_memoria(unBuffer, cpu_fd);
+
+				break;
+			}
 			case -1:{
 				log_debug(memoria_logger, "[CPU] se desconecto. Terminando consulta");
 				exit(0);
@@ -100,4 +106,34 @@ void atender_peticion_marco(t_buffer* unBuffer, int cpu_fd){
 	send(cpu_fd, &marco, sizeof(int), 0);
 
 	log_debug(memoria_logger, "Marco Enviado");
+}
+
+void atender_lectura_memoria(t_buffer* unBuffer, int cpu_fd){
+	uint32_t direccion_fisica;
+	uint32_t tamanio;
+
+	direccion_fisica = recibir_uint32_del_buffer(unBuffer);
+	tamanio = recibir_uint32_del_buffer(unBuffer);
+
+	// void* lectura = malloc(tamanio);
+	// memcpy(lectura, leer_valor(direccion_fisica, tamanio), tamanio);
+	// send(cpu_fd, lectura, tamanio, 0);
+
+	void* lectura = obtener_lectura(direccion_fisica, tamanio);
+
+    if (lectura == NULL) {
+        log_error(memoria_logger, "Fallo al leer memoria: dirección inválida o fuera de rango");
+        return;
+    }
+
+	void* copia_lectura = malloc(tamanio);
+	pthread_mutex_lock(&mutex_espacio_usuario);
+    memcpy(copia_lectura, lectura, tamanio);
+	pthread_mutex_unlock(&mutex_espacio_usuario);
+
+    send(cpu_fd, copia_lectura, tamanio, 0);
+
+    log_debug(memoria_logger, "Lectura enviada a CPU: dirección %u, tamaño %u", direccion_fisica, tamanio);
+
+	free(copia_lectura);
 }

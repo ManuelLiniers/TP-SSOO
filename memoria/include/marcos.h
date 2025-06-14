@@ -11,5 +11,6 @@ bool hay_marcos_libres();
 t_marco* obtener_marco_por_nro_marco(int nro_marco);
 void destruir_list_marcos_y_todos_los_marcos();
 void asignar_marcos_a_tabla(t_tabla_nivel* tabla, int pid);
+int obtener_pid_por_dir_fisica(uint32_t direccion_fisica);
 
 #endif /* MARCOS_H_ */
