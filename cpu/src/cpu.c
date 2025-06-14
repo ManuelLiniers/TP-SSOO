@@ -19,7 +19,13 @@ int main(int argc, char* argv[]) {
 
     TAMANIO_PAGINA = config_get_int_value(cpu_config, "TAMANIO_PAGINA");
     ENTRADAS_CACHE = config_get_int_value(cpu_config, "ENTRADAS_CACHE");
-    pthread_mutex_init(&mutex_interrupt, NULL);
+    pthread_mutex_init(&mutex_interrupt, NULL);  
+    /*  typedef union
+{
+  struct __pthread_mutex_s __data;
+  char __size[__SIZEOF_PTHREAD_MUTEX_T];
+  long int __align;
+} pthread_mutex_t;   */
 
 
     char* ip_memoria = config_get_string_value(cpu_config, "IP_MEMORIA");
@@ -189,7 +195,7 @@ void* escuchar_interrupt(void* arg) {
         if (recv(fd, &codigo, sizeof(op_code), 0) > 0) {
             if (codigo == INTERRUPCION_CPU) {  
                 pthread_mutex_lock(&mutex_interrupt);
-                flag_interrupcion = true;
+                flag_interrupcion = true;  //FALG QUE PROTEJO CON UN MUTEX PARA QUE AMBOS HILOS NO LA USEN A LA VEZ
                 pthread_mutex_unlock(&mutex_interrupt);
 
                 log_debug(logger, "Llega interrupción al puerto Interrupt");
@@ -403,7 +409,7 @@ void enviar_contexto_a_kernel_io(t_contexto* contexto, motivo_desalojo motivo, i
 
 //PONER EN MMU.C
 uint32_t traducir_direccion_logica(uint32_t direccion_logica, int tamanio_pagina, t_contexto* contexto, int conexion_memoria) {
-    uint32_t nro_pagina = direccion_logica / tamanio_pagina;
+    uint32_t nro_pagina = floor(direccion_logica / tamanio_pagina);
     uint32_t desplazamiento = direccion_logica % tamanio_pagina;
 
     uint32_t marco = 0;   //EN BUSCAR_EN_TLB PASAMOS MARCO COMO REFERENCIA XQ LA FUNCION DEVUELVE UN INT Y PARA QUE TOME EL VALOR DEL MARCO ENCONTRADO

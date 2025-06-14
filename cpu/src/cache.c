@@ -35,7 +35,7 @@ void reemplazar_con_clock(t_entrada_cache* nueva, t_log* logger, int conexion_me
         if (!actual->bit_uso) { //Si el bit de uso esta en falso (0), esta entrada es candidata a ser reemplazada
             if (actual->bit_modificado) { 
 
-                t_paquete* paquete = crear_paquete(ESCRIBIR_MEMORIA); // ENVIO A MEMORIA EL CONTENIDO ACTUALIZADO
+                t_paquete* paquete = crear_paquete(ESCRIBIR_MEMORIA); // ENVIO A MEMORIA EL CONTENIDO ACTUALIZADO(XQ EL BM ES 1)
                 agregar_a_paquete(paquete, &(actual->marco), sizeof(uint32_t));
                 agregar_a_paquete(paquete, actual->contenido, strlen(actual->contenido) + 1);
                 enviar_paquete(paquete, conexion_memoria);
@@ -45,7 +45,7 @@ void reemplazar_con_clock(t_entrada_cache* nueva, t_log* logger, int conexion_me
 
                 log_debug(logger, "PID: %d - Memory Update - Página: %d", actual->pid, actual->pagina);
             }
-            list_replace_and_destroy_element(cache_paginas, puntero_clock, nueva, free);
+            list_replace_and_destroy_element(cache_paginas, puntero_clock, nueva, free);  //@brief Remueve un elemento de la lista de una determinada posicion y loretorna.
             log_info(logger, "PID: %d - Cache Add - Pagina: %d", nueva->pid, nueva->pagina);
             puntero_clock = (puntero_clock + 1) % entradas_cache;
             return;
@@ -64,14 +64,14 @@ void agregar_a_cache(int pid, uint32_t pagina, char* contenido, bool fue_modific
     nueva->bit_modificado = fue_modificado;
 
     if (list_size(cache_paginas) < entradas_cache) {
-        list_add(cache_paginas, nueva);
+        list_add(cache_paginas, nueva);  //CARGA LA PAGINA SI LE QUEDA ESPACIO, SINO REEMPLAZA CON CLOCK
         log_info(logger, "PID: %d - Cache Add - Pagina: %d", pid, pagina);
     } else {
         reemplazar_con_clock(nueva, logger, conexion_memoria);
     }
 }
 
-void limpiar_cache_por_pid(int pid, int conexion_memoria, int tamanio_pagina, t_log* logger) {
+void limpiar_cache_por_pid(int pid, int conexion_memoria, int tamanio_pagina, t_log* logger) {  //PARA CUANDO SE DESALOJA UN PROCESO
     for (int i = list_size(cache_paginas) - 1; i >= 0; i--) {
         t_entrada_cache* entrada = list_get(cache_paginas, i);
         if (entrada->pid == pid) {
