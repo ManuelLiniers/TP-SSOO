@@ -6,6 +6,7 @@ int conexion_kernel_interrupt;
 bool flag_interrupcion = false;
 int TAMANIO_PAGINA;
 int ENTRADAS_CACHE;
+int retardo_cache;
 
 
 int main(int argc, char* argv[]) {
@@ -15,10 +16,13 @@ int main(int argc, char* argv[]) {
     t_config* cpu_config = crear_config(logger);
 
     inicializar_tlb(logger, cpu_config);
+    inicializar_cache(logger, cpu_config);
 
+TAMANIO_PAGINA = config_get_int_value(cpu_config, "TAMANIO_PAGINA");
+retardo_cache = config_get_int_value(cpu_config, "RETARDO_CACHE")
 
-    TAMANIO_PAGINA = config_get_int_value(cpu_config, "TAMANIO_PAGINA");
-    ENTRADAS_CACHE = config_get_int_value(cpu_config, "ENTRADAS_CACHE");
+//ENTRADAS_CACHE = config_get_int_value(cpu_config, "ENTRADAS_CACHE");
+    
     pthread_mutex_init(&mutex_interrupt, NULL);  
     /*  typedef union
 {
@@ -418,6 +422,7 @@ uint32_t traducir_direccion_logica(uint32_t direccion_logica, int tamanio_pagina
     char* contenido_cache = NULL;
     if (entradas_cache > 0 && buscar_en_cache(contexto->pid, nro_pagina, &contenido_cache, &marco, logger)) {
         // Solo necesito el marco si quiero calcular la dirección física
+        usleep(retardo_cache * 1000);  //tiempo de acceso a caché (delay) multiplico por 1000 xq esta en ms
         free(contenido_cache);
         return marco * tamanio_pagina + desplazamiento;
     }
@@ -429,19 +434,21 @@ uint32_t traducir_direccion_logica(uint32_t direccion_logica, int tamanio_pagina
 
     log_info(logger, "PID: %d - OBTENER MARCO - Página: %d", contexto->pid, nro_pagina);
 
+    //SI LA PAGINA NO ESTÁ NI EN LAS ENTRADAS DE CACHE NI EN LAS DE TLB ENTONCES BUSCA DIRECTO EN MEMORIA
+
     t_paquete* paquete = crear_paquete(PEDIR_MARCO); //segun el issue 4702: "Pueden enviar un solo mensaje desde CPU con PID y nro de página, y eso representa los N accesos a memoria
     agregar_a_paquete(paquete, &(contexto->pid), sizeof(uint32_t));  
     agregar_a_paquete(paquete, &nro_pagina, sizeof(uint32_t));
     enviar_paquete(paquete, conexion_memoria);
     eliminar_paquete(paquete);
 
-    recv(conexion_memoria, &marco, sizeof(uint32_t), 0);
+    recv(conexion_memoria, &marco, sizeof(uint32_t), 0);  //recibo marco de la memoria
     log_debug(logger, "PID: %d - Marco recibido: %d", contexto->pid, marco);
 
     if (entradas_cache > 0) {
-    char* contenido_simulado = strdup("pagina_sin_datos");  // contenido simulado
-    agregar_a_cache(contexto->pid, nro_pagina, contenido_simulado, false, logger, conexion_memoria);
-    free(contenido_simulado);
+    char* contenido_de_pag = strdup("pagina_sin_datos");  // contenido simulado
+    agregar_a_cache(contexto->pid, nro_pagina, contenido_de_pag, false, logger, conexion_memoria); //l bit de modif es siempre false hasta que la CPU haga un write
+    free(contenido_de_pag);
 }
 
     agregar_a_tlb(contexto->pid, nro_pagina, marco, logger);

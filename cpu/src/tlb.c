@@ -33,18 +33,19 @@ int buscar_en_tlb(int pid, uint32_t pagina, uint32_t* marco_resultado, t_log* lo
     return 0;
 }
 
+
 void agregar_a_tlb(int pid, uint32_t pagina, uint32_t marco, t_log* logger) {
     if (list_size(tlb) >= entradas_tlb) {
-        if (string_equals_ignore_case(algoritmo_tlb, "FIFO")) {
+        if (string_equals_ignore_case(algoritmo_tlb, "FIFO")) { //el elemento en la posición 0 es el más viejo (el primero que entró),seremueve y libera la memoria
             list_remove_and_destroy_element(tlb, 0, free);
         } else if (string_equals_ignore_case(algoritmo_tlb, "LRU")) {
-            int index_lru = 0;
+            int index_de_entrada = 0;
             uint64_t min_timestamp = UINT64_MAX;
-            for (int i = 0; i < list_size(tlb); i++) {
+            for (int i = 0; i < list_size(tlb); i++) { //recorro toda la TLB buscando la entrada con el timestamp más viejo
                 t_entrada_tlb* entrada = list_get(tlb, i);
                 if (entrada->timestamp < min_timestamp) {  //ACTUALIZO LOS TIMESTAMP DE CADA ENTRADA PARA IDENTIFICAR LA MÁS VIEJA EN CASO DE USAR LRU DESPUÉS
                     min_timestamp = entrada->timestamp;
-                    index_lru = i;
+                    index_de_entrada = i;
                 }
             }
             list_remove_and_destroy_element(tlb, index_lru, free);
