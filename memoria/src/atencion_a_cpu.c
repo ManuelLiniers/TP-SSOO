@@ -28,7 +28,13 @@ void atender_cpu(int cpu_fd){
 			}
 			case LEER_MEMORIA: {
 				unBuffer = recibir_paquete(cpu_fd);
-				atender_lectura_memoria(unBuffer, cpu_fd);
+				atender_lectura_espacio_usuario(unBuffer, cpu_fd);
+
+				break;
+			}
+			case ESCRIBIR_MEMORIA: {
+				unBuffer = recibir_paquete(cpu_fd);
+				atender_escritura_espacio_usuario(unBuffer, cpu_fd);
 
 				break;
 			}
@@ -108,7 +114,7 @@ void atender_peticion_marco(t_buffer* unBuffer, int cpu_fd){
 	log_debug(memoria_logger, "Marco Enviado");
 }
 
-void atender_lectura_memoria(t_buffer* unBuffer, int cpu_fd){
+void atender_lectura_espacio_usuario(t_buffer* unBuffer, int cpu_fd){
 	uint32_t direccion_fisica;
 	uint32_t tamanio;
 
@@ -136,4 +142,23 @@ void atender_lectura_memoria(t_buffer* unBuffer, int cpu_fd){
     log_debug(memoria_logger, "Lectura enviada a CPU: dirección %u, tamaño %u", direccion_fisica, tamanio);
 
 	free(copia_lectura);
+}
+
+void atender_escritura_espacio_usuario(t_buffer* unBuffer, int cpu_fd){
+	uint32_t direccion_fisica;
+	int tamanio;
+
+	direccion_fisica = recibir_uint32_del_buffer(unBuffer);
+	tamanio = recibir_int_del_buffer(unBuffer);
+	void* valor = malloc(tamanio);
+	valor = recibir_informacion_del_buffer(unBuffer, tamanio);
+
+	int respuesta = OK;
+	if(escribir_espacio(direccion_fisica, tamanio, valor) == -1){
+		respuesta = -1;
+	}
+
+	send(cpu_fd, &respuesta, sizeof(int), 0);
+
+	free(valor);
 }

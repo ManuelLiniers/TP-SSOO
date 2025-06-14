@@ -9,7 +9,8 @@ void enviar_instruccion_a_cpu(char* instruccion, int cpu_fd);
 
 void atender_peticion_marco(t_buffer* unBuffer, int cpu_fd);
 
-void atender_lectura_memoria(t_buffer* unBuffer, int cpu_fd);
+void atender_lectura_espacio_usuario(t_buffer* unBuffer, int cpu_fd);
+void atender_escritura_espacio_usuario(t_buffer* unBuffer, int cpu_fd);
 
 
 #endif /* ATENCION_A_CPU_H_ */
