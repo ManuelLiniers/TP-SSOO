@@ -48,7 +48,7 @@ void agregar_a_tlb(int pid, uint32_t pagina, uint32_t marco, t_log* logger) {
                     index_de_entrada = i;
                 }
             }
-            list_remove_and_destroy_element(tlb, index_lru, free);
+            list_remove_and_destroy_element(tlb, index_de_entrada, free);
         }
     }
 
