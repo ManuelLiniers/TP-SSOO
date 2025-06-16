@@ -54,7 +54,7 @@ void inicializar_planificacion(){
 	scheduler_init();
 
 	pthread_t planificador_corto_plazo;
-	pthread_create(&planificador_corto_plazo, NULL, (void*) planificar_corto_plazo, NULL);
+	pthread_create(&planificador_corto_plazo, NULL, (void*) planificar_corto_plazo_FIFO, NULL);
 	pthread_detach(planificador_corto_plazo);
 
 	if(strcmp(algoritmo_largo_plazo,"FIFO") == 0){

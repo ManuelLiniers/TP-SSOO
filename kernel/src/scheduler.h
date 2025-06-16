@@ -28,8 +28,10 @@ void *comprobar_espacio_memoria(void* arg);
 bool proceso_es_mas_chico(void* a, void* b);
 void esperar_devolucion_proceso(void* arg);
 void esperar_dispatch(void* arg);
+void log_metricas_estado(t_pcb* proceso);
+long calcular_tiempo(t_metricas_estado_tiempo* metrica);
 void esperar_interrupt(void* arg);
-void* planificar_corto_plazo(void* arg);
+void* planificar_corto_plazo_FIFO(void* arg);
 
 void enviar_proceso_a_io(t_pcb* proceso, int io_id, int io_tiempo);
 void vuelta_proceso_io(void* args);

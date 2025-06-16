@@ -15,7 +15,7 @@ extern t_list* lista_cpus;
 void iniciar_cpus();
 
 // Estados posibles de un proceso
-typedef enum { NEW, READY, EXEC, BLOCKED, EXIT } t_estado;
+typedef enum { NEW, READY, EXEC, BLOCKED, SUSP_READY, SUSP_BLOCKED, EXIT } t_estado;
 
 int id_estado(t_estado estado);
 
@@ -49,13 +49,15 @@ typedef struct {
 void crear_proceso(char* instrucciones, char* tamanio_proceso);
 
 t_pcb* buscar_proceso_pid(uint32_t pid);
-void cambiarEstado(t_pcb* proceso,t_estado EXEC);
+void cambiarEstado(t_pcb* proceso, t_estado estado);
+char* estado_to_string(t_estado estado);
 
 extern t_list* lista_procesos_ejecutando;
 void sacar_proceso_ejecucion(t_pcb* proceso);
 
 t_metricas_estado_tiempo* obtener_ultima_metrica(t_pcb* proceso);
-int calcular_rafaga(t_list* metricas_tiempo);
+t_list* obtener_exec(t_pcb* proceso);
+long calcular_rafaga(t_list* estados_exec);
 
 
 /**

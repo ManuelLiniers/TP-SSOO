@@ -50,7 +50,7 @@ t_pcb* pcb_create() {
 
     pid_incremental++;
 
-    int metricas_estado[5] = {0, 0, 0, 0, 0};
+    int metricas_estado[7] = {0, 0, 0, 0, 0, 0, 0};
     memcpy(pcb->metricas_estado, metricas_estado, sizeof(int[5]));
     pcb->metricas_tiempo = list_create();
 
@@ -73,15 +73,21 @@ int id_estado(t_estado estado){
         break;
     case READY:
         return 1;
-    break;
+        break;
     case EXEC:
         return 2;
         break;
     case BLOCKED:
         return 3;
         break;
-    case EXIT:
+    case SUSP_READY:
         return 4;
+        break;
+    case SUSP_BLOCKED:
+        return 5;
+        break;
+    case EXIT:
+        return 6;
         break;
     default:
         return -1;
@@ -140,10 +146,11 @@ void sacar_proceso_ejecucion(t_pcb* proceso){
 void cambiarEstado(t_pcb* proceso, t_estado estado){
 
     t_metricas_estado_tiempo* metrica_anterior = obtener_ultima_metrica(proceso);
+    t_list* estados_exec = obtener_exec(proceso);
     if(metrica_anterior != NULL){
         metrica_anterior->tiempo_fin = clock(); // o se puede cambiar por time()
-        if(metrica_anterior->estado == EXEC && estado == BLOCKED){
-            proceso->rafaga_real = calcular_rafaga(proceso->metricas_tiempo);
+        if(metrica_anterior->estado == EXEC && estado == BLOCKED ){
+            proceso->rafaga_real = calcular_rafaga(estados_exec);
         }
     }
 
@@ -156,7 +163,50 @@ void cambiarEstado(t_pcb* proceso, t_estado estado){
     metrica->tiempo_inicio = clock();
 
     list_add(proceso->metricas_tiempo, metrica);
-    log_info(logger_kernel, "## (<%d>) Pasa del estado <%s> al estado <%s>", proceso->pid, metrica_anterior->estado, estado);
+    log_info(logger_kernel, "## (<%d>) Pasa del estado <%s> al estado <%s>", proceso->pid, estado_to_string(metrica_anterior->estado), estado_to_string(estado));
+}
+
+char* estado_to_string(t_estado estado){
+    switch (estado)
+    {
+    case NEW:
+        return "NEW";
+        break;
+    case READY:
+        return "READY";
+        break;
+    case EXEC:
+        return "EXEC";
+        break;
+    case BLOCKED:
+        return "BLOCKED";
+        break;
+    case SUSP_READY:
+        return "SUSP_READY";
+        break;
+    case SUSP_BLOCKED:
+        return "SUSP_BLOCKED";
+        break;
+    case EXIT:
+        return "EXIT";
+        break;
+    default:
+        return NULL;
+        break;
+    }
+}
+
+t_list* obtener_exec(t_pcb* proceso){
+    t_list* list_exec = list_create();
+    int i = list_size(proceso->metricas_tiempo)-1;
+    t_metricas_estado_tiempo* metrica = list_get(proceso->metricas_tiempo, i); 
+    for(; metrica->estado != BLOCKED; i--){
+        if(metrica->estado == EXEC){
+            list_add(list_exec, metrica);
+        }
+        metrica = list_get(proceso->metricas_tiempo, i);
+    }
+    return list_exec;
 }
 
 t_metricas_estado_tiempo* obtener_ultima_metrica(t_pcb* proceso){
@@ -171,15 +221,13 @@ t_metricas_estado_tiempo* obtener_ultima_metrica(t_pcb* proceso){
     }
 }
 
-int calcular_rafaga(t_list* metricas_tiempo){
-    t_metricas_estado_tiempo* ultima_metrica = list_get(metricas_tiempo, sizeof(metricas_tiempo)-1); 
-    t_metricas_estado_tiempo* metrica = list_get(metricas_tiempo, sizeof(metricas_tiempo)-3);
-    if(metrica->estado == EXEC){
-        return ultima_metrica->tiempo_fin - metrica->tiempo_inicio - (ultima_metrica->tiempo_inicio - metrica->tiempo_fin);
+long calcular_rafaga(t_list* estados_exec){
+    long tiempo_total;
+    for(int i = 0; i<list_size(estados_exec);i++){
+        t_metricas_estado_tiempo* metrica = list_get(estados_exec, i);
+        tiempo_total += (metrica->tiempo_fin - metrica->tiempo_inicio);
     }
-    else{
-        return ultima_metrica->tiempo_fin - ultima_metrica->tiempo_inicio;
-    }
+    return tiempo_total;
 }
 
 t_queue* obtener_cola_io(int io_id){

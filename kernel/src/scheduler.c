@@ -5,7 +5,7 @@ char* algoritmo_largo_plazo;
 int estimacion_inicial;
 double estimador_alfa;
 
-void *planificar_corto_plazo(void* arg){
+void *planificar_corto_plazo_FIFO(void* arg){
 	while(1){
         wait_sem(&proceso_ready);
         // wait de cpu libre?
@@ -57,6 +57,9 @@ void esperar_dispatch(void* arg){
         log_info(logger_kernel, "## (<%d>) - Solicito syscall: <%s>", proceso->pid, "EXIT");
 
         log_info(logger_kernel, "## %d - Finaliza el proceso", proceso->pid);
+
+        log_metricas_estado(proceso);
+
         break;
     case CAUSA_IO:
 
@@ -90,10 +93,13 @@ void esperar_dispatch(void* arg){
     case INIT_PROC:
         int tamanio_proceso = recibir_int_del_buffer(paquete);
         char* archivo = recibir_string_del_buffer(paquete);
+        char* nombre = malloc(sizeof(char));
+        sprintf(nombre, "%d",tamanio_proceso);
 
         log_info(logger_kernel, "## (<%d>) - Solicito syscall: <%s>", proceso->pid, "INIT_PROC");
 
-        crear_proceso(archivo, tamanio_proceso);
+        crear_proceso(archivo, nombre);
+        free(nombre);
         break;
     
     default:
@@ -108,6 +114,54 @@ void esperar_dispatch(void* arg){
     */
 
     free(paquete);
+}
+
+void log_metricas_estado(t_pcb* proceso){
+    long tiempo_new;
+    long tiempo_ready;
+    long tiempo_exec;
+    long tiempo_blocked;
+    long tiempo_susp_ready;
+    long tiempo_susp_blocked;
+    for(int i = 0; i<list_size(proceso->metricas_tiempo);i++){
+        t_metricas_estado_tiempo* metrica = list_get(proceso->metricas_tiempo, i);
+        long tiempo = calcular_tiempo(metrica);
+        switch (metrica->estado)
+        {
+        case NEW:
+            tiempo_new += tiempo;
+            break;
+        case READY:
+            tiempo_ready += tiempo;
+            break;
+        case EXEC:
+            tiempo_exec += tiempo;
+            break;
+        case BLOCKED:
+            tiempo_blocked += tiempo;
+            break;
+        case SUSP_READY:
+            tiempo_susp_ready += tiempo;
+            break;
+        case SUSP_BLOCKED:
+            tiempo_susp_blocked += tiempo;
+            break;
+        case EXIT:
+            break;
+        default:
+            break;
+        }
+
+    }
+
+    log_info(logger_kernel, "## %d - Metricas de estado: NEW %d %ld, READY %d %ld, EXEC %d %ld, BLOCKED %d %ld, SUSP_READY %d %ld, SUSP_BLOCKED %d %ld", 
+    proceso->pid, proceso->metricas_estado[0], tiempo_new, proceso->metricas_estado[1], tiempo_ready, proceso->metricas_estado[2], tiempo_exec, 
+    proceso->metricas_estado[3], tiempo_blocked, proceso->metricas_estado[4], tiempo_susp_ready, proceso->metricas_estado[5], tiempo_susp_blocked);
+
+}
+
+long calcular_tiempo(t_metricas_estado_tiempo* metrica){
+    return metrica->tiempo_fin - metrica->tiempo_inicio;
 }
 
 void esperar_interrupt(void* arg){
@@ -256,15 +310,18 @@ bool proceso_es_mas_chico(void* a, void* b){
     t_pcb* proceso_a = (t_pcb*) a;
     t_pcb* proceso_b = (t_pcb*) b;
     
-    /* En un futuro sera:
+
+    return proceso_a->tamanio_proceso <= proceso_b->tamanio_proceso;
+}
+
+bool shortest_job_first(void* a, void* b){
+    t_pcb* proceso_a = (t_pcb*) a;
+    t_pcb* proceso_b = (t_pcb*) b;
 
     double estimacion_a = proceso_a->rafaga_real * estimador_alfa + proceso_a->estimacion_anterior * (1-estimador_alfa);
     double estimacion_b = proceso_b->rafaga_real * estimador_alfa + proceso_b->estimacion_anterior * (1-estimador_alfa);
+    
     return estimacion_a <= estimacion_b;
-
-    */
-
-    return proceso_a->tamanio_proceso <= proceso_b->tamanio_proceso;
 }
 void poner_en_ejecucion(t_pcb* proceso, t_cpu** cpu_encargada){
 
