@@ -16,8 +16,8 @@ void inicializar_cache(t_log* logger, t_config* cpu_config) {
 bool buscar_en_cache(int pid, uint32_t pagina, char** contenido_resultado, uint32_t* marco_resultado, t_log* logger) {
     for (int i = 0; i < list_size(cache_paginas); i++) {
         t_entrada_cache* entrada = list_get(cache_paginas, i);
-        if (entrada->pid == pid && entrada->pagina == pagina) { //comparo numeros de pagina
-            entrada->bit_uso = true;
+        if (entrada->pid == pid && entrada->pagina == pagina) { //comparo numeros de pagina y proceso
+            entrada->bit_uso = true; //pone el bit de uso en 1 xq la entrada ahora esta siendo usada
             *contenido_resultado = strdup(entrada->contenido);
             *marco_resultado = entrada->marco; // encuentra marco correspondiente
             log_info(logger, "PID: %d - Cache Hit - Pagina: %d", pid, pagina);  //LOGEA QUE ENCONTRO LA PAGINA Y EL VALOR DEL MARCO SE PASA POR REFERENCIA(en valor de cpu.c)
@@ -54,22 +54,21 @@ void reemplazar_con_clock(t_entrada_cache* nueva, t_log* logger, int conexion_me
         puntero_clock = (puntero_clock + 1) % entradas_cache;
     }
 }
-
-void agregar_a_cache(int pid, uint32_t pagina, char* contenido, bool fue_modificado, t_log* logger, int conexion_memoria) {
+void agregar_a_cache(int pid, uint32_t pagina, char* contenido, t_log* logger, int conexion_memoria) {
     t_entrada_cache* nueva = malloc(sizeof(t_entrada_cache));
     nueva->pid = pid;
     nueva->pagina = pagina;
     nueva->contenido = strdup(contenido);
     nueva->bit_uso = true;
-    nueva->bit_modificado = fue_modificado;
+    nueva->bit_modificado = false; 
 
     if (list_size(cache_paginas) < entradas_cache) {
-        list_add(cache_paginas, nueva);  //CARGA LA PAGINA SI LE QUEDA ESPACIO, SINO REEMPLAZA CON CLOCK
+        list_add(cache_paginas, nueva);
         log_info(logger, "PID: %d - Cache Add - Pagina: %d", pid, pagina);
     } else {
         reemplazar_con_clock(nueva, logger, conexion_memoria);
     }
-}
+    }
 
 void limpiar_cache_por_pid(int pid, int conexion_memoria, int tamanio_pagina, t_log* logger) {  //PARA CUANDO SE DESALOJA UN PROCESO
     for (int i = list_size(cache_paginas) - 1; i >= 0; i--) {

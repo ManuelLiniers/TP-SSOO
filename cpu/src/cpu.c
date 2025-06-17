@@ -281,9 +281,13 @@ void ciclo_de_instruccion_execute(t_instruccion_decodificada* instruccion, t_con
             log_error(logger, "GOTO sin operando");
         }
     }
-    else if (string_equals_ignore_case(opcode, "EXIT")) {
-        contexto->program_counter = -1;
-    }
+  else if (string_equals_ignore_case(opcode, "EXIT")) {
+    log_info(logger, "PID: %d - Ejecutando: EXIT", contexto->pid);
+
+    enviar_contexto_a_kernel(contexto, FINALIZADO, conexion_kernel_dispatch, logger); //motivo para que finalice (kernel lo pasa a terminado)
+    contexto->program_counter = -1;
+}
+
     else if (string_equals_ignore_case(opcode, "IO")) {
     int id_dispositivo = atoi(instruccion->operandos[0]);
     int tiempo = atoi(instruccion->operandos[1]);
@@ -291,7 +295,7 @@ void ciclo_de_instruccion_execute(t_instruccion_decodificada* instruccion, t_con
     log_info(logger, "PID: %d - Ejecutando: IO - Dispositivo: %d - Tiempo: %d", contexto->pid, id_dispositivo, tiempo);
 
     enviar_contexto_a_kernel_io(contexto, CAUSA_IO, conexion_kernel_dispatch, logger, id_dispositivo, tiempo);
-    contexto->program_counter = -1;
+    contexto->program_counter = -1;  //desalojo al proceso
 }
 
 else if (string_equals_ignore_case(opcode, "INIT_PROC")) {
@@ -301,14 +305,32 @@ else if (string_equals_ignore_case(opcode, "INIT_PROC")) {
     log_info(logger, "PID: %d - Ejecutando: INIT_PROC - Archivo: %s - Tamaño: %d", contexto->pid, archivo_instrucciones, tamanio);
 
     enviar_contexto_a_kernel_init_proc(contexto, INIT_PROC, conexion_kernel_dispatch, logger, archivo_instrucciones, tamanio);
-    contexto->program_counter = -1;
+
+    // Como el proceso no se bloquea ni finaliza, avanzo al siguiente ciclo de instrucción
+    contexto->program_counter++;
 }
 
 
 else if (string_equals_ignore_case(opcode, "DUMP_MEMORY")) {
     log_info(logger, "PID: %d - Ejecutando: DUMP_MEMORY", contexto->pid);
-    enviar_contexto_a_kernel(contexto, SIGNAL, conexion_kernel_dispatch, logger); // SEGUNDO PARAMETRO ES EL MOTIVO DE DESLOJO (PUSE SIGNAL XQ SI)
-    contexto->program_counter = -1;
+
+    // envio la petición de Dump a Memoria
+    t_paquete* paquete = crear_paquete(DUMP_MEMORY);
+    agregar_a_paquete(paquete, &(contexto->pid), sizeof(uint32_t));
+    enviar_paquete(paquete, conexion_memoria);
+    eliminar_paquete(paquete);
+
+    // esperorespuesta de Memoria
+    int resultado_dump;
+    recv(conexion_memoria, &resultado_dump, sizeof(int), 0);
+
+    if (resultado_dump == OK) {
+        enviar_contexto_a_kernel(contexto, SIGNAL, conexion_kernel_dispatch, logger);
+    } else {
+        enviar_contexto_a_kernel(contexto, FINALIZADO, conexion_kernel_dispatch, logger);
+    }
+
+    contexto->program_counter = -1; // fin del proceso en CPU
 }
 
     else if (string_equals_ignore_case(opcode, "READ")) {
@@ -336,7 +358,20 @@ else if (string_equals_ignore_case(opcode, "WRITE")) {
     int* tamanio = malloc(sizeof(int));
     *tamanio = strlen(valor) + 1; 
 
-    // si da error cambiar por 256 el tamanio de pagina
+    //ahora se actualiza la cache con el contenido y el BM si estaba la pagina presente, si no está no pasa nada xq dsp se busca en traducir_direccion
+
+     for (int i = 0; i < list_size(cache_paginas); i++) {
+        t_entrada_cache* entrada = list_get(cache_paginas, i);
+        if (entrada->pid == contexto->pid && entrada->pagina == (direccion_logica / TAMANIO_PAGINA)) { //compara por pid y num pagina
+            free(entrada->contenido);
+            entrada->contenido = strdup(valor);
+            entrada->bit_modificado = true;
+            entrada->bit_uso = true;
+            usleep(retardo_cache * 1000); // retardo de acceso a cache
+            break;
+        }
+    }
+
     uint32_t direccion_fisica = traducir_direccion_logica(direccion_logica, TAMANIO_PAGINA, contexto, conexion_memoria);
 
     log_info(logger, "PID: %d - Acción: ESCRIBIR - Dirección Física: %d - Valor: %s", contexto->pid, direccion_fisica, valor);
@@ -423,6 +458,7 @@ void enviar_contexto_a_kernel_io(t_contexto* contexto, motivo_desalojo motivo, i
 
 //PONER EN MMU.C
 uint32_t traducir_direccion_logica(uint32_t direccion_logica, int tamanio_pagina, t_contexto* contexto, int conexion_memoria) {
+
     uint32_t nro_pagina = floor(direccion_logica / tamanio_pagina);
     uint32_t desplazamiento = direccion_logica % tamanio_pagina;
 
@@ -444,7 +480,7 @@ uint32_t traducir_direccion_logica(uint32_t direccion_logica, int tamanio_pagina
 
     log_info(logger, "PID: %d - OBTENER MARCO - Página: %d", contexto->pid, nro_pagina);
 
-    //SI LA PAGINA NO ESTÁ NI EN LAS ENTRADAS DE CACHE NI EN LAS DE TLB ENTONCES BUSCA DIRECTO EN MEMORIA
+    //SI LA PAGINA NO ESTÁ NI EN LAS ENTRADAS DE CACHE NI EN LAS DE TLB ENTONCES BUSCA DIRECTO EN MEMORIA (HUBO DOBLE MISS)
 
     t_paquete* paquete = crear_paquete(PEDIR_MARCO); //segun el issue 4702: "Pueden enviar un solo mensaje desde CPU con PID y nro de página, y eso representa los N accesos a memoria
     agregar_a_paquete(paquete, &(contexto->pid), sizeof(uint32_t));  
@@ -455,10 +491,20 @@ uint32_t traducir_direccion_logica(uint32_t direccion_logica, int tamanio_pagina
     recv(conexion_memoria, &marco, sizeof(uint32_t), 0);  //recibo marco de la memoria
     log_debug(logger, "PID: %d - Marco recibido: %d", contexto->pid, marco);
 
+    t_paquete* paquete_contenido = crear_paquete(LEER_PAGINA_COMPLETA);   //pido contenido a memoria 
+    agregar_a_paquete(paquete_contenido, &marco, sizeof(uint32_t)); // le paso el marco asociado a la pagina que tiene el contenido q pido
+    enviar_paquete(paquete_contenido, conexion_memoria);
+    eliminar_paquete(paquete_contenido);
+
+    uint32_t tamanio_contenido;  //creo variable del tamaño del contenido
+    recv(conexion_memoria, &tamanio_contenido, sizeof(uint32_t), 0);
+    char* contenido_real = malloc(tamanio_contenido);
+    recv(conexion_memoria, contenido_real, tamanio_contenido, 0);
+
+
     if (entradas_cache > 0) {
-    char* contenido_de_pag = strdup("pagina_sin_datos");  // contenido simulado
-    agregar_a_cache(contexto->pid, nro_pagina, contenido_de_pag, false, logger, conexion_memoria); //l bit de modif es siempre false hasta que la CPU haga un write
-    free(contenido_de_pag);
+    agregar_a_cache(contexto->pid, nro_pagina, contenido_real, logger, conexion_memoria); 
+    free(contenido_real);
 }
 
     agregar_a_tlb(contexto->pid, nro_pagina, marco, logger);
