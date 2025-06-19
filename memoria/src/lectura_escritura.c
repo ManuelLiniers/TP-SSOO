@@ -40,11 +40,11 @@ int escribir_espacio(uint32_t direccion_fisica, int tamanio, void* valor) {
     return 0;
 }
 
-void dump_de_memoria(uint32_t pid) {
+int dump_de_memoria(uint32_t pid) {
     t_proceso* proceso = obtener_proceso_por_id(pid);
     if (!proceso) {
         log_error(memoria_logger, "PID: %d - No se encuentra el proceso para el dump", pid);
-        return;
+        return -1;
     }
 
     time_t ahora = time(NULL);
@@ -58,7 +58,7 @@ void dump_de_memoria(uint32_t pid) {
     FILE* archivo = fopen(path_dump, "w");
     if (!archivo) {
         log_error(memoria_logger, "No se pudo crear archivo de dump para PID: %d", pid);
-        return;
+        return -1;
     }
 
     fprintf(archivo, "===== MEMORY DUMP: PID %d =====\n", pid);
@@ -77,5 +77,51 @@ void dump_de_memoria(uint32_t pid) {
 
     fclose(archivo);
 
+    // ✅ Log obligatorio según el enunciado
     log_info(memoria_logger, "## PID: %d - Memory Dump solicitado", pid);
+    return 0;
+}
+
+void leer_pagina_completa(uint32_t nro_marco, int socket_destino) {
+    t_marco* marco = obtener_marco_por_nro_marco(nro_marco);
+    if (!marco || marco->libre) {
+        log_error(memoria_logger, "Error: marco %d no válido o libre", nro_marco);
+        uint32_t error_size = 0;
+        send(socket_destino, &error_size, sizeof(uint32_t), 0);
+        return;
+    }
+
+    void* ptr_base = espacio_usuario + marco->base;
+
+    pthread_mutex_lock(&mutex_espacio_usuario);
+    char* contenido = malloc(TAM_PAGINA);
+    memcpy(contenido, ptr_base, TAM_PAGINA);
+    pthread_mutex_unlock(&mutex_espacio_usuario);
+
+    uint32_t tamanio = TAM_PAGINA;
+    send(socket_destino, &tamanio, sizeof(uint32_t), 0);
+    send(socket_destino, contenido, tamanio, 0);
+
+    free(contenido);
+
+    log_debug(memoria_logger, "Marco %d enviado a CPU (%d bytes)", nro_marco, tamanio);
+}
+
+void escribir_pagina_completa(uint32_t nro_marco, void* contenido) {
+    t_marco* marco = obtener_marco_por_nro_marco(nro_marco);
+    if (!marco || marco->libre) {
+        log_error(memoria_logger, "Error: marco %d no válido o libre", nro_marco);
+        return;
+    }
+
+    void* ptr_base = espacio_usuario + marco->base;
+
+    pthread_mutex_lock(&mutex_espacio_usuario);
+    memcpy(ptr_base, contenido, TAM_PAGINA);
+    pthread_mutex_unlock(&mutex_espacio_usuario);
+
+    int pid = marco->info->pid_proceso;
+    int pagina = marco->info->nro_pagina;
+
+    log_info(memoria_logger, "PID: %d - Escritura completa - Marco: %d - Pagina: %d", pid, nro_marco, pagina);
 }

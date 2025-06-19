@@ -38,6 +38,17 @@ void atender_cpu(int cpu_fd){
 
 				break;
 			}
+			case DUMP_MEMORY: {
+				unBuffer = recibir_paquete(cpu_fd);
+				atender_dump_memory(unBuffer, cpu_fd);
+
+				break;
+			}
+			case LEER_PAGINA_COMPLETA: {
+				unBuffer = recibir_paquete(cpu_fd);
+				atender_lectura_pagina_completa(unBuffer, cpu_fd);
+				break;
+			}
 			case -1:{
 				log_debug(memoria_logger, "[CPU] se desconecto. Terminando consulta");
 				exit(0);
@@ -161,4 +172,50 @@ void atender_escritura_espacio_usuario(t_buffer* unBuffer, int cpu_fd){
 	send(cpu_fd, &respuesta, sizeof(int), 0);
 
 	free(valor);
+}
+
+void atender_dump_memory(t_buffer* unBuffer, int cpu_fd) {
+    uint32_t pid = recibir_uint32_del_buffer(unBuffer);
+
+    int resultado = dump_de_memoria(pid);  // 0 si OK, -1 si hubo error
+
+    int codigo_respuesta = resultado == 0 ? OK : -1;
+    send(cpu_fd, &codigo_respuesta, sizeof(int), 0);
+
+    if (codigo_respuesta == OK) {
+        log_info(memoria_logger, "Dump de memoria exitoso para PID: %d", pid);
+    } else {
+        log_error(memoria_logger, "Fallo el dump de memoria para PID: %d", pid);
+    }
+}
+
+void atender_lectura_pagina_completa(t_buffer* unBuffer, int cpu_fd) {
+	uint32_t nro_marco;
+
+	nro_marco = recibir_uint32_del_buffer(unBuffer);
+
+	t_marco* marco = obtener_marco_por_nro_marco(nro_marco);
+	if (!marco || marco->libre) {
+		log_error(memoria_logger, "No se pudo leer marco %d: inválido o libre", nro_marco);
+		uint32_t tamanio_error = 0;
+		send(cpu_fd, &tamanio_error, sizeof(uint32_t), 0);
+		return;
+	}
+
+	// Extraer contenido
+	pthread_mutex_lock(&mutex_espacio_usuario);
+	void* contenido = malloc(TAM_PAGINA);
+	memcpy(contenido, espacio_usuario + marco->base, TAM_PAGINA);
+	pthread_mutex_unlock(&mutex_espacio_usuario);
+
+	// Enviar tamaño
+	uint32_t tamanio = TAM_PAGINA;
+	send(cpu_fd, &tamanio, sizeof(uint32_t), 0);
+
+	// Enviar contenido
+	send(cpu_fd, contenido, tamanio, 0);
+
+	log_debug(memoria_logger, "Marco %d leído y enviado a CPU", nro_marco);
+
+	free(contenido);
 }

@@ -93,27 +93,3 @@ void liberar_pagina_y_marcos(t_pagina* pagina){
     }
     free(pagina);
 }
-
-uint32_t traducir_direccion_logica(t_proceso* proceso, uint32_t direccion_logica) {
-    uint32_t pagina = direccion_logica / TAM_PAGINA;
-    uint32_t desplazamiento = direccion_logica % TAM_PAGINA;
-
-    pthread_mutex_lock(&proceso->mutex_TP);
-    t_pagina* pagina_virtual = buscar_pagina_en_tabla((t_tabla_nivel*)proceso->tabla_paginas_raiz, pagina, proceso->metricas);
-
-    if (pagina_virtual == NULL) {
-        log_error(memoria_logger, "PID: %d - Error: página virtual no encontrada", proceso->pid);
-        pthread_mutex_unlock(&proceso->mutex_TP);
-        return -1;
-    }
-
-    t_marco* marco = obtener_marco_por_nro_marco(pagina_virtual->marco_asignado);
-    pthread_mutex_unlock(&proceso->mutex_TP);
-
-    if (!marco) {
-        log_error(memoria_logger, "PID: %d - Error al obtener marco %d", proceso->pid, pagina_virtual->marco_asignado);
-        return -1;
-    }
-
-    return marco->base + desplazamiento;
-}
