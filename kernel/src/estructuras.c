@@ -58,6 +58,7 @@ t_pcb* pcb_create() {
     int metricas_estado[7] = {0, 0, 0, 0, 0, 0, 0};
     memcpy(pcb->metricas_estado, metricas_estado, sizeof(int[5]));
     pcb->metricas_tiempo = list_create();
+    pcb->cpu_encargada = NULL;
 
     /* tengo una idea para implementar las metricas que capaz es mas simple
     no lo pense tanto en codigo pero capaz que sea un vector con 5 espacios
@@ -149,14 +150,14 @@ void sacar_proceso_ejecucion(t_pcb* proceso){
 }
 
 void cambiarEstado(t_pcb* proceso, t_estado estado){
-
     t_metricas_estado_tiempo* metrica_anterior = obtener_ultima_metrica(proceso);
-    t_list* estados_exec = obtener_exec(proceso);
+
     if(metrica_anterior != NULL){
         metrica_anterior->tiempo_fin = clock(); // o se puede cambiar por time()
         if(metrica_anterior->estado == EXEC && estado == BLOCKED ){
+            t_list* estados_exec = obtener_exec(proceso);
             proceso->rafaga_real = calcular_rafaga(estados_exec);
-            actualizar_estimacion(proceso);
+            calcular_estimacion(proceso);
         }
     }
 
@@ -170,10 +171,15 @@ void cambiarEstado(t_pcb* proceso, t_estado estado){
     list_add(proceso->metricas_tiempo, metrica);
     }
 
-    log_info(logger_kernel, "## (<%d>) Pasa del estado <%s> al estado <%s>", proceso->pid, estado_to_string(metrica_anterior->estado), estado_to_string(estado));
+    if(metrica_anterior == NULL){
+        log_info(logger_kernel, "## (<%d>) Pasa al estado <%s>", proceso->pid, estado_to_string(estado));
+    }
+    else{
+        log_info(logger_kernel, "## (<%d>) Pasa del estado <%s> al estado <%s>", proceso->pid, estado_to_string(metrica_anterior->estado), estado_to_string(estado));
+    }
 }
 
-void actualizar_estimacion(t_pcb* proceso){
+void calcular_estimacion(t_pcb* proceso){
     proceso->estimacion_actual = proceso->rafaga_real * estimador_alfa + proceso->estimacion_anterior * (1-estimador_alfa);
     proceso->estimacion_anterior = proceso->estimacion_actual;
 }

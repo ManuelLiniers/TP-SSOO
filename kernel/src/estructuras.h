@@ -34,6 +34,16 @@ typedef struct{
     long tiempo_fin;
  } t_metricas_estado_tiempo;
 
+typedef struct{
+    char cpu_id[20];
+    int socket_dispatch;
+    int socket_interrupt;
+    bool esta_libre;
+} t_cpu;
+
+t_cpu* buscar_cpu_libre(t_list* lista_cpus);
+
+
 // Control Block de un proceso
 typedef struct {
     int pid;                    // Identificador único
@@ -47,6 +57,7 @@ typedef struct {
     long estimacion_anterior;
     long rafaga_real;
     long estimacion_actual;
+    t_cpu* cpu_encargada;
     // Más campos opcionales: tamaño de memoria, registros, métricas, etc.
 } t_pcb;
 
@@ -54,7 +65,7 @@ void crear_proceso(char* instrucciones, char* tamanio_proceso);
 
 t_pcb* buscar_proceso_pid(uint32_t pid);
 void cambiarEstado(t_pcb* proceso, t_estado estado);
-void actualizar_estimacion(t_pcb* proceso);
+void calcular_estimacion(t_pcb* proceso);
 char* estado_to_string(t_estado estado);
 
 extern t_list* lista_procesos_ejecutando;
@@ -78,16 +89,6 @@ t_pcb* pcb_create();
  * @param pcb_void puntero a t_pcb (pasado como void* para destruir en queues)
  */
 void pcb_destroy(void* pcb_void);
-
-
-typedef struct{
-    char cpu_id[20];
-    int socket_dispatch;
-    int socket_interrupt;
-    bool esta_libre;
-} t_cpu;
-
-t_cpu* buscar_cpu_libre(t_list* lista_cpus);
 
 typedef struct{
     char nombre[20];

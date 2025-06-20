@@ -32,7 +32,8 @@ typedef enum {
     PAGE_FAULT,
     INTERRUPCION,
     CAUSA_INIT_PROC,
-    DESALOJO_POR_QUANTUM
+    DESALOJO_POR_QUANTUM,
+    EXEC_INSTRUC
 } motivo_desalojo;
 
 #endif

@@ -13,8 +13,7 @@ void *planificar_corto_plazo_FIFO(void* arg){
             if(hay_cpu_libre(&cpu_encargada)){
                 t_pcb* proceso = queue_pop(queue_ready);
                 signal_mutex(&mutex_queue_ready);
-                poner_en_ejecucion(proceso, cpu_encargada);
-                cambiarEstado(proceso, EXEC);
+                poner_en_ejecucion(proceso, cpu_encargada, cpu_encargada->socket_dispatch);
                 pthread_t* esperar_devolucion = malloc(sizeof(pthread_t));
                 pthread_create(esperar_devolucion, NULL, (void*) esperar_dispatch, (void*) cpu_encargada);
                 free(cpu_encargada);
@@ -33,31 +32,6 @@ bool hay_cpu_libre(t_cpu** cpu_encargada){
     *cpu_encargada = cpu_libre;
 
     return cpu_libre != NULL;
-}
-
-void* planificar_corto_plazo_SJF(void* arg){
-    while(1){
-        wait_sem(&proceso_ready);
-        wait_mutex(&mutex_queue_ready);
-        if(!list_is_empty(queue_ready_SJF)){
-            list_sort(queue_ready_SJF, shortest_job_first);
-            t_cpu* cpu_encargada = malloc(sizeof(t_cpu));
-            if(hay_cpu_libre(&cpu_encargada)){
-                t_pcb* proceso = queue_pop(queue_ready);
-                signal_mutex(&mutex_queue_ready);
-                poner_en_ejecucion(proceso, cpu_encargada);
-                cambiarEstado(proceso, EXEC);
-                pthread_t* esperar_devolucion = malloc(sizeof(pthread_t));
-                pthread_create(esperar_devolucion, NULL, (void*) esperar_dispatch, (void*) cpu_encargada);
-                free(cpu_encargada);
-            }
-            signal_mutex(&mutex_queue_ready);
-        }
-        else{
-            signal_mutex(&mutex_queue_ready);
-        }
-    }
-
 }
 
 void esperar_dispatch(void* arg){
@@ -155,6 +129,177 @@ void esperar_dispatch(void* arg){
     free(paquete);
 }
 
+void* planificar_corto_plazo_SJF(void* arg){
+    while(1){
+        wait_sem(&proceso_ready);
+        wait_mutex(&mutex_queue_ready);
+        if(!list_is_empty(queue_ready_SJF)){
+            list_sort(queue_ready_SJF, shortest_job_first);
+            t_cpu* cpu_encargada = malloc(sizeof(t_cpu));
+            if(hay_cpu_libre(&cpu_encargada)){
+                t_pcb* proceso = list_remove(queue_ready_SJF, 0);
+                signal_mutex(&mutex_queue_ready);
+                poner_en_ejecucion(proceso, cpu_encargada, cpu_encargada->socket_dispatch);
+                pthread_t* esperar_devolucion = malloc(sizeof(pthread_t));
+                pthread_create(esperar_devolucion, NULL, (void*) esperar_dispatch, (void*) cpu_encargada);
+                free(cpu_encargada);
+            }
+            signal_mutex(&mutex_queue_ready);
+        }
+        else{
+            signal_mutex(&mutex_queue_ready);
+        }
+    }
+
+}
+
+void* planificar_corto_plazo_SJF_desalojo(void* arg){
+      while(1){
+        wait_sem(&proceso_ready);
+        wait_mutex(&mutex_queue_ready);
+        if(!list_is_empty(queue_ready_SJF)){
+            list_sort(queue_ready_SJF, shortest_job_first);
+            t_cpu* cpu_encargada = malloc(sizeof(t_cpu));
+            if(hay_cpu_libre(&cpu_encargada)){
+                t_pcb* proceso = list_remove(queue_ready_SJF, 0);
+                signal_mutex(&mutex_queue_ready);
+                poner_en_ejecucion(proceso, cpu_encargada, cpu_encargada->socket_dispatch);
+                cambiarEstado(proceso, EXEC);
+                pthread_t* esperar_devolucion = malloc(sizeof(pthread_t));
+                pthread_create(esperar_devolucion, NULL, (void*) esperar_dispatch, (void*) cpu_encargada);
+                free(cpu_encargada);
+            }
+            /*  
+                Hay que ir iterando la lista de procesos en ready para ver si hay procesos en ejecucion
+                que tienen una estimacion mas grande que los que estan en ready. Si es asi hay que desalojarlos
+            */ 
+            int cant_procesos;
+            for(int i = 0; i<list_size(queue_ready_SJF);i++){
+                t_pcb* otro_proceso = list_get(queue_ready_SJF, i);
+                for(int j = 0; j<list_size(lista_procesos_ejecutando); j++){
+                    t_pcb* proceso_ejecutando = list_get(lista_procesos_ejecutando, j);
+                    if(shortest_job_first((void*) otro_proceso, (void*) proceso_ejecutando) && otro_proceso->estado == READY){
+                        poner_en_ejecucion(otro_proceso, proceso_ejecutando->cpu_encargada, proceso_ejecutando->cpu_encargada->socket_interrupt);
+                        cant_procesos++;
+                        log_info(logger_kernel, "## (<%d>) - Desalojado por algoritmo SJF/SRT", proceso_ejecutando->pid);
+                        list_add_sorted(queue_ready_SJF, proceso_ejecutando, shortest_job_first);
+                    }
+                }
+
+            }
+            for(int i=0; i<cant_procesos ; i++){
+                list_remove(queue_ready_SJF, i);
+            }
+            signal_mutex(&mutex_queue_ready);
+        }
+        else{
+            signal_mutex(&mutex_queue_ready);
+        }
+    }
+}
+
+void esperar_dispatch_SJF_desalojo(void* arg){
+    t_cpu* cpu_encargada = (t_cpu*) arg;
+    t_buffer* paquete = recibir_paquete(cpu_encargada->socket_dispatch);
+
+    uint32_t pid = recibir_uint32_del_buffer(paquete);
+    t_pcb* proceso = buscar_proceso_pid(pid);
+    uint32_t pc = recibir_uint32_del_buffer(paquete);
+    for(int i=0; i<4; i++){
+        proceso->registros[i] = recibir_uint32_del_buffer(paquete);
+    };
+    int motivo = recibir_int_del_buffer(paquete);
+
+    proceso->program_counter = pc;
+    
+    switch (motivo)
+    {
+    case FINALIZADO:
+        cambiarEstado(proceso, EXIT);
+
+        wait_mutex(&mutex_queue_exit);
+        queue_push(queue_exit, proceso);
+        signal_mutex(&mutex_queue_exit);
+
+        sacar_proceso_ejecucion(proceso);
+
+        log_info(logger_kernel, "## (<%d>) - Solicito syscall: <%s>", proceso->pid, "EXIT");
+
+        log_info(logger_kernel, "## %d - Finaliza el proceso", proceso->pid);
+
+        log_metricas_estado(proceso);
+
+        /* 
+        
+                    AVISAR A MEMORIA
+
+        */
+
+       free(proceso);
+
+        break;
+    case CAUSA_IO:
+
+        int io_id = recibir_int_del_buffer(paquete);
+        int io_tiempo = recibir_int_del_buffer(paquete);
+        t_dispositivo_io* dispositivo = buscar_io(io_id);
+        if(dispositivo == NULL){
+            log_error(logger_kernel, "No se encontro la IO: %d", io_id);
+            break;
+        }
+
+        if(queue_is_empty(obtener_cola_io(io_id))){
+            enviar_proceso_a_io(proceso, io_id, io_tiempo);
+        }
+
+        tiempo_en_io proceso_bloqueado;
+        proceso_bloqueado.pcb = proceso;
+        proceso_bloqueado.tiempo = io_tiempo;
+
+        sacar_proceso_ejecucion(proceso);
+
+        wait_mutex(&mutex_queue_block);
+        queue_push(obtener_cola_io(io_id), &proceso_bloqueado);
+        signal_mutex(&mutex_queue_block);
+
+        cambiarEstado(proceso, BLOCKED);
+
+        free(paquete);
+        break;
+
+    case INIT_PROC:
+        int tamanio_proceso = recibir_int_del_buffer(paquete);
+        char* archivo = recibir_string_del_buffer(paquete);
+        char* nombre = malloc(sizeof(char));
+        sprintf(nombre, "%d",tamanio_proceso);
+
+        log_info(logger_kernel, "## (<%d>) - Solicito syscall: <%s>", proceso->pid, "INIT_PROC");
+
+        crear_proceso(archivo, nombre);
+        free(nombre);
+        break;
+    case EXEC_INSTRUC:
+        actualizar_estimacion(proceso);
+        break;
+    default:
+        log_error(logger_kernel, "Motivo de desalojo desconocido");
+        break;
+    }
+    
+    /* 
+    
+    CORREGIR sizeof(int) 
+    
+    */
+
+    free(paquete);
+}
+
+void actualizar_estimacion(t_pcb* proceso){
+    long tiempo_actual = clock();
+    proceso->estimacion_actual-= tiempo_actual;
+}
+
 void log_metricas_estado(t_pcb* proceso){
     long tiempo_new;
     long tiempo_ready;
@@ -201,40 +346,6 @@ void log_metricas_estado(t_pcb* proceso){
 
 long calcular_tiempo(t_metricas_estado_tiempo* metrica){
     return metrica->tiempo_fin - metrica->tiempo_inicio;
-}
-
-void esperar_interrupt(void* arg){
-    t_cpu* cpu_encargada = (t_cpu*) arg;
-    t_buffer* buffer = malloc(sizeof(t_buffer)); 
-    recv(cpu_encargada->socket_interrupt, buffer, sizeof(int), 0);
-    
-    /* 
-    
-    CORREGIR sizeof(int) 
-    
-    */
-
-    int* pid_proceso = malloc(sizeof(int));
-    memcpy(buffer->stream, (void*) pid_proceso, sizeof(int));
-    int* tiempo_proceso = malloc(sizeof(int));
-    memcpy(buffer->stream, (void*) tiempo_proceso, sizeof(int));
-    int* id_io_a_usar = malloc(sizeof(int));
-    memcpy(buffer->stream, (void*) id_io_a_usar, sizeof(int));
-    int id_io = *id_io_a_usar;
-
-    t_dispositivo_io* dispositivo = buscar_io(id_io);
-    if(dispositivo == NULL){
-        log_error(logger_kernel, "No se encontro la IO: %d", id_io);
-    }
-    t_paquete* paquete = crear_paquete(PETICION_IO);
-    agregar_a_paquete(paquete, pid_proceso, sizeof(int));
-    agregar_a_paquete(paquete, tiempo_proceso,sizeof(int));
-    enviar_paquete(paquete, dispositivo->socket);
-    eliminar_paquete(paquete);
-    free(buffer);
-    free(pid_proceso);
-    free(tiempo_proceso);
-    free(id_io_a_usar);
 }
 
 
@@ -357,9 +468,9 @@ bool shortest_job_first(void* a, void* b){
     t_pcb* proceso_a = (t_pcb*) a;
     t_pcb* proceso_b = (t_pcb*) b;
     
-    return proceso_a->estimacion_actual <= proceso_b->estimacion_actual;
+    return proceso_a->estimacion_actual < proceso_b->estimacion_actual;
 }
-void poner_en_ejecucion(t_pcb* proceso, t_cpu* cpu_encargada){
+void poner_en_ejecucion(t_pcb* proceso, t_cpu* cpu_encargada, int socket){
 
     // t_cpu* cpu_libre = buscar_cpu_libre(lista_cpus);
     // mandar a alguna cpu dependiendo de cual este libre
@@ -368,10 +479,12 @@ void poner_en_ejecucion(t_pcb* proceso, t_cpu* cpu_encargada){
     agregar_a_paquete(paquete, &proceso->pid, sizeof(int));
     agregar_a_paquete(paquete, &proceso->program_counter, sizeof(int));
     // enviar_paquete(paquete, cpu_libre->socket_dispatch);
-    enviar_paquete(paquete, cpu_encargada->socket_dispatch);
+    enviar_paquete(paquete, socket);
     eliminar_paquete(paquete);
 
+    proceso->cpu_encargada = cpu_encargada;
     list_add(lista_procesos_ejecutando, proceso);
+    cambiarEstado(proceso, EXEC);
 
     
     // *cpu_encargada = cpu_libre;
