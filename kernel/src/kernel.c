@@ -235,6 +235,7 @@ void crear_proceso(char* instrucciones, char* tamanio_proceso){
     pcb_nuevo->instrucciones = instrucciones;
     pcb_nuevo->tamanio_proceso = atoi(tamanio_proceso);
 	pcb_nuevo->estimacion_anterior = estimacion_inicial;
+	pcb_nuevo->estimacion_actual = estimacion_inicial;
     if(strcmp(algoritmo_largo_plazo,"FIFO") == 0){
 		wait_mutex(&mutex_queue_new);
 		queue_push(queue_new, pcb_nuevo);

@@ -2,8 +2,6 @@
 
 char* algoritmo_corto_plazo;
 char* algoritmo_largo_plazo;
-int estimacion_inicial;
-double estimador_alfa;
 
 void *planificar_corto_plazo_FIFO(void* arg){
 	while(1){
@@ -11,21 +9,54 @@ void *planificar_corto_plazo_FIFO(void* arg){
         // wait de cpu libre?
         wait_mutex(&mutex_queue_ready);
         if(!queue_is_empty(queue_ready)){
-            t_pcb* proceso = queue_pop(queue_ready);
-            signal_mutex(&mutex_queue_ready);
             t_cpu* cpu_encargada = malloc(sizeof(t_cpu));
-            poner_en_ejecucion(proceso, &cpu_encargada);
-            cambiarEstado(proceso, EXEC);
-            /* 
-            crear hilo que quede a la espera de recibir dicho PID después de la ejecución? 
-            */
-           pthread_t* esperar_devolucion = malloc(sizeof(pthread_t));
-           pthread_create(esperar_devolucion, NULL, (void*) esperar_dispatch, (void*) cpu_encargada);
+            if(hay_cpu_libre(&cpu_encargada)){
+                t_pcb* proceso = queue_pop(queue_ready);
+                signal_mutex(&mutex_queue_ready);
+                poner_en_ejecucion(proceso, cpu_encargada);
+                cambiarEstado(proceso, EXEC);
+                pthread_t* esperar_devolucion = malloc(sizeof(pthread_t));
+                pthread_create(esperar_devolucion, NULL, (void*) esperar_dispatch, (void*) cpu_encargada);
+                free(cpu_encargada);
+            }
+            signal_mutex(&mutex_queue_ready);
         }
         else{
             signal_mutex(&mutex_queue_ready);
         }
 	}
+
+}
+
+bool hay_cpu_libre(t_cpu** cpu_encargada){
+    t_cpu* cpu_libre = buscar_cpu_libre(lista_cpus);
+    *cpu_encargada = cpu_libre;
+
+    return cpu_libre != NULL;
+}
+
+void* planificar_corto_plazo_SJF(void* arg){
+    while(1){
+        wait_sem(&proceso_ready);
+        wait_mutex(&mutex_queue_ready);
+        if(!list_is_empty(queue_ready_SJF)){
+            list_sort(queue_ready_SJF, shortest_job_first);
+            t_cpu* cpu_encargada = malloc(sizeof(t_cpu));
+            if(hay_cpu_libre(&cpu_encargada)){
+                t_pcb* proceso = queue_pop(queue_ready);
+                signal_mutex(&mutex_queue_ready);
+                poner_en_ejecucion(proceso, cpu_encargada);
+                cambiarEstado(proceso, EXEC);
+                pthread_t* esperar_devolucion = malloc(sizeof(pthread_t));
+                pthread_create(esperar_devolucion, NULL, (void*) esperar_dispatch, (void*) cpu_encargada);
+                free(cpu_encargada);
+            }
+            signal_mutex(&mutex_queue_ready);
+        }
+        else{
+            signal_mutex(&mutex_queue_ready);
+        }
+    }
 
 }
 
@@ -59,6 +90,14 @@ void esperar_dispatch(void* arg){
         log_info(logger_kernel, "## %d - Finaliza el proceso", proceso->pid);
 
         log_metricas_estado(proceso);
+
+        /* 
+        
+                    AVISAR A MEMORIA
+
+        */
+
+       free(proceso);
 
         break;
     case CAUSA_IO:
@@ -317,27 +356,25 @@ bool proceso_es_mas_chico(void* a, void* b){
 bool shortest_job_first(void* a, void* b){
     t_pcb* proceso_a = (t_pcb*) a;
     t_pcb* proceso_b = (t_pcb*) b;
-
-    double estimacion_a = proceso_a->rafaga_real * estimador_alfa + proceso_a->estimacion_anterior * (1-estimador_alfa);
-    double estimacion_b = proceso_b->rafaga_real * estimador_alfa + proceso_b->estimacion_anterior * (1-estimador_alfa);
     
-    return estimacion_a <= estimacion_b;
+    return proceso_a->estimacion_actual <= proceso_b->estimacion_actual;
 }
-void poner_en_ejecucion(t_pcb* proceso, t_cpu** cpu_encargada){
+void poner_en_ejecucion(t_pcb* proceso, t_cpu* cpu_encargada){
 
-    t_cpu* cpu_libre = buscar_cpu_libre(lista_cpus);
+    // t_cpu* cpu_libre = buscar_cpu_libre(lista_cpus);
     // mandar a alguna cpu dependiendo de cual este libre
 
     t_paquete* paquete = crear_paquete(CONTEXTO_PROCESO);
     agregar_a_paquete(paquete, &proceso->pid, sizeof(int));
     agregar_a_paquete(paquete, &proceso->program_counter, sizeof(int));
-    enviar_paquete(paquete, cpu_libre->socket_dispatch);
+    // enviar_paquete(paquete, cpu_libre->socket_dispatch);
+    enviar_paquete(paquete, cpu_encargada->socket_dispatch);
     eliminar_paquete(paquete);
 
     list_add(lista_procesos_ejecutando, proceso);
 
-    //
-    *cpu_encargada = cpu_libre;
+    
+    // *cpu_encargada = cpu_libre;
 
 }
 

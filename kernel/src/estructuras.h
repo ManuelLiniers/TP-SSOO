@@ -13,6 +13,8 @@ extern t_list* lista_dispositivos_io;
 void iniciar_dispositivos_io();
 extern t_list* lista_cpus;
 void iniciar_cpus();
+extern int estimacion_inicial;
+extern double estimador_alfa;
 
 // Estados posibles de un proceso
 typedef enum { NEW, READY, EXEC, BLOCKED, SUSP_READY, SUSP_BLOCKED, EXIT } t_estado;
@@ -22,6 +24,7 @@ int id_estado(t_estado estado);
 extern t_queue* queue_new;
 extern t_list* queue_new_PMCP;
 extern t_queue* queue_ready;
+extern t_list* queue_ready_SJF;
 extern t_list* queue_block;
 extern t_queue* queue_exit;
 
@@ -43,6 +46,7 @@ typedef struct {
     int registros[4];
     long estimacion_anterior;
     long rafaga_real;
+    long estimacion_actual;
     // Más campos opcionales: tamaño de memoria, registros, métricas, etc.
 } t_pcb;
 
@@ -50,6 +54,7 @@ void crear_proceso(char* instrucciones, char* tamanio_proceso);
 
 t_pcb* buscar_proceso_pid(uint32_t pid);
 void cambiarEstado(t_pcb* proceso, t_estado estado);
+void actualizar_estimacion(t_pcb* proceso);
 char* estado_to_string(t_estado estado);
 
 extern t_list* lista_procesos_ejecutando;

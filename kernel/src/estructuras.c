@@ -6,11 +6,14 @@ int id_io_incremental = 0;
 t_list* lista_dispositivos_io;
 t_list* lista_cpus;
 t_list* lista_procesos_ejecutando;
+int estimacion_inicial;
+double estimador_alfa;
 
 // Definición de las colas globales
 t_queue* queue_new;
 t_list* queue_new_PMCP;
 t_queue* queue_ready;
+t_list* queue_ready_SJF;
 t_list* queue_block;
 t_queue* queue_exit;
 
@@ -18,9 +21,11 @@ void scheduler_init(void) {
     queue_new  = queue_create();
     queue_new_PMCP = list_create();
     queue_ready = queue_create();
+    queue_ready_SJF = list_create();
     queue_block = list_create();
     queue_exit = queue_create();
     lista_procesos_ejecutando = list_create();
+
 }
 
 void scheduler_destroy(void) {
@@ -122,7 +127,7 @@ t_cpu* buscar_cpu_libre(t_list* lista_cpus){
             return actual;
         }
     }
-    log_error(logger_kernel, "No se hay CPUs libres");
+    log_error(logger_kernel, "No hay CPUs libres");
     return NULL;
 }
 
@@ -151,19 +156,26 @@ void cambiarEstado(t_pcb* proceso, t_estado estado){
         metrica_anterior->tiempo_fin = clock(); // o se puede cambiar por time()
         if(metrica_anterior->estado == EXEC && estado == BLOCKED ){
             proceso->rafaga_real = calcular_rafaga(estados_exec);
+            actualizar_estimacion(proceso);
         }
     }
 
     proceso->estado = estado;
     proceso->metricas_estado[id_estado(estado)]++;
 
-
+    if(estado != EXIT){
     t_metricas_estado_tiempo* metrica = malloc(sizeof(t_metricas_estado_tiempo));
     metrica->estado = estado;
     metrica->tiempo_inicio = clock();
-
     list_add(proceso->metricas_tiempo, metrica);
+    }
+
     log_info(logger_kernel, "## (<%d>) Pasa del estado <%s> al estado <%s>", proceso->pid, estado_to_string(metrica_anterior->estado), estado_to_string(estado));
+}
+
+void actualizar_estimacion(t_pcb* proceso){
+    proceso->estimacion_actual = proceso->rafaga_real * estimador_alfa + proceso->estimacion_anterior * (1-estimador_alfa);
+    proceso->estimacion_anterior = proceso->estimacion_actual;
 }
 
 char* estado_to_string(t_estado estado){
