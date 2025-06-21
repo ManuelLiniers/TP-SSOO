@@ -195,8 +195,10 @@ void atender_dump_memory(t_buffer* unBuffer, int cpu_fd) {
 }
 
 void atender_lectura_pagina_completa(t_buffer* unBuffer, int cpu_fd) {
+	uint32_t pid;
 	uint32_t nro_marco;
 
+	pid = recibir_uint32_del_buffer(unBuffer);
 	nro_marco = recibir_uint32_del_buffer(unBuffer);
 
 	if (bitarray_test_bit(bit_marcos, nro_marco)) {
@@ -206,10 +208,17 @@ void atender_lectura_pagina_completa(t_buffer* unBuffer, int cpu_fd) {
 		return;
 	}
 
+	void* lectura = obtener_lectura(nro_marco * TAM_PAGINA, TAM_PAGINA, pid);
+
+    if (lectura == NULL) {
+        log_error(memoria_logger, "Fallo al leer memoria: dirección inválida o fuera de rango");
+        return;
+    }
+
 	// Extraer contenido
 	void* contenido = malloc(TAM_PAGINA);
 	pthread_mutex_lock(&mutex_espacio_usuario);
-	memcpy(contenido, espacio_usuario + nro_marco * TAM_PAGINA, TAM_PAGINA);
+	memcpy(contenido, lectura, TAM_PAGINA);
 	pthread_mutex_unlock(&mutex_espacio_usuario);
 
 	// Enviar tamaño

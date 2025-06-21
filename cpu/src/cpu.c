@@ -494,6 +494,7 @@ uint32_t traducir_direccion_logica(uint32_t direccion_logica, int tamanio_pagina
     log_debug(logger, "PID: %d - Marco recibido: %d", contexto->pid, marco);
 
     t_paquete* paquete_contenido = crear_paquete(LEER_PAGINA_COMPLETA);   //pido contenido a memoria 
+    agregar_a_paquete(paquete_contenido, &(contexto->pid), sizeof(uint32_t));
     agregar_a_paquete(paquete_contenido, &marco, sizeof(uint32_t)); // le paso el marco asociado a la pagina que tiene el contenido q pido
     enviar_paquete(paquete_contenido, conexion_memoria);
     eliminar_paquete(paquete_contenido);
@@ -505,9 +506,9 @@ uint32_t traducir_direccion_logica(uint32_t direccion_logica, int tamanio_pagina
 
 
     if (entradas_cache > 0) {
-    agregar_a_cache(contexto->pid, nro_pagina, contenido_real, logger, conexion_memoria); 
-    free(contenido_real);
-}
+        agregar_a_cache(contexto->pid, nro_pagina, contenido_real, logger, conexion_memoria); 
+        free(contenido_real);
+    }
 
     agregar_a_tlb(contexto->pid, nro_pagina, marco, logger);
 
