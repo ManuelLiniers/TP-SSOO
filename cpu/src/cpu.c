@@ -54,7 +54,7 @@ retardo_cache = config_get_int_value(cpu_config, "RETARDO_CACHE");
 
 
     pthread_t hilo_interrupt;
-    pthread_create(&hilo_interrupt, NULL, escuchar_interrupt, &conexion_kernel_interrupt);
+    pthread_create(&hilo_interrupt, NULL, escuchar_interrupt, &conexion_kernel_interrupt);  //lanzo funcion para hilo paralelo para que escuche constantemente el socket del puerto de interrupciones
     pthread_detach(hilo_interrupt);
 
     //espero PCBs del Kernel por dispatch
@@ -174,6 +174,7 @@ void atender_proceso_del_kernel(t_contexto* contexto, t_log* logger) {
         if (hay_interrupcion()) {
             log_debug(logger, "Se detectó una interrupción luego de ejecutar la instrucción");
             enviar_contexto_a_kernel(contexto, INTERRUPCION, conexion_kernel_dispatch, logger);
+            //le avisa al kernel que hubo interrupción, desaloja el proceso y resetea el flag a false para poder seguir escuchando futuras interrupciones
 
             pthread_mutex_lock(&mutex_interrupt);
             flag_interrupcion = false;
@@ -211,10 +212,11 @@ void* escuchar_interrupt(void* arg) {
 
 bool hay_interrupcion() {
     pthread_mutex_lock(&mutex_interrupt);
-    bool resultado = flag_interrupcion;
+    bool resultado = flag_interrupcion;  //definida al ppio, es false por defecto, se pone en true cuadndo hay una interrupcion
     pthread_mutex_unlock(&mutex_interrupt);
     return resultado;
 }
+
 
 void destruir_estructuras_del_contexto_actual(t_contexto* contexto) {
     limpiar_tlb_por_pid(contexto->pid);  
