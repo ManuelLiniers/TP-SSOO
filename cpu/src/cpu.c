@@ -159,7 +159,7 @@ void atender_proceso_del_kernel(t_contexto* contexto, t_log* logger) {
 
     while (1) {
         char* instruccion_cruda = ciclo_de_instruccion_fetch(conexion_memoria, contexto);
-        if (!instruccion_cruda) {
+        if (!instruccion_cruda) { //si el fetch devuelve NULL entonces haria !NULL y el if vería un 1 entonces entra al bloque
             log_error(logger, "Fallo al recibir la instrucción desde Memoria.");
             break;
         }
