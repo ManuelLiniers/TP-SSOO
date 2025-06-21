@@ -7,6 +7,10 @@ pthread_t cpu_interrupt;
 int main(int argc, char* argv[]) {
     inicializar_kernel();
 	inicializar_servidores();
+
+	printf("Ingrese ENTER para comenzar la planificacion");
+	getchar(); // bloquea el programa hasta que se ingrese enter
+
 	crear_proceso(argv[1], argv[2]); // Creo proceso inicial con valores recibidos por parametro
 	inicializar_planificacion();
 	
@@ -76,7 +80,7 @@ void inicializar_planificacion(){
 		log_debug(logger_kernel, "Planificacion largo plazo con FIFO");
 		pthread_t planificador_largo_plazo_FIFO;
 		pthread_create(&planificador_largo_plazo_FIFO, NULL, (void *) planificar_largo_plazo_FIFO, NULL);
-		pthread_detach(planificador_largo_plazo_FIFO);
+		pthread_join(planificador_largo_plazo_FIFO, NULL);
 	}
 
 	if(strcmp(algoritmo_largo_plazo,"FIFO") == 0){
@@ -84,14 +88,14 @@ void inicializar_planificacion(){
 		log_debug(logger_kernel, "Planificacion largo plazo con FIFO");
 		pthread_t planificador_largo_plazo_FIFO;
 		pthread_create(&planificador_largo_plazo_FIFO, NULL, (void *) planificar_largo_plazo_FIFO, NULL);
-		pthread_detach(planificador_largo_plazo_FIFO);
+		pthread_join(planificador_largo_plazo_FIFO, NULL);
 	}
 	if(strcmp(algoritmo_largo_plazo,"PMCP") == 0){
 
 		log_debug(logger_kernel, "Planificacion largo plazo con PMCP");
 		pthread_t planificador_largo_plazo_PMCP;
 		pthread_create(&planificador_largo_plazo_PMCP, NULL, (void *) planificar_largo_plazo_PMCP, NULL);
-		pthread_detach(planificador_largo_plazo_PMCP);
+		pthread_join(planificador_largo_plazo_PMCP, NULL);
 	}
 
 	log_debug(logger_kernel, "Planificacion inicializada");
