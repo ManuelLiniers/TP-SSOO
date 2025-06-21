@@ -352,10 +352,8 @@ bool espacio_en_memoria(t_pcb* proceso){
 
     eliminar_paquete(paqueteInfo);
 
-    t_buffer* buffer = malloc(sizeof(t_buffer));
-    recv(conexion, buffer, sizeof(int), 0);
-    int resultado = recibir_int_del_buffer(buffer);
-    free(buffer);
+    int resultado;
+    recv(conexion, &resultado, sizeof(int), 0);
     return resultado==OK;
 }
 
