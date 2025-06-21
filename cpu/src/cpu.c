@@ -8,12 +8,15 @@ int TAMANIO_PAGINA;
 int ENTRADAS_CACHE;
 int retardo_cache;
 
+t_log* logger = NULL;
+t_config* cpu_config = NULL;
+pthread_mutex_t mutex_interrupt;
 
 int main(int argc, char* argv[]) {
     saludar("cpu");
 
-    t_log* logger = crear_log();
-    t_config* cpu_config = crear_config(logger);
+    logger = crear_log();
+    cpu_config = crear_config(logger);
 
     inicializar_tlb(logger, cpu_config);
     inicializar_cache(logger, cpu_config);
