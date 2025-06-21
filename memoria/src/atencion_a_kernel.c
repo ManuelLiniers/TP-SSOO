@@ -60,9 +60,9 @@ void iniciar_proceso(t_buffer* unBuffer, int kernel_fd){
 
 		t_proceso* procesoNuevo = crear_proceso(pid, tamanio, path_instrucciones);
 
-		pthread_mutex_lock(&procesoNuevo->mutex_TP); // no es necesario pero para mas seguridad
+		pthread_mutex_lock(&mutex_bit_marcos);
 		asignar_marcos_a_tabla(procesoNuevo->tabla_paginas_raiz, procesoNuevo->pid);
-		pthread_mutex_unlock(&procesoNuevo->mutex_TP);
+		pthread_mutex_unlock(&mutex_bit_marcos);
 	
 		log_info(memoria_logger, "## PID: <%d> - Proceso Creado - Tamaño: <%d>", pid, tamanio);
 

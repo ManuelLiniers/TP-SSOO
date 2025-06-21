@@ -126,17 +126,15 @@ void atender_peticion_marco(t_buffer* unBuffer, int cpu_fd){
 }
 
 void atender_lectura_espacio_usuario(t_buffer* unBuffer, int cpu_fd){
+	int pid;
 	uint32_t direccion_fisica;
 	uint32_t tamanio;
 
+	pid = recibir_int_del_buffer(unBuffer);
 	direccion_fisica = recibir_uint32_del_buffer(unBuffer);
 	tamanio = recibir_uint32_del_buffer(unBuffer);
 
-	// void* lectura = malloc(tamanio);
-	// memcpy(lectura, leer_valor(direccion_fisica, tamanio), tamanio);
-	// send(cpu_fd, lectura, tamanio, 0);
-
-	void* lectura = obtener_lectura(direccion_fisica, tamanio);
+	void* lectura = obtener_lectura(direccion_fisica, tamanio, pid);
 
     if (lectura == NULL) {
         log_error(memoria_logger, "Fallo al leer memoria: dirección inválida o fuera de rango");
@@ -156,16 +154,18 @@ void atender_lectura_espacio_usuario(t_buffer* unBuffer, int cpu_fd){
 }
 
 void atender_escritura_espacio_usuario(t_buffer* unBuffer, int cpu_fd){
+	int pid;
 	uint32_t direccion_fisica;
 	int tamanio;
 
+	pid = recibir_int_del_buffer(unBuffer);
 	direccion_fisica = recibir_uint32_del_buffer(unBuffer);
 	tamanio = recibir_int_del_buffer(unBuffer);
 	void* valor = malloc(tamanio);
 	valor = recibir_informacion_del_buffer(unBuffer, tamanio);
 
 	int respuesta = OK;
-	if(escribir_espacio(direccion_fisica, tamanio, valor) == -1){
+	if(escribir_espacio(direccion_fisica, tamanio, valor, pid) == -1){
 		respuesta = -1;
 	}
 
@@ -194,8 +194,7 @@ void atender_lectura_pagina_completa(t_buffer* unBuffer, int cpu_fd) {
 
 	nro_marco = recibir_uint32_del_buffer(unBuffer);
 
-	t_marco* marco = obtener_marco_por_nro_marco(nro_marco);
-	if (!marco || marco->libre) {
+	if (bitarray_test_bit(bit_marcos, nro_marco)) {
 		log_error(memoria_logger, "No se pudo leer marco %d: inválido o libre", nro_marco);
 		uint32_t tamanio_error = 0;
 		send(cpu_fd, &tamanio_error, sizeof(uint32_t), 0);
@@ -203,9 +202,9 @@ void atender_lectura_pagina_completa(t_buffer* unBuffer, int cpu_fd) {
 	}
 
 	// Extraer contenido
-	pthread_mutex_lock(&mutex_espacio_usuario);
 	void* contenido = malloc(TAM_PAGINA);
-	memcpy(contenido, espacio_usuario + marco->base, TAM_PAGINA);
+	pthread_mutex_lock(&mutex_espacio_usuario);
+	memcpy(contenido, espacio_usuario + nro_marco * TAM_PAGINA, TAM_PAGINA);
 	pthread_mutex_unlock(&mutex_espacio_usuario);
 
 	// Enviar tamaño

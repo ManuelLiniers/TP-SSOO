@@ -336,11 +336,13 @@ else if (string_equals_ignore_case(opcode, "DUMP_MEMORY")) {
     else if (string_equals_ignore_case(opcode, "READ")) {
     uint32_t direccion_logica = atoi(instruccion->operandos[0]); //el primer parametro de READ es la dir logica, el segundo el tamanio
     uint32_t tamanio = atoi(instruccion->operandos[1]);
-    uint32_t direccion_fisica = traducir_direccion_logica(direccion_logica, 256, contexto, conexion_memoria); 
+    uint32_t direccion_fisica = traducir_direccion_logica(direccion_logica, 256, contexto, conexion_memoria);
+    int pid = contexto->pid;
 
-    log_info(logger, "PID: %d - Acción: LEER - Dirección Física: %d", contexto->pid, direccion_fisica);
+    log_info(logger, "PID: %d - Acción: LEER - Dirección Física: %d", pid, direccion_fisica);
 
     t_paquete* paquete = crear_paquete(LEER_MEMORIA);
+    agregar_a_paquete(paquete, &pid, sizeof(int));
     agregar_a_paquete(paquete, &direccion_fisica, sizeof(uint32_t));
     agregar_a_paquete(paquete, &tamanio, sizeof(uint32_t));
     enviar_paquete(paquete, conexion_memoria);
@@ -355,8 +357,7 @@ else if (string_equals_ignore_case(opcode, "DUMP_MEMORY")) {
 else if (string_equals_ignore_case(opcode, "WRITE")) {
     uint32_t direccion_logica = atoi(instruccion->operandos[0]);  //el primer parametro de WRITE es la dir logica, el segundo son los datos
     char* valor = instruccion->operandos[1];
-    int* tamanio = malloc(sizeof(int));
-    *tamanio = strlen(valor) + 1; 
+    int tamanio = strlen(valor) + 1; 
 
     //ahora se actualiza la cache con el contenido y el BM si estaba la pagina presente, si no está no pasa nada xq dsp se busca en traducir_direccion
 
@@ -373,19 +374,20 @@ else if (string_equals_ignore_case(opcode, "WRITE")) {
     }
 
     uint32_t direccion_fisica = traducir_direccion_logica(direccion_logica, TAMANIO_PAGINA, contexto, conexion_memoria);
+    int pid = contexto->pid;
 
-    log_info(logger, "PID: %d - Acción: ESCRIBIR - Dirección Física: %d - Valor: %s", contexto->pid, direccion_fisica, valor);
+    log_info(logger, "PID: %d - Acción: ESCRIBIR - Dirección Física: %d - Valor: %s", pid, direccion_fisica, valor);
 
     t_paquete* paquete = crear_paquete(ESCRIBIR_MEMORIA);
+    agregar_a_paquete(paquete, &pid, sizeof(int));
     agregar_a_paquete(paquete, &direccion_fisica, sizeof(uint32_t));
-    agregar_a_paquete(paquete, tamanio, sizeof(int));
-    agregar_a_paquete(paquete, valor, *tamanio);
+    agregar_a_paquete(paquete, &tamanio, sizeof(int));
+    agregar_a_paquete(paquete, valor, tamanio);
     enviar_paquete(paquete, conexion_memoria);
     eliminar_paquete(paquete);
 
     int respuesta;
     recv(conexion_memoria, &respuesta, sizeof(int), 0);
-    free(tamanio);
     if(respuesta != OK){
         log_error(logger, "No se escribio correctamente");
     }

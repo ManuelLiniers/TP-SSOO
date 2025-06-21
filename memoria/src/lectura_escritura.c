@@ -4,12 +4,10 @@
 #include <string.h>
 #include <time.h>
 
-void* obtener_lectura(uint32_t direccion_fisica, uint32_t tamanio) {
+void* obtener_lectura(uint32_t direccion_fisica, uint32_t tamanio, int pid) {
     if (direccion_fisica + tamanio > TAM_MEMORIA) return NULL;
 
     if (direccion_fisica / TAM_PAGINA != (direccion_fisica + tamanio - 1) / TAM_PAGINA) return NULL;
-
-    int pid = obtener_pid_por_dir_fisica(direccion_fisica);
 
     log_info(memoria_logger, "## PID: %d - Lectura - Dir. Física: %d - Tamaño: %d",
              pid, direccion_fisica, tamanio);
@@ -20,12 +18,10 @@ void* obtener_lectura(uint32_t direccion_fisica, uint32_t tamanio) {
     return espacio_usuario + direccion_fisica;
 }
 
-int escribir_espacio(uint32_t direccion_fisica, int tamanio, void* valor) {
+int escribir_espacio(uint32_t direccion_fisica, int tamanio, void* valor, int pid) {
     if (direccion_fisica + tamanio > TAM_MEMORIA) return -1;
 
     if (direccion_fisica / TAM_PAGINA != (direccion_fisica + tamanio - 1) / TAM_PAGINA) return -1;
-
-    int pid = obtener_pid_por_dir_fisica(direccion_fisica);
 
     log_info(memoria_logger, "## PID: %d - Escritura - Dir. Física: %d - Tamaño: %d",
              pid, direccion_fisica, tamanio);
@@ -41,6 +37,7 @@ int escribir_espacio(uint32_t direccion_fisica, int tamanio, void* valor) {
 }
 
 int dump_de_memoria(uint32_t pid) {
+    /*
     t_proceso* proceso = obtener_proceso_por_id(pid);
     if (!proceso) {
         log_error(memoria_logger, "PID: %d - No se encuentra el proceso para el dump", pid);
@@ -79,22 +76,15 @@ int dump_de_memoria(uint32_t pid) {
 
     // ✅ Log obligatorio según el enunciado
     log_info(memoria_logger, "## PID: %d - Memory Dump solicitado", pid);
+    */
     return 0;
 }
 
 void leer_pagina_completa(uint32_t nro_marco, int socket_destino) {
-    t_marco* marco = obtener_marco_por_nro_marco(nro_marco);
-    if (!marco || marco->libre) {
-        log_error(memoria_logger, "Error: marco %d no válido o libre", nro_marco);
-        uint32_t error_size = 0;
-        send(socket_destino, &error_size, sizeof(uint32_t), 0);
-        return;
-    }
+    void* ptr_base = espacio_usuario + nro_marco * TAM_PAGINA;
 
-    void* ptr_base = espacio_usuario + marco->base;
-
-    pthread_mutex_lock(&mutex_espacio_usuario);
     char* contenido = malloc(TAM_PAGINA);
+    pthread_mutex_lock(&mutex_espacio_usuario);
     memcpy(contenido, ptr_base, TAM_PAGINA);
     pthread_mutex_unlock(&mutex_espacio_usuario);
 
@@ -108,20 +98,11 @@ void leer_pagina_completa(uint32_t nro_marco, int socket_destino) {
 }
 
 void escribir_pagina_completa(uint32_t nro_marco, void* contenido) {
-    t_marco* marco = obtener_marco_por_nro_marco(nro_marco);
-    if (!marco || marco->libre) {
-        log_error(memoria_logger, "Error: marco %d no válido o libre", nro_marco);
-        return;
-    }
-
-    void* ptr_base = espacio_usuario + marco->base;
+    void* ptr_base = espacio_usuario + nro_marco * TAM_PAGINA;
 
     pthread_mutex_lock(&mutex_espacio_usuario);
     memcpy(ptr_base, contenido, TAM_PAGINA);
     pthread_mutex_unlock(&mutex_espacio_usuario);
 
-    int pid = marco->info->pid_proceso;
-    int pagina = marco->info->nro_pagina;
-
-    log_info(memoria_logger, "PID: %d - Escritura completa - Marco: %d - Pagina: %d", pid, nro_marco, pagina);
+    //log_debug(memoria_logger, "PID: %d - Escritura completa - Marco: %d - Pagina: %d", pid, nro_marco, pagina);
 }

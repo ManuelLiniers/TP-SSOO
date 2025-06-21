@@ -4,6 +4,7 @@
 #include <commons/log.h>
 #include <commons/config.h>
 #include <commons/collections/list.h>
+#include <commons/bitarray.h>
 
 typedef struct {
     int accesos_tablas_paginas;
@@ -44,17 +45,6 @@ typedef struct{
 	pthread_mutex_t mutex_TP;
 } t_proceso;
 
-typedef struct {
-	int pid_proceso;
-	int nro_pagina;
-} marco_info;
-
-typedef struct {
-    int nro_marco;
-    int base;
-    bool libre;
-    marco_info* info;
-} t_marco;
 
 // Variables de configuración
 extern char* PUERTO_ESCUCHA;
@@ -83,12 +73,12 @@ extern t_log* memoria_logger;
 extern t_config* memoria_config;
 
 // Paginas
-extern t_list* lst_marcos;
+extern t_bitarray* bit_marcos;
 extern int marcos_totales;
 
 // Semaforos
 extern pthread_mutex_t m_tablas;
-extern pthread_mutex_t mutex_lst_marco;
+extern pthread_mutex_t mutex_bit_marcos;
 extern pthread_mutex_t mutex_espacio_usuario;
 
 #endif

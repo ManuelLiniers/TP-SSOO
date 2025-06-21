@@ -20,7 +20,7 @@
 
 void leer_config();
 void leer_log();
-void inicializar_memoria();
+char* inicializar_memoria();
 void finalizar_memoria();
 int servidor_escucha(int server_fd_memoria);
 void saludar_cliente(void *void_args);

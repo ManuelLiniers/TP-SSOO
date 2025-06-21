@@ -1,12 +1,12 @@
 #include "../include/memoria.h"
 
 int main(int argc, char* argv[]) {
-	inicializar_memoria();
+	char* bits = inicializar_memoria();
 
 	while(servidor_escucha(server_fd_memoria));
 
 
-	finalizar_memoria();
+	finalizar_memoria(bits);
 
     return EXIT_SUCCESS;
 }
@@ -40,7 +40,7 @@ void leer_log(t_log* logger){
 }
 
 
-void inicializar_memoria(){
+char* inicializar_memoria(){
 	
 	memoria_logger = log_create("Memoria.log", "[Memoria]", 1, LOG_LEVEL_DEBUG);
 	
@@ -55,7 +55,7 @@ void inicializar_memoria(){
 	//  leer_log(memoria_logger);  		(Para pruebas)
 
 
-	espacio_usuario = malloc(TAM_MEMORIA);
+	espacio_usuario = calloc(1, TAM_MEMORIA);
 	if(espacio_usuario == NULL){
     	log_error(memoria_logger, "Error al crear memoria de usuario");
     	exit(1);
@@ -64,13 +64,9 @@ void inicializar_memoria(){
 
 	// Inicializar lista para administración de marcos libres
 	marcos_totales = TAM_MEMORIA / TAM_PAGINA;
-	lst_marcos = list_create();
-	for(int i = 0; i < marcos_totales; i++) {
-		t_marco* marco_nuevo  = crear_marco(TAM_PAGINA * i, true, i);
-    	
-		list_add(lst_marcos, marco_nuevo); // Todos los marcos libres inicialmente
-	}
-	
+	char* bits = malloc(marcos_totales);
+	bit_marcos = bitarray_create_with_mode(bits, marcos_totales, LSB_FIRST);
+	pthread_mutex_init(&mutex_bit_marcos, NULL);
 
 
 	log_debug(memoria_logger,"Iniciando servidor Memoria");
@@ -79,11 +75,14 @@ void inicializar_memoria(){
 	procesos_memoria = list_create();
 
 	server_fd_memoria = iniciar_servidor(memoria_logger, NULL, PUERTO_ESCUCHA);
+
+	return bits;
 }
 
 
-void finalizar_memoria(){
-	//free(espacio_usuario);
+void finalizar_memoria(char* bits){
+	free(espacio_usuario);
+	free(bits);
 	log_debug(memoria_logger, "Memoria terminada correctamente");
 	log_destroy(memoria_logger);
 	config_destroy(memoria_config);

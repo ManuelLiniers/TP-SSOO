@@ -87,9 +87,7 @@ void liberar_tablas(t_tabla_nivel* tabla) {
 
 void liberar_pagina_y_marcos(t_pagina* pagina){
     if(pagina->marco_asignado != -1){
-        t_marco* marco = obtener_marco_por_nro_marco(pagina->marco_asignado);
-        marco->libre = true;
-        marco->info->pid_proceso = -1;
+        liberar_marco(pagina->marco_asignado);
     }
     free(pagina);
 }
