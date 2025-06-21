@@ -17,6 +17,14 @@ t_list* queue_ready_SJF;
 t_list* queue_block;
 t_queue* queue_exit;
 
+void agregar_a_lista(void* cola_ready, t_pcb* proceso){
+    list_add( (t_list*) cola_ready, proceso); 
+}
+
+void agregar_a_cola(void* cola_ready, t_pcb* proceso){
+    queue_push((t_queue*) cola_ready, proceso);
+}
+
 void scheduler_init(void) {
     queue_new  = queue_create();
     queue_new_PMCP = list_create();
@@ -58,7 +66,6 @@ t_pcb* pcb_create() {
     int metricas_estado[7] = {0, 0, 0, 0, 0, 0, 0};
     memcpy(pcb->metricas_estado, metricas_estado, sizeof(int[5]));
     pcb->metricas_tiempo = list_create();
-    pcb->cpu_encargada = NULL;
 
     /* tengo una idea para implementar las metricas que capaz es mas simple
     no lo pense tanto en codigo pero capaz que sea un vector con 5 espacios
@@ -145,7 +152,12 @@ t_pcb* buscar_proceso_pid(uint32_t pid){
 }
 
 void sacar_proceso_ejecucion(t_pcb* proceso){
-    list_remove_element(lista_procesos_ejecutando, proceso);
+    for(int i = 0; i<list_size(lista_procesos_ejecutando); i++){
+        t_unidad_ejecucion* actual = list_get(lista_procesos_ejecutando, i);
+        if(actual->proceso->pid == proceso->pid){
+            list_remove_element(lista_procesos_ejecutando, actual); 
+        }
+    }
     signal_sem(&espacio_memoria);
 }
 

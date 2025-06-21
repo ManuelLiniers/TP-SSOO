@@ -42,7 +42,7 @@ void comprobar_cola_bloqueados(int io_id);
 
 bool hay_cpu_libre(t_cpu** cpu_encargada);
 bool espacio_en_memoria(t_pcb* proceso);
-void poner_en_ready(t_pcb* proceso);
+// void poner_en_ready(t_pcb* proceso);
 void poner_en_ejecucion(t_pcb* proceso, t_cpu* cpu_encargada, int socket);
 
 

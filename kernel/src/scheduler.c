@@ -194,11 +194,12 @@ void* planificar_corto_plazo_SJF_desalojo(void* arg){
             for(int i = 0; i<list_size(queue_ready_SJF);i++){
                 t_pcb* otro_proceso = list_get(queue_ready_SJF, i);
                 for(int j = 0; j<list_size(lista_procesos_ejecutando); j++){
-                    t_pcb* proceso_ejecutando = list_get(lista_procesos_ejecutando, j);
-                    if(shortest_job_first((void*) otro_proceso, (void*) proceso_ejecutando) && otro_proceso->estado == READY){
-                        poner_en_ejecucion(otro_proceso, proceso_ejecutando->cpu_encargada, proceso_ejecutando->cpu_encargada->socket_interrupt);
+                    t_unidad_ejecucion* proceso_ejecutando = list_get(lista_procesos_ejecutando, j);
+                    if(shortest_job_first((void*) otro_proceso, (void*) proceso_ejecutando->proceso) && otro_proceso->estado == READY){
+                        poner_en_ejecucion(otro_proceso, proceso_ejecutando->cpu, proceso_ejecutando->cpu->socket_interrupt);
                         cant_procesos++;
-                        log_info(logger_kernel, "## (<%d>) - Desalojado por algoritmo SJF/SRT", proceso_ejecutando->pid);
+                        sacar_proceso_ejecucion(proceso_ejecutando->proceso);
+                        log_info(logger_kernel, "## (<%d>) - Desalojado por algoritmo SJF/SRT", proceso_ejecutando->proceso->pid);
                         list_add_sorted(queue_ready_SJF, proceso_ejecutando, shortest_job_first);
                     }
                 }
@@ -271,6 +272,7 @@ long calcular_tiempo(t_metricas_estado_tiempo* metrica){
 
 
 void *planificar_largo_plazo_FIFO(void* arg){
+    t_agregacion_ready* agregacion = arg;
 	while(1){
         wait_sem(&nuevo_proceso);
         wait_mutex(&mutex_queue_new);
@@ -283,7 +285,11 @@ void *planificar_largo_plazo_FIFO(void* arg){
 				queue_pop(queue_new);
                 signal_mutex(&mutex_queue_new);
 
-                poner_en_ready(proceso);
+                // PONER EN READY
+                cambiarEstado(proceso, READY);
+                wait_mutex(&mutex_queue_ready);
+                agregacion->funcion_agregacion(agregacion->cola_ready, proceso);
+                signal_mutex(&mutex_queue_ready);
 
                 signal_sem(&proceso_ready);
 			}
@@ -302,8 +308,9 @@ void *planificar_largo_plazo_FIFO(void* arg){
 }
 
 void *planificar_largo_plazo_PMCP(void* arg){
+    t_agregacion_ready* agregacion = arg;
     pthread_t hilo_comprobar_espacio;
-    pthread_create(&hilo_comprobar_espacio, NULL, (void*) comprobar_espacio_memoria, NULL);
+    pthread_create(&hilo_comprobar_espacio, NULL, (void*) comprobar_espacio_memoria, arg);
     pthread_detach(hilo_comprobar_espacio);
 
     while(1){
@@ -316,7 +323,11 @@ void *planificar_largo_plazo_PMCP(void* arg){
             list_remove_element(queue_new_PMCP, proceso);
             signal_mutex(&mutex_queue_new);
 
-            poner_en_ready(proceso);
+            // PONER EN READY
+            cambiarEstado(proceso, READY);
+            wait_mutex(&mutex_queue_ready);
+	        agregacion->funcion_agregacion(agregacion->cola_ready, proceso);
+            signal_mutex(&mutex_queue_ready);
             
             signal_sem(&proceso_ready);
         }
@@ -327,6 +338,7 @@ void *planificar_largo_plazo_PMCP(void* arg){
 }
 
 void *comprobar_espacio_memoria(void* arg){
+    t_agregacion_ready* agregacion = arg;
     while(1){
         wait_sem(&espacio_memoria);
 
@@ -336,7 +348,10 @@ void *comprobar_espacio_memoria(void* arg){
         signal_mutex(&mutex_queue_new);
 
         if(espacio_en_memoria(proceso)){
-            poner_en_ready(proceso);
+        cambiarEstado(proceso, READY);
+        wait_mutex(&mutex_queue_ready);
+        agregacion->funcion_agregacion(agregacion->cola_ready, proceso);
+        signal_mutex(&mutex_queue_ready);
         }
     }
 }
@@ -357,13 +372,13 @@ bool espacio_en_memoria(t_pcb* proceso){
     return resultado==OK;
 }
 
-void poner_en_ready(t_pcb* proceso){
+/* void poner_en_ready(t_pcb* proceso){
 
     cambiarEstado(proceso, READY);
     wait_mutex(&mutex_queue_ready);
 	queue_push(queue_ready, proceso);
     signal_mutex(&mutex_queue_ready);
-}
+} */
 
 bool proceso_es_mas_chico(void* a, void* b){
     t_pcb* proceso_a = (t_pcb*) a;
@@ -391,8 +406,10 @@ void poner_en_ejecucion(t_pcb* proceso, t_cpu* cpu_encargada, int socket){
     enviar_paquete(paquete, socket);
     eliminar_paquete(paquete);
 
-    proceso->cpu_encargada = cpu_encargada;
-    list_add(lista_procesos_ejecutando, proceso);
+    t_unidad_ejecucion* nueva = malloc(sizeof(t_unidad_ejecucion));
+    nueva->cpu = cpu_encargada;
+    nueva->proceso = proceso;
+    list_add(lista_procesos_ejecutando, nueva);
     cambiarEstado(proceso, EXEC);
 
     

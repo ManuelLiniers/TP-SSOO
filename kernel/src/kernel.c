@@ -79,22 +79,38 @@ void inicializar_planificacion(){
 
 		log_debug(logger_kernel, "Planificacion largo plazo con FIFO");
 		pthread_t planificador_largo_plazo_FIFO;
-		pthread_create(&planificador_largo_plazo_FIFO, NULL, (void *) planificar_largo_plazo_FIFO, NULL);
-		pthread_join(planificador_largo_plazo_FIFO, NULL);
-	}
-
-	if(strcmp(algoritmo_largo_plazo,"FIFO") == 0){
-
-		log_debug(logger_kernel, "Planificacion largo plazo con FIFO");
-		pthread_t planificador_largo_plazo_FIFO;
-		pthread_create(&planificador_largo_plazo_FIFO, NULL, (void *) planificar_largo_plazo_FIFO, NULL);
+		void* arg = malloc(sizeof(void));
+		t_agregacion_ready* argumento = malloc(sizeof(t_agregacion_ready));
+		if(strcmp(algoritmo_corto_plazo, "SJF") == 0 || strcmp(algoritmo_corto_plazo, "SJFDESALOJO") == 0){
+			argumento->cola_ready = (void*) queue_ready_SJF;
+			argumento->funcion_agregacion = agregar_a_lista;
+			arg = (void*) argumento;
+		}
+		else{
+			argumento->cola_ready = (void*) queue_ready;
+			argumento->funcion_agregacion = agregar_a_cola;
+			arg = (void*) argumento;
+		}
+		pthread_create(&planificador_largo_plazo_FIFO, NULL, (void *) planificar_largo_plazo_FIFO, arg);
 		pthread_join(planificador_largo_plazo_FIFO, NULL);
 	}
 	if(strcmp(algoritmo_largo_plazo,"PMCP") == 0){
 
 		log_debug(logger_kernel, "Planificacion largo plazo con PMCP");
 		pthread_t planificador_largo_plazo_PMCP;
-		pthread_create(&planificador_largo_plazo_PMCP, NULL, (void *) planificar_largo_plazo_PMCP, NULL);
+		void* arg = malloc(sizeof(void));
+		t_agregacion_ready* argumento = malloc(sizeof(t_agregacion_ready));
+		if(strcmp(algoritmo_corto_plazo, "SJF") == 0 || strcmp(algoritmo_corto_plazo, "SJFDESALOJO") == 0){
+			argumento->cola_ready = (void*) queue_ready_SJF;
+			argumento->funcion_agregacion = agregar_a_lista;
+			arg = (void*) argumento;
+		}
+		else{
+			argumento->cola_ready = (void*) queue_ready;
+			argumento->funcion_agregacion = agregar_a_cola;
+			arg = (void*) argumento;
+		}
+		pthread_create(&planificador_largo_plazo_PMCP, NULL, (void *) planificar_largo_plazo_PMCP, arg);
 		pthread_join(planificador_largo_plazo_PMCP, NULL);
 	}
 
