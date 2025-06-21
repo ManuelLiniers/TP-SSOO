@@ -61,7 +61,7 @@ void destruir_todos_los_marcos() {
     pthread_mutex_unlock(&mutex_bit_marcos);
 }
 
-void asignar_marcos_a_tabla(t_tabla_nivel* tabla, int pid) {
+void asignar_marcos_a_tabla(t_tabla_nivel* tabla) {
     for (int i = 0; i < ENTRADAS_POR_TABLA; i++) {
         t_entrada_tabla* entrada = list_get(tabla->entradas, i);
 
@@ -78,7 +78,7 @@ void asignar_marcos_a_tabla(t_tabla_nivel* tabla, int pid) {
             }
         } else {
             t_tabla_nivel* subtabla = (t_tabla_nivel*) entrada->siguiente_nivel;
-            asignar_marcos_a_tabla(subtabla, pid);  // llamada recursiva
+            asignar_marcos_a_tabla(subtabla);  // llamada recursiva
         }
     }
 }

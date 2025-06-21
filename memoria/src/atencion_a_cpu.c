@@ -38,12 +38,6 @@ void atender_cpu(int cpu_fd){
 
 				break;
 			}
-			case DUMP_MEMORY: {
-				unBuffer = recibir_paquete(cpu_fd);
-				atender_dump_memory(unBuffer, cpu_fd);
-
-				break;
-			}
 			case LEER_PAGINA_COMPLETA: {
 				unBuffer = recibir_paquete(cpu_fd);
 				atender_lectura_pagina_completa(unBuffer, cpu_fd);
@@ -177,21 +171,6 @@ void atender_escritura_espacio_usuario(t_buffer* unBuffer, int cpu_fd){
 	send(cpu_fd, &respuesta, sizeof(int), 0);
 
 	free(valor);
-}
-
-void atender_dump_memory(t_buffer* unBuffer, int cpu_fd) {
-    uint32_t pid = recibir_uint32_del_buffer(unBuffer);
-
-    int resultado = dump_de_memoria(pid);  // 0 si OK, -1 si hubo error
-
-    int codigo_respuesta = resultado == 0 ? OK : -1;
-    send(cpu_fd, &codigo_respuesta, sizeof(int), 0);
-
-    if (codigo_respuesta == OK) {
-        log_info(memoria_logger, "Dump de memoria exitoso para PID: %d", pid);
-    } else {
-        log_error(memoria_logger, "Fallo el dump de memoria para PID: %d", pid);
-    }
 }
 
 void atender_lectura_pagina_completa(t_buffer* unBuffer, int cpu_fd) {

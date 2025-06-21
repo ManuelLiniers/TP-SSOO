@@ -24,6 +24,13 @@ void atender_kernel(int kernel_fd){ // agregar que reciba el buffer
 
 				break;
 			}
+			case DUMP_MEMORY: {
+				unBuffer = recibir_paquete(kernel_fd);
+				
+				atender_dump_memory(unBuffer, kernel_fd);
+
+				break;
+			}
 			case -1:{
 				log_debug(memoria_logger, "[KERNEL] se desconecto. Terminando consulta");
 				exit(0);
@@ -61,7 +68,7 @@ void iniciar_proceso(t_buffer* unBuffer, int kernel_fd){
 		t_proceso* procesoNuevo = crear_proceso(pid, tamanio, path_instrucciones);
 
 		pthread_mutex_lock(&mutex_bit_marcos);
-		asignar_marcos_a_tabla(procesoNuevo->tabla_paginas_raiz, procesoNuevo->pid);
+		asignar_marcos_a_tabla(procesoNuevo->tabla_paginas_raiz);
 		pthread_mutex_unlock(&mutex_bit_marcos);
 	
 		log_info(memoria_logger, "## PID: <%d> - Proceso Creado - Tamaño: <%d>", pid, tamanio);
@@ -88,4 +95,19 @@ void fin_proceso(t_buffer* unBuffer, int kernel_fd){
 	//
 
 	finalizar_proceso(proceso);
+}
+
+void atender_dump_memory(t_buffer* unBuffer, int cpu_fd) {
+    uint32_t pid = recibir_uint32_del_buffer(unBuffer);
+
+    int resultado = dump_de_memoria(pid);  // 0 si OK, -1 si hubo error
+
+    int codigo_respuesta = resultado == 0 ? OK : -1;
+    send(cpu_fd, &codigo_respuesta, sizeof(int), 0);
+
+    if (codigo_respuesta == OK) {
+        log_debug(memoria_logger, "Dump de memoria exitoso para PID: %d", pid);
+    } else {
+        log_error(memoria_logger, "Fallo el dump de memoria para PID: %d", pid);
+    }
 }

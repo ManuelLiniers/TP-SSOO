@@ -11,7 +11,6 @@ void atender_peticion_marco(t_buffer* unBuffer, int cpu_fd);
 
 void atender_lectura_espacio_usuario(t_buffer* unBuffer, int cpu_fd);
 void atender_escritura_espacio_usuario(t_buffer* unBuffer, int cpu_fd);
-void atender_dump_memory(t_buffer* unBuffer, int cpu_fd);
 void atender_lectura_pagina_completa(t_buffer* unBuffer, int cpu_fd);
 void atender_escritura_pagina_completa(t_buffer* unBuffer, int cpu_fd);
 
