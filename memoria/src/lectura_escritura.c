@@ -49,7 +49,7 @@ int dump_de_memoria(uint32_t pid) {
     strftime(timestamp, sizeof(timestamp), "%Y%m%d_%H%M%S", t);
 
     char path_dump[256];
-    snprintf(path_dump, sizeof(path_dump), "%s/%d-%s.dmp", DUMP_PATH, pid, timestamp);
+    snprintf(path_dump, sizeof(path_dump), "%s%d-%s.dmp", DUMP_PATH, pid, timestamp);
 
     FILE* archivo = fopen(path_dump, "w");
     if (!archivo) {

@@ -11,7 +11,6 @@ int obtener_marco_libre(){
     size_t cantidad_marcos = bitarray_get_max_bit(bit_marcos);
     int marco = -1;
 
-    pthread_mutex_lock(&mutex_bit_marcos);
     for (int i = 0; i < cantidad_marcos; i++) {
         if (!bitarray_test_bit(bit_marcos, i)) {
             bitarray_set_bit(bit_marcos, i);
@@ -19,7 +18,6 @@ int obtener_marco_libre(){
             break;
         }
     }
-    pthread_mutex_unlock(&mutex_bit_marcos);
     
     return marco;
 }
