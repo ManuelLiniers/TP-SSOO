@@ -153,7 +153,7 @@ void cambiarEstado(t_pcb* proceso, t_estado estado){
     t_metricas_estado_tiempo* metrica_anterior = obtener_ultima_metrica(proceso);
 
     if(metrica_anterior != NULL){
-        metrica_anterior->tiempo_fin = clock(); // o se puede cambiar por time()
+        metrica_anterior->tiempo_fin = (double)time(NULL); // o se puede cambiar por time()
         if(metrica_anterior->estado == EXEC && estado == BLOCKED ){
             t_list* estados_exec = obtener_exec(proceso);
             proceso->rafaga_real = calcular_rafaga(estados_exec);
@@ -165,10 +165,10 @@ void cambiarEstado(t_pcb* proceso, t_estado estado){
     proceso->metricas_estado[id_estado(estado)]++;
 
     if(estado != EXIT){
-    t_metricas_estado_tiempo* metrica = malloc(sizeof(t_metricas_estado_tiempo));
-    metrica->estado = estado;
-    metrica->tiempo_inicio = clock();
-    list_add(proceso->metricas_tiempo, metrica);
+        t_metricas_estado_tiempo* metrica = malloc(sizeof(t_metricas_estado_tiempo));
+        metrica->estado = estado;
+        metrica->tiempo_inicio = (double)time(NULL);
+        list_add(proceso->metricas_tiempo, metrica);
     }
 
     if(metrica_anterior == NULL){

@@ -6,13 +6,10 @@ pthread_t cpu_interrupt;
 
 int main(int argc, char* argv[]) {
     inicializar_kernel();
-	inicializar_planificacion();
 	inicializar_servidores();
-
-
 	crear_proceso(argv[1], argv[2]); // Creo proceso inicial con valores recibidos por parametro
-
-
+	inicializar_planificacion();
+	
     // log_debug(logger_kernel,"Iniciando servidor Kernel");
 	// int server_fd_kernel_io = iniciar_servidor(logger_kernel, ip_kernel, puerto_kernel); 
 	// Si esta ESCUCHANDO en PUERTO KERNEL -> SE CONECTA CON IO PORQUE IO ES CLIENTE NADA MÁS DE ESTE PUERTO. SI ESCUCHA OTRO PUERTO, SE CONECTA A ALGUNO DE CPU
@@ -33,6 +30,7 @@ void inicializar_kernel(char* instrucciones, char* tamanio_proceso){
 	logger_kernel = log_create("kernel.log", "[Kernel]", 1, LOG_LEVEL_DEBUG);
     iniciar_config();
 	iniciar_semaforos();
+	scheduler_init();
 	
 	ip_memoria = config_get_string_value(config_kernel, "IP_MEMORIA");
     puerto_memoria = config_get_string_value(config_kernel, "PUERTO_MEMORIA");
@@ -41,8 +39,8 @@ void inicializar_kernel(char* instrucciones, char* tamanio_proceso){
 	puerto_dispatch = config_get_string_value(config_kernel, "PUERTO_ESCUCHA_DISPATCH");
 	puerto_interrupt = config_get_string_value(config_kernel, "PUERTO_ESCUCHA_INTERRUPT");
 	puerto_io = config_get_string_value(config_kernel, "PUERTO_ESCUCHA_IO");
-	algoritmo_corto_plazo = config_get_string_value(config_kernel, "ALGORITMO_PLANIFICACION");
-	algoritmo_largo_plazo = config_get_string_value(config_kernel, "ALGORITMO_INGRESO_A_READY");
+	algoritmo_corto_plazo = config_get_string_value(config_kernel, "ALGORITMO_PLANIFICACION"); // FIFO, SJF, SJFDESALOJO
+	algoritmo_largo_plazo = config_get_string_value(config_kernel, "ALGORITMO_INGRESO_A_READY"); // FIFO, PMCP
 	estimacion_inicial = config_get_int_value(config_kernel, "ESTIMACION_INICIAL");
 	estimador_alfa = config_get_double_value(config_kernel, "ALFA");
 
@@ -51,11 +49,35 @@ void inicializar_kernel(char* instrucciones, char* tamanio_proceso){
 
 void inicializar_planificacion(){
 
-	scheduler_init();
+	if(strcmp(algoritmo_corto_plazo,"FIFO") == 0){
 
-	pthread_t planificador_corto_plazo;
-	pthread_create(&planificador_corto_plazo, NULL, (void*) planificar_corto_plazo_FIFO, NULL);
-	pthread_detach(planificador_corto_plazo);
+		log_debug(logger_kernel, "Planificacion corto plazo con FIFO");
+		pthread_t planificador_corto_plazo;
+		pthread_create(&planificador_corto_plazo, NULL, (void*) planificar_corto_plazo_FIFO, NULL);
+		pthread_detach(planificador_corto_plazo);
+	}
+	if(strcmp(algoritmo_corto_plazo,"SJF") == 0){
+
+		log_debug(logger_kernel, "Planificacion corto plazo con SJF sin desalojo");
+		pthread_t planificador_corto_plazo;
+		pthread_create(&planificador_corto_plazo, NULL, (void*) planificar_corto_plazo_SJF, NULL);
+		pthread_detach(planificador_corto_plazo);
+	}
+	if(strcmp(algoritmo_corto_plazo,"SJFDESALOJO") == 0){
+
+		log_debug(logger_kernel, "Planificacion corto plazo con SJF sin desalojo");
+		pthread_t planificador_corto_plazo;
+		pthread_create(&planificador_corto_plazo, NULL, (void*) planificar_corto_plazo_SJF_desalojo, NULL);
+		pthread_detach(planificador_corto_plazo);
+	}
+
+	if(strcmp(algoritmo_largo_plazo,"FIFO") == 0){
+
+		log_debug(logger_kernel, "Planificacion largo plazo con FIFO");
+		pthread_t planificador_largo_plazo_FIFO;
+		pthread_create(&planificador_largo_plazo_FIFO, NULL, (void *) planificar_largo_plazo_FIFO, NULL);
+		pthread_detach(planificador_largo_plazo_FIFO);
+	}
 
 	if(strcmp(algoritmo_largo_plazo,"FIFO") == 0){
 
@@ -94,7 +116,7 @@ void inicializar_servidores(){
 }
 
 void iniciar_cpu_dispatch(void* arg){
-	log_debug(logger_kernel, "entre dispatch");
+	log_debug(logger_kernel, "entro al hilo dispatch");
 	int server_fd_kernel_dispatch = iniciar_servidor(logger_kernel, NULL, puerto_dispatch);
 
 	while (server_fd_kernel_dispatch != -1)
@@ -158,6 +180,7 @@ void modificar_dispatch(t_cpu* una_cpu, int socket_fd){
 }
 
 void iniciar_cpu_interrupt(void* arg){
+	log_debug(logger_kernel, "entre al hilo interrupt");
 	int server_fd_kernel_interrupt = iniciar_servidor(logger_kernel, NULL, puerto_interrupt);
 
 	while (server_fd_kernel_interrupt != -1)
@@ -188,8 +211,7 @@ void modificar_interrupt(t_cpu* una_cpu, int socket_fd){
 }
 
 void iniciar_servidor_io(void* arg){
-
-	log_debug(logger_kernel, "entre io");
+	log_debug(logger_kernel, "entro al hilo IO");
 	int server_fd_kernel_io = iniciar_servidor(logger_kernel, NULL, puerto_io);
 
 	while(server_fd_kernel_io != -1){
@@ -236,6 +258,7 @@ void crear_proceso(char* instrucciones, char* tamanio_proceso){
     pcb_nuevo->tamanio_proceso = atoi(tamanio_proceso);
 	pcb_nuevo->estimacion_anterior = estimacion_inicial;
 	pcb_nuevo->estimacion_actual = estimacion_inicial;
+	log_info(logger_kernel, "## (<%d>) Se crea el proceso - Estado: NEW", pcb_nuevo->pid);
     if(strcmp(algoritmo_largo_plazo,"FIFO") == 0){
 		wait_mutex(&mutex_queue_new);
 		queue_push(queue_new, pcb_nuevo);
@@ -250,6 +273,5 @@ void crear_proceso(char* instrucciones, char* tamanio_proceso){
 		signal_mutex(&mutex_queue_new);
 		signal_sem(&nuevo_proceso);
     }
-	log_info(logger_kernel, "## (<%d>) Se crea el proceso - Estado: NEW", pcb_nuevo->pid);
 }
 

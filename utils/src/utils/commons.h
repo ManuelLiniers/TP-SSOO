@@ -33,7 +33,8 @@ typedef enum {
     INTERRUPCION,
     CAUSA_INIT_PROC,
     DESALOJO_POR_QUANTUM,
-    EXEC_INSTRUC
+    EXEC_INSTRUC,
+    MEMORY_DUMP
 } motivo_desalojo;
 
 #endif

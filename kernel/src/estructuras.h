@@ -30,8 +30,8 @@ extern t_queue* queue_exit;
 
 typedef struct{
     t_estado estado;
-    long tiempo_inicio;
-    long tiempo_fin;
+    double tiempo_inicio;
+    double tiempo_fin;
  } t_metricas_estado_tiempo;
 
 typedef struct{

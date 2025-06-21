@@ -65,13 +65,9 @@ void esperar_dispatch(void* arg){
 
         log_metricas_estado(proceso);
 
-        /* 
-        
-                    AVISAR A MEMORIA
+        paquete_memoria_pid(proceso, FINALIZAR_PROCESO);
 
-        */
-
-       free(proceso);
+        free(proceso);
 
         break;
     case CAUSA_IO:
@@ -111,10 +107,22 @@ void esperar_dispatch(void* arg){
 
         log_info(logger_kernel, "## (<%d>) - Solicito syscall: <%s>", proceso->pid, "INIT_PROC");
 
+        if(strcmp(algoritmo_corto_plazo, "FIFO") != 0){
+            actualizar_estimacion(proceso);
+        }
+
         crear_proceso(archivo, nombre);
         free(nombre);
         break;
-    
+    case EXEC_INSTRUC:
+        if(strcmp(algoritmo_corto_plazo, "FIFO") != 0){
+            actualizar_estimacion(proceso);
+        }
+        break;
+    case MEMORY_DUMP:
+        paquete_memoria_pid(proceso, MEMORY_DUMP);
+        // bloquear proceso?
+        break;
     default:
         log_error(logger_kernel, "Motivo de desalojo desconocido");
         break;
@@ -127,6 +135,15 @@ void esperar_dispatch(void* arg){
     */
 
     free(paquete);
+}
+
+void paquete_memoria_pid(t_pcb* proceso, op_code codigo){
+    int conexion = crear_conexion_memoria();
+    
+    t_paquete* paquete = crear_paquete(codigo);
+    agregar_a_paquete(paquete, &(proceso->pid), sizeof(int));
+    enviar_paquete(paquete, conexion);
+    eliminar_paquete(paquete);
 }
 
 void* planificar_corto_plazo_SJF(void* arg){
@@ -198,106 +215,10 @@ void* planificar_corto_plazo_SJF_desalojo(void* arg){
     }
 }
 
-void esperar_dispatch_SJF_desalojo(void* arg){
-    t_cpu* cpu_encargada = (t_cpu*) arg;
-    t_buffer* paquete = recibir_paquete(cpu_encargada->socket_dispatch);
-
-    uint32_t pid = recibir_uint32_del_buffer(paquete);
-    t_pcb* proceso = buscar_proceso_pid(pid);
-    uint32_t pc = recibir_uint32_del_buffer(paquete);
-    for(int i=0; i<4; i++){
-        proceso->registros[i] = recibir_uint32_del_buffer(paquete);
-    };
-    int motivo = recibir_int_del_buffer(paquete);
-
-    proceso->program_counter = pc;
-    
-    switch (motivo)
-    {
-    case FINALIZADO:
-        cambiarEstado(proceso, EXIT);
-
-        wait_mutex(&mutex_queue_exit);
-        queue_push(queue_exit, proceso);
-        signal_mutex(&mutex_queue_exit);
-
-        sacar_proceso_ejecucion(proceso);
-
-        log_info(logger_kernel, "## (<%d>) - Solicito syscall: <%s>", proceso->pid, "EXIT");
-
-        log_info(logger_kernel, "## %d - Finaliza el proceso", proceso->pid);
-
-        log_metricas_estado(proceso);
-
-        /* 
-        
-                    AVISAR A MEMORIA
-
-        */
-
-       free(proceso);
-
-        break;
-    case CAUSA_IO:
-
-        int io_id = recibir_int_del_buffer(paquete);
-        int io_tiempo = recibir_int_del_buffer(paquete);
-        t_dispositivo_io* dispositivo = buscar_io(io_id);
-        if(dispositivo == NULL){
-            log_error(logger_kernel, "No se encontro la IO: %d", io_id);
-            break;
-        }
-
-        if(queue_is_empty(obtener_cola_io(io_id))){
-            enviar_proceso_a_io(proceso, io_id, io_tiempo);
-        }
-
-        tiempo_en_io proceso_bloqueado;
-        proceso_bloqueado.pcb = proceso;
-        proceso_bloqueado.tiempo = io_tiempo;
-
-        sacar_proceso_ejecucion(proceso);
-
-        wait_mutex(&mutex_queue_block);
-        queue_push(obtener_cola_io(io_id), &proceso_bloqueado);
-        signal_mutex(&mutex_queue_block);
-
-        cambiarEstado(proceso, BLOCKED);
-
-        free(paquete);
-        break;
-
-    case INIT_PROC:
-        int tamanio_proceso = recibir_int_del_buffer(paquete);
-        char* archivo = recibir_string_del_buffer(paquete);
-        char* nombre = malloc(sizeof(char));
-        sprintf(nombre, "%d",tamanio_proceso);
-
-        log_info(logger_kernel, "## (<%d>) - Solicito syscall: <%s>", proceso->pid, "INIT_PROC");
-
-        crear_proceso(archivo, nombre);
-        free(nombre);
-        break;
-    case EXEC_INSTRUC:
-        actualizar_estimacion(proceso);
-        break;
-    default:
-        log_error(logger_kernel, "Motivo de desalojo desconocido");
-        break;
-    }
-    
-    /* 
-    
-    CORREGIR sizeof(int) 
-    
-    */
-
-    free(paquete);
-}
-
 void actualizar_estimacion(t_pcb* proceso){
-    long tiempo_actual = clock();
-    proceso->estimacion_actual-= tiempo_actual;
+    double tiempo_actual = (double)time(NULL);
+    t_metricas_estado_tiempo* metrica_anterior = obtener_ultima_metrica(proceso);
+    proceso->estimacion_actual-= (tiempo_actual - metrica_anterior->tiempo_inicio);
 }
 
 void log_metricas_estado(t_pcb* proceso){
@@ -422,16 +343,6 @@ void *comprobar_espacio_memoria(void* arg){
 
 bool espacio_en_memoria(t_pcb* proceso){
     int conexion = crear_conexion_memoria();
-    hacer_handshake(logger_kernel, conexion);
-
-    t_paquete* paqueteID = crear_paquete(IDENTIFICACION);
-
-	void* coso_a_enviar = malloc(sizeof(int));
-	int codigo = KERNEL;
-	memcpy(coso_a_enviar, &codigo, sizeof(int));
-    agregar_a_paquete(paqueteID, coso_a_enviar, sizeof(op_code));
-    enviar_paquete(paqueteID, conexion);
-    eliminar_paquete(paqueteID);
 
     t_paquete* paqueteInfo = crear_paquete(INICIAR_PROCESO);
     agregar_a_paquete(paqueteInfo, &proceso->pid, sizeof(int));
