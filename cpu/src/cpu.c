@@ -218,7 +218,7 @@ bool hay_interrupcion() {
 
 void destruir_estructuras_del_contexto_actual(t_contexto* contexto) {
     limpiar_tlb_por_pid(contexto->pid);  
-    limpiar_cache_por_pid(contexto->pid, conexion_memoria, TAMANIO_PAGINA, logger); 
+    limpiar_cache_por_pid(contexto->pid, conexion_memoria, logger); 
     free(contexto);
     
 

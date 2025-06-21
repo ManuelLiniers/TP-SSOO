@@ -29,20 +29,27 @@ bool buscar_en_cache(int pid, uint32_t pagina, char** contenido_resultado, uint3
 }
 
 
-void reemplazar_con_clock(t_entrada_cache* nueva, t_log* logger, int conexion_memoria) {
+void reemplazar_con_clock(t_entrada_cache* nueva, t_log* logger, int conexion_memoria, int pid) {
     while (1) {
         t_entrada_cache* actual = list_get(cache_paginas, puntero_clock);
         if (!actual->bit_uso) { //Si el bit de uso esta en falso (0), esta entrada es candidata a ser reemplazada
             if (actual->bit_modificado) { 
-
-                t_paquete* paquete = crear_paquete(ESCRIBIR_MEMORIA); // ENVIO A MEMORIA EL CONTENIDO ACTUALIZADO(XQ EL BM ES 1)
+                escribir_pagina_memoria(pid, actual->marco, actual->contenido, conexion_memoria, logger, actual->pagina, actual->marco);
+/*              t_paquete* paquete = crear_paquete(ESCRIBIR_PAGINA_COMPLETA); // ENVIO A MEMORIA EL CONTENIDO ACTUALIZADO(XQ EL BM ES 1)
+                agregar_a_paquete(paquete, &pid, sizeof(int));
                 agregar_a_paquete(paquete, &(actual->marco), sizeof(uint32_t));
                 agregar_a_paquete(paquete, actual->contenido, strlen(actual->contenido) + 1);
                 enviar_paquete(paquete, conexion_memoria);
                 eliminar_paquete(paquete);
 
-                log_info(logger, "PID: %d - Memory Update - Página: %d - Frame: %d", actual->pid, actual->pagina, actual->marco);
+                int respuesta;
+                recv(conexion_memoria, &respuesta, sizeof(int), 0);
+                if(respuesta != OK){
+                    log_error(logger, "No se escribio correctamente");
+                }
 
+                log_info(logger, "PID: %d - Memory Update - Página: %d - Frame: %d", actual->pid, actual->pagina, actual->marco);
+*/
                 log_debug(logger, "PID: %d - Memory Update - Página: %d", actual->pid, actual->pagina);
             }
             list_replace_and_destroy_element(cache_paginas, puntero_clock, nueva, free);  //@brief Remueve un elemento de la lista de una determinada posicion y loretorna.
@@ -54,6 +61,7 @@ void reemplazar_con_clock(t_entrada_cache* nueva, t_log* logger, int conexion_me
         puntero_clock = (puntero_clock + 1) % entradas_cache;
     }
 }
+
 void agregar_a_cache(int pid, uint32_t pagina, char* contenido, t_log* logger, int conexion_memoria) {
     t_entrada_cache* nueva = malloc(sizeof(t_entrada_cache));
     nueva->pid = pid;
@@ -66,25 +74,44 @@ void agregar_a_cache(int pid, uint32_t pagina, char* contenido, t_log* logger, i
         list_add(cache_paginas, nueva);
         log_info(logger, "PID: %d - Cache Add - Pagina: %d", pid, pagina);
     } else {
-        reemplazar_con_clock(nueva, logger, conexion_memoria);
+        reemplazar_con_clock(nueva, logger, conexion_memoria, pid);
     }
-    }
+}
 
-void limpiar_cache_por_pid(int pid, int conexion_memoria, int tamanio_pagina, t_log* logger) {  //PARA CUANDO SE DESALOJA UN PROCESO
+void limpiar_cache_por_pid(int pid, int conexion_memoria, t_log* logger) {  //PARA CUANDO SE DESALOJA UN PROCESO
     for (int i = list_size(cache_paginas) - 1; i >= 0; i--) {
         t_entrada_cache* entrada = list_get(cache_paginas, i);
         if (entrada->pid == pid) {
             if (entrada->bit_modificado) {  // Calcular dir fisica y enviar write
-                uint32_t direccion_fisica = entrada->marco * tamanio_pagina; //DESPLAZAMIENTO SERIA 0 xq escribo la pagina entera
-                t_paquete* paquete = crear_paquete(ESCRIBIR_MEMORIA);  
+                uint32_t direccion_fisica = entrada->marco * TAMANIO_PAGINA; //DESPLAZAMIENTO SERIA 0 xq escribo la pagina entera
+                escribir_pagina_memoria(pid, direccion_fisica, entrada->contenido, conexion_memoria, logger, entrada->pagina, entrada->marco);
+                /*
+                t_paquete* paquete = crear_paquete(ESCRIBIR_PAGINA_COMPLETA);  
                 agregar_a_paquete(paquete, &direccion_fisica, sizeof(uint32_t));
                 agregar_a_paquete(paquete, entrada->contenido, strlen(entrada->contenido) + 1);
                 enviar_paquete(paquete, conexion_memoria);
                 eliminar_paquete(paquete);
                 log_info(logger, "PID: %d - Memory Update - Página: %d - Frame: %d", entrada->pid, entrada->pagina, direccion_fisica / tamanio_pagina);
-            }
+*/            }
             list_remove_and_destroy_element(cache_paginas, i, free);
         }
     }
 }
 
+void escribir_pagina_memoria(int pid, uint32_t direccion_fisica, void* valor, int conexion_memoria, t_log* logger, uint32_t pagina, uint32_t marco){
+    t_paquete* paquete = crear_paquete(ESCRIBIR_PAGINA_COMPLETA); // ENVIO A MEMORIA EL CONTENIDO ACTUALIZADO(XQ EL BM ES 1)
+    agregar_a_paquete(paquete, &pid, sizeof(int));
+    agregar_a_paquete(paquete, &direccion_fisica, sizeof(uint32_t));
+    agregar_a_paquete(paquete, valor, TAMANIO_PAGINA);
+    enviar_paquete(paquete, conexion_memoria);
+    eliminar_paquete(paquete);
+
+    int respuesta;
+    recv(conexion_memoria, &respuesta, sizeof(int), 0);
+    if(respuesta != OK){
+        log_error(logger, "No se escribio correctamente");
+    }
+
+    log_info(logger, "PID: %d - Memory Update - Página: %d - Frame: %d", pid, pagina, marco);
+
+}

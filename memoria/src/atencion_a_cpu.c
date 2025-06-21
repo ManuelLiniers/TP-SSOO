@@ -49,6 +49,11 @@ void atender_cpu(int cpu_fd){
 				atender_lectura_pagina_completa(unBuffer, cpu_fd);
 				break;
 			}
+			case ESCRIBIR_PAGINA_COMPLETA: {
+				unBuffer = recibir_paquete(cpu_fd);
+				atender_escritura_pagina_completa(unBuffer, cpu_fd);
+				break;
+			}
 			case -1:{
 				log_debug(memoria_logger, "[CPU] se desconecto. Terminando consulta");
 				exit(0);
@@ -217,4 +222,23 @@ void atender_lectura_pagina_completa(t_buffer* unBuffer, int cpu_fd) {
 	log_debug(memoria_logger, "Marco %d leído y enviado a CPU", nro_marco);
 
 	free(contenido);
+}
+
+void atender_escritura_pagina_completa(t_buffer* unBuffer, int cpu_fd){
+	int pid;
+	uint32_t direccion_fisica;
+
+	pid = recibir_int_del_buffer(unBuffer);
+	direccion_fisica = recibir_uint32_del_buffer(unBuffer);
+	void* valor = malloc(TAM_PAGINA);
+	valor = recibir_informacion_del_buffer(unBuffer, TAM_PAGINA);
+
+	int respuesta = OK;
+	if(escribir_espacio(direccion_fisica, TAM_PAGINA, valor, pid) == -1){
+		respuesta = -1;
+	}
+
+	send(cpu_fd, &respuesta, sizeof(int), 0);
+
+	free(valor);
 }

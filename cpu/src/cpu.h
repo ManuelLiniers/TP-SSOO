@@ -1,3 +1,6 @@
+#ifndef CPU_H_
+#define CPU_H_
+
 #include "utils/hello.h"
 #include "utils/commons.h"
 #include "utils/socket.h"
@@ -8,6 +11,7 @@
 extern int conexion_memoria;
 extern int conexion_kernel_dispatch;
 extern int conexion_kernel_interrupt;
+extern int TAMANIO_PAGINA;
 extern t_config* cpu_config;
 
 t_log* crear_log();
@@ -47,5 +51,4 @@ t_buffer* recibir_buffer_contexto(int socket);
 t_contexto* deserializar_contexto(t_buffer* buffer);
 void abrir_conexion_memoria(char* ip_memoria, char* puerto_memoria);
 
-
-
+#endif /* CPU_H_ */
