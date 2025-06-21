@@ -180,6 +180,7 @@ void cambiarEstado(t_pcb* proceso, t_estado estado){
         t_metricas_estado_tiempo* metrica = malloc(sizeof(t_metricas_estado_tiempo));
         metrica->estado = estado;
         metrica->tiempo_inicio = (double)time(NULL);
+        metrica->tiempo_fin = 0;
         list_add(proceso->metricas_tiempo, metrica);
     }
 

@@ -219,7 +219,13 @@ void* planificar_corto_plazo_SJF_desalojo(void* arg){
 void actualizar_estimacion(t_pcb* proceso){
     double tiempo_actual = (double)time(NULL);
     t_metricas_estado_tiempo* metrica_anterior = obtener_ultima_metrica(proceso);
-    proceso->estimacion_actual-= (tiempo_actual - metrica_anterior->tiempo_inicio);
+    if(metrica_anterior->tiempo_fin == 0){
+        proceso->estimacion_actual-= (tiempo_actual - metrica_anterior->tiempo_inicio);
+    }
+    else{
+        proceso->estimacion_actual-= (tiempo_actual - metrica_anterior->tiempo_fin);
+    }
+    metrica_anterior->tiempo_fin = tiempo_actual;
 }
 
 void log_metricas_estado(t_pcb* proceso){

@@ -284,6 +284,7 @@ void crear_proceso(char* instrucciones, char* tamanio_proceso){
 		queue_push(queue_new, pcb_nuevo);
 		signal_mutex(&mutex_queue_new);
 		signal_sem(&nuevo_proceso);
+		cambiarEstado(pcb_nuevo, NEW);
 	}
     if(strcmp(algoritmo_largo_plazo,"PMCP") == 0){
 		wait_mutex(&mutex_queue_new);
