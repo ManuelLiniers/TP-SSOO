@@ -36,34 +36,6 @@ int escribir_espacio(uint32_t direccion_fisica, int tamanio, void* valor, int pi
     return 0;
 }
 
-
-void leer_pagina_completa(uint32_t nro_marco, int socket_destino) {
-    void* ptr_base = espacio_usuario + nro_marco * TAM_PAGINA;
-
-    char* contenido = malloc(TAM_PAGINA);
-    pthread_mutex_lock(&mutex_espacio_usuario);
-    memcpy(contenido, ptr_base, TAM_PAGINA);
-    pthread_mutex_unlock(&mutex_espacio_usuario);
-
-    uint32_t tamanio = TAM_PAGINA;
-    send(socket_destino, &tamanio, sizeof(uint32_t), 0);
-    send(socket_destino, contenido, tamanio, 0);
-
-    free(contenido);
-
-    log_debug(memoria_logger, "Marco %d enviado a CPU (%d bytes)", nro_marco, tamanio);
-}
-
-void escribir_pagina_completa(uint32_t nro_marco, void* contenido) {
-    void* ptr_base = espacio_usuario + nro_marco * TAM_PAGINA;
-
-    pthread_mutex_lock(&mutex_espacio_usuario);
-    memcpy(ptr_base, contenido, TAM_PAGINA);
-    pthread_mutex_unlock(&mutex_espacio_usuario);
-
-    //log_debug(memoria_logger, "PID: %d - Escritura completa - Marco: %d - Pagina: %d", pid, nro_marco, pagina);
-}
-
 int dump_de_memoria(uint32_t pid) {
     t_proceso* proceso = obtener_proceso_por_id(pid);
     if (!proceso) {
@@ -77,7 +49,7 @@ int dump_de_memoria(uint32_t pid) {
     strftime(timestamp, sizeof(timestamp), "%Y%m%d_%H%M%S", t);
 
     char path_dump[256];
-    snprintf(path_dump, sizeof(path_dump), "%s/pid%d_dump_%s.txt", DUMP_PATH, pid, timestamp);
+    snprintf(path_dump, sizeof(path_dump), "%s/%d-%s.dmp", DUMP_PATH, pid, timestamp);
 
     FILE* archivo = fopen(path_dump, "w");
     if (!archivo) {
@@ -88,18 +60,6 @@ int dump_de_memoria(uint32_t pid) {
     pthread_mutex_lock(&proceso->mutex_TP);
     escribir_marcos_en_archivo(archivo, proceso->tabla_paginas_raiz);
     pthread_mutex_unlock(&proceso->mutex_TP);
-
-    /*for (int i = 0; i < TAM_MEMORIA; i += TAM_PAGINA) {
-        int pid_actual = obtener_pid_por_dir_fisica(i);
-        if (pid_actual != pid) continue;
-
-        fprintf(archivo, "\n-- Dir. Física: %d --\n", i);
-        for (int j = 0; j < TAM_PAGINA; j++) {
-            uint8_t valor = *((uint8_t*)(espacio_usuario + i + j));
-            fprintf(archivo, "%02X ", valor);
-            if ((j + 1) % 16 == 0) fprintf(archivo, "\n");
-        }
-    }*/
 
     fclose(archivo);
 
@@ -126,9 +86,26 @@ void escribir_marcos_en_archivo(FILE* archivo, t_tabla_nivel* tabla){
 }
 
 void poner_marco_en_archivo(FILE* archivo, int marco){
+    // Validaciones iniciales
+    if (archivo == NULL || marco < 0) {
+        log_error(memoria_logger, "Parámetros inválidos");
+        return;
+    }
+
+    const uint8_t* inicio_marco = (uint8_t*)(espacio_usuario + marco);
+    const int bytes_por_linea = 16;
+    char buffer_linea[bytes_por_linea * 3 + 1]; // 2 chars por byte + espacio + \0
+
     for (int j = 0; j < TAM_PAGINA; j++) {
-        uint8_t valor = *((uint8_t*)(espacio_usuario + marco + j));
-        fprintf(archivo, "%02X ", valor);
-        if ((j + 1) % 16 == 0) fprintf(archivo, "\n");
+        // Alternativa más segura para acceso a memoria
+        uint8_t valor = inicio_marco[j];
+        
+        // Formatear en buffer
+        sprintf(buffer_linea + (j % bytes_por_linea) * 3, "%02X ", valor);
+
+        // Escribir línea completa
+        if ((j + 1) % bytes_por_linea == 0 || j == TAM_PAGINA - 1) {
+            fprintf(archivo, "%s\n", buffer_linea);
+        }
     }
 }
