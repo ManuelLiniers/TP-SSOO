@@ -35,7 +35,7 @@ typedef struct{
  } t_metricas_estado_tiempo;
 
 typedef struct{
-    char cpu_id[20];
+    int cpu_id;
     int socket_dispatch;
     int socket_interrupt;
     bool esta_libre;

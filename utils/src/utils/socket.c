@@ -124,8 +124,10 @@ void recibir_mensaje(t_log* logger, int socket_cliente)
 int recibir_operacion(int socket_cliente)
 {
 	op_code cod_op;
-	if(recv(socket_cliente, &cod_op, sizeof(op_code), MSG_WAITALL) > 0)
+	if(recv(socket_cliente, &cod_op, sizeof(op_code), MSG_WAITALL) > 0){
+		printf("cod_op en recibir operacion %d", cod_op);
 		return cod_op;
+	}
 	else
 	{
 		close(socket_cliente);
@@ -295,6 +297,7 @@ void saludar_cliente_generico(t_log* logger, void *void_args, void (*funcion_ide
     free(void_args);
 
     int code_op = recibir_operacion(socket_fd);
+	log_debug(logger, "Opcode 1: %d", code_op);
 
     switch(code_op){
         case HANDSHAKE: {
@@ -302,6 +305,7 @@ void saludar_cliente_generico(t_log* logger, void *void_args, void (*funcion_ide
             send(socket_fd, &respuesta, sizeof(int), 0);
 
             int op_code = recibir_operacion(socket_fd);
+			log_debug(logger, "Opcode 2: %d", op_code);
             if (op_code == IDENTIFICACION) {
                 t_buffer* buffer = recibir_paquete(socket_fd);
                 funcion_identificacion(buffer, socket_fd); // función pasada como parámetro

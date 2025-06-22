@@ -50,7 +50,7 @@ void atender_cpu(int cpu_fd){
 			}
 			case -1:{
 				log_debug(memoria_logger, "[CPU] se desconecto. Terminando consulta");
-				exit(0);
+				pthread_cancel(pthread_self());
 			}
             default: {
 				log_warning(memoria_logger, "Operación desconocida de CPU");

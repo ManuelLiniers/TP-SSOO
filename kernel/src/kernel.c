@@ -164,7 +164,7 @@ void identificar_cpu_distpatch(t_buffer* buffer, int socket){
 
 
 bool comparar_cpu_id(t_cpu* existente, t_cpu* buscada){
-	return strcmp(existente->cpu_id, buscada->cpu_id) == 0;
+	return existente->cpu_id == buscada->cpu_id;
 }
 
 t_cpu* cpu_ya_existe(t_list* lista, t_cpu* buscada){
@@ -178,16 +178,17 @@ t_cpu* cpu_ya_existe(t_list* lista, t_cpu* buscada){
 }
 
 void identificar_cpu(t_buffer* buffer, int socket_fd, void (*funcion)(t_cpu*, int)){
-	int tamanio_nombre = recibir_int_del_buffer(buffer);
-	void* nombre_raw = recibir_informacion_del_buffer(buffer, tamanio_nombre);
+	int id = recibir_int_del_buffer(buffer);
+	//void* nombre_raw = recibir_informacion_del_buffer(buffer, tamanio_nombre);
+	//memcpy(cpu_nueva->cpu_id, cpu_id, tamanio_nombre);
 	t_cpu* cpu_nueva = malloc(sizeof(t_cpu));
-	memcpy(cpu_nueva->cpu_id, nombre_raw, tamanio_nombre);
+	cpu_nueva->cpu_id = id;
 	t_cpu* encontrada = cpu_ya_existe(lista_cpus, cpu_nueva);
 	if(encontrada == NULL){
 		funcion(cpu_nueva, socket_fd);
 		list_add(lista_cpus, cpu_nueva);
-		log_debug(logger_kernel, "Tamanio del nombre: %d", tamanio_nombre);
-		log_debug(logger_kernel, "Se identifico la CPU: %s", cpu_nueva->cpu_id);
+		//log_debug(logger_kernel, "Tamanio del nombre: %d", tamanio_nombre);
+		log_debug(logger_kernel, "Se identifico la CPU: %d", cpu_nueva->cpu_id);
 	}
 	else{ 
 		funcion(encontrada, socket_fd);

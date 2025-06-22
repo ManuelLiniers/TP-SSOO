@@ -122,9 +122,7 @@ int servidor_escucha(int server_fd_memoria){
 */
 
 void saludar_cliente(void *void_args){
-	while(1){
-		saludar_cliente_generico(memoria_logger, void_args, identificar_modulo);
-	}
+	saludar_cliente_generico(memoria_logger, void_args, identificar_modulo);
 }
 
 
