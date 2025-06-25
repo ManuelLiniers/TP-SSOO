@@ -43,10 +43,7 @@ int dump_de_memoria(uint32_t pid) {
         return -1;
     }
 
-    time_t ahora = time(NULL);
-    struct tm* t = localtime(&ahora);
-    char timestamp[32];
-    strftime(timestamp, sizeof(timestamp), "%Y%m%d_%H%M%S", t);
+    char* timestamp = temporal_get_string_time("%H:%M:%S:%MS");
 
     char path_dump[256];
     snprintf(path_dump, sizeof(path_dump), "%s%d-%s.dmp", DUMP_PATH, pid, timestamp);
