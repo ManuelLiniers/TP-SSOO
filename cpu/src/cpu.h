@@ -50,6 +50,7 @@ void enviar_contexto_a_kernel_io(t_contexto* contexto, motivo_desalojo motivo, i
 void enviar_contexto_a_kernel_init_proc(t_contexto* contexto, motivo_desalojo motivo, int fd, t_log* logger, char* archivo, int tamanio);
 t_buffer* recibir_buffer_contexto(int socket);
 t_contexto* deserializar_contexto(t_buffer* buffer);
-void abrir_conexion_memoria(char* ip_memoria, char* puerto_memoria);
+void abrir_conexion_memoria(int conexion);
+void abrir_conexion_kernel(int conexion);
 
 #endif /* CPU_H_ */

@@ -8,6 +8,8 @@ int TAMANIO_PAGINA;
 int ENTRADAS_CACHE;
 int retardo_cache;
 
+int id;
+
 t_log* logger = NULL;
 t_config* cpu_config = NULL;
 pthread_mutex_t mutex_interrupt;
@@ -15,8 +17,12 @@ pthread_mutex_t mutex_interrupt;
 int main(int argc, char* argv[]) {
     saludar("cpu");
 
+
     logger = crear_log();
     cpu_config = crear_config(logger);
+    
+    id = atoi(argv[1]);
+    log_debug(logger, "Id CPU: %d", id);
 
     inicializar_tlb(logger, cpu_config);
     inicializar_cache(logger, cpu_config);
@@ -45,12 +51,15 @@ retardo_cache = config_get_int_value(cpu_config, "RETARDO_CACHE");
     conexion_memoria = crear_conexion(logger, ip_memoria, puerto_memoria);
     conexion_kernel_dispatch = crear_conexion(logger, ip_kernel, puerto_kernel_dispatch);
     conexion_kernel_interrupt = crear_conexion(logger, ip_kernel, puerto_kernel_interrupt);
-    hacer_handshake(logger, conexion_kernel_dispatch);
+    abrir_conexion_kernel(conexion_kernel_dispatch);
+    abrir_conexion_kernel(conexion_kernel_interrupt);
+    abrir_conexion_memoria(conexion_memoria);
+    /* hacer_handshake(logger, conexion_kernel_dispatch);
     enviarCodigo(conexion_kernel_dispatch,HANDSHAKE);
     hacer_handshake(logger, conexion_kernel_interrupt);
     enviarCodigo(conexion_kernel_interrupt,HANDSHAKE);
 
-    abrir_conexion_memoria(ip_memoria, puerto_memoria);
+    abrir_conexion_memoria(ip_memoria, puerto_memoria); */
     
 
     // mensaje_inicial(conexion_memoria, conexion_kernel_dispatch, conexion_kernel_interrupt);
@@ -524,11 +533,10 @@ uint32_t traducir_direccion_logica(uint32_t direccion_logica, int tamanio_pagina
 //La idea es reflejar los N accesos en los retardos, y entender la ventaja de usar TLB y caché
 
 
-void abrir_conexion_memoria(char* ip_memoria, char* puerto_memoria){
-    conexion_memoria = crear_conexion(logger, ip_memoria, puerto_memoria);
+void abrir_conexion_memoria(int conexion){
+    //conexion_memoria = crear_conexion(logger, ip_memoria, puerto_memoria);
 
-    hacer_handshake(logger, conexion_memoria);
-    
+    hacer_handshake(logger, conexion);
     t_paquete* paqueteID = crear_paquete(IDENTIFICACION);
 
 	void* coso_a_enviar = malloc(sizeof(int));
@@ -536,6 +544,15 @@ void abrir_conexion_memoria(char* ip_memoria, char* puerto_memoria){
 	memcpy(coso_a_enviar, &codigo, sizeof(int));
     agregar_a_paquete(paqueteID, coso_a_enviar, sizeof(op_code));
     free(coso_a_enviar);
-    enviar_paquete(paqueteID, conexion_memoria);
+    enviar_paquete(paqueteID, conexion);
+    eliminar_paquete(paqueteID);
+}
+
+void abrir_conexion_kernel(int conexion){
+    hacer_handshake(logger, conexion);
+    t_paquete* paqueteID = crear_paquete(IDENTIFICACION);
+
+    agregar_a_paquete(paqueteID, &id, sizeof(int));
+    enviar_paquete(paqueteID, conexion);
     eliminar_paquete(paqueteID);
 }
