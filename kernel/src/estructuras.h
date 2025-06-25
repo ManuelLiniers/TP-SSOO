@@ -6,6 +6,10 @@
 #include "semaforos.h"
 #include "conexion.h"
 
+void mostrar_cola(t_queue** cola);
+void mostrar_lista(t_list* lista);
+void mostrar_cpus();
+
 extern int pid_incremental;
 extern int id_io_incremental;
 
@@ -42,6 +46,7 @@ typedef struct{
 } t_cpu;
 
 t_cpu* buscar_cpu_libre(t_list* lista_cpus);
+void mostrar_cpu(t_cpu* cpu);
 
 
 // Control Block de un proceso

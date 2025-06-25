@@ -8,7 +8,7 @@ int main(int argc, char* argv[]) {
     inicializar_kernel();
 	inicializar_servidores();
 
-	printf("Ingrese ENTER para comenzar la planificacion");
+	printf("Ingrese ENTER para comenzar la planificacion >> \n");
 	getchar(); // bloquea el programa hasta que se ingrese enter
 
 	crear_proceso(argv[1], argv[2]); // Creo proceso inicial con valores recibidos por parametro
@@ -185,6 +185,7 @@ void identificar_cpu(t_buffer* buffer, int socket_fd, void (*funcion)(t_cpu*, in
 	cpu_nueva->cpu_id = id;
 	t_cpu* encontrada = cpu_ya_existe(lista_cpus, cpu_nueva);
 	if(encontrada == NULL){
+		cpu_nueva->esta_libre = 1;
 		funcion(cpu_nueva, socket_fd);
 		list_add(lista_cpus, cpu_nueva);
 		//log_debug(logger_kernel, "Tamanio del nombre: %d", tamanio_nombre);
@@ -194,6 +195,7 @@ void identificar_cpu(t_buffer* buffer, int socket_fd, void (*funcion)(t_cpu*, in
 		funcion(encontrada, socket_fd);
 		free(cpu_nueva);
 	}
+	mostrar_cpus();
 }
 
 void modificar_dispatch(t_cpu* una_cpu, int socket_fd){
@@ -283,6 +285,8 @@ void crear_proceso(char* instrucciones, char* tamanio_proceso){
     if(strcmp(algoritmo_largo_plazo,"FIFO") == 0){
 		wait_mutex(&mutex_queue_new);
 		queue_push(queue_new, pcb_nuevo);
+		log_info(logger_kernel, "Cola de NEW:");
+		mostrar_cola(&queue_new);
 		signal_mutex(&mutex_queue_new);
 		signal_sem(&nuevo_proceso);
 		cambiarEstado(pcb_nuevo, NEW);

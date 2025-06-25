@@ -131,6 +131,7 @@ t_dispositivo_io* buscar_io(int id_io){
 t_cpu* buscar_cpu_libre(t_list* lista_cpus){
     for(int i = 0; i<list_size(lista_cpus); i++){
         t_cpu* actual = list_get(lista_cpus, i);
+        mostrar_cpu(actual);
         if(actual->esta_libre){
             return actual;
         }
@@ -263,4 +264,52 @@ long calcular_rafaga(t_list* estados_exec){
 
 t_queue* obtener_cola_io(int io_id){
     return list_get(queue_block, io_id);
+}
+
+void mostrar_cola(t_queue** cola){
+    if(queue_is_empty(*cola)){
+        log_info(logger_kernel, "La cola esta vacia");
+    }
+    else{
+        t_queue* aux = queue_create();
+        for(int i = 0; i<queue_size(*cola); i++){
+            t_pcb* proceso = queue_pop(*cola);
+            queue_push(aux, proceso);
+            log_info(logger_kernel, "PID: (<%d>)", proceso->pid);
+        }
+        *cola=aux;
+        log_info(logger_kernel, "------");
+    }
+}
+
+void mostrar_lista(t_list* lista){
+    if(list_is_empty(lista)){
+        log_info(logger_kernel, "La lista esta vacia");
+    }
+    else{
+        for(int i = 0; i<list_size(lista); i++){
+            t_pcb* proceso = list_get(lista, i);
+            log_info(logger_kernel, "PID: (<%d>)", proceso->pid);
+        }
+        log_info(logger_kernel, "------");
+    }
+}
+
+void mostrar_cpus(){
+    log_info(logger_kernel, "Lista de CPUs:");
+    if(list_is_empty(lista_cpus)){
+        log_info(logger_kernel, "La lista esta vacia");
+    }
+    else{
+        for(int i = 0; i<list_size(lista_cpus); i++){
+            t_cpu* cpu = list_get(lista_cpus, i);
+            mostrar_cpu(cpu);
+        }
+        log_info(logger_kernel, "------");
+    }
+}
+
+void mostrar_cpu(t_cpu* cpu){
+    log_info(logger_kernel, "ID: (<%d>)", cpu->cpu_id);
+    log_info(logger_kernel, "Estado: %d", cpu->esta_libre);
 }

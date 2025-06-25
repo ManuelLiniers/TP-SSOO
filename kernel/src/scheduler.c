@@ -4,14 +4,16 @@ char* algoritmo_corto_plazo;
 char* algoritmo_largo_plazo;
 
 void *planificar_corto_plazo_FIFO(void* arg){
+    log_info(logger_kernel, "Entre a Corto Plazo FIFO");
 	while(1){
         wait_sem(&proceso_ready);
         // wait de cpu libre?
         wait_mutex(&mutex_queue_ready);
-        if(!queue_is_empty(queue_ready)){
+        if(!list_is_empty(queue_ready_SJF)){
+            log_info(logger_kernel, "Busco una CPU libre");
             t_cpu* cpu_encargada = malloc(sizeof(t_cpu));
             if(hay_cpu_libre(&cpu_encargada)){
-                t_pcb* proceso = queue_pop(queue_ready);
+                t_pcb* proceso = list_get(queue_ready_SJF, 0);
                 signal_mutex(&mutex_queue_ready);
                 poner_en_ejecucion(proceso, cpu_encargada, cpu_encargada->socket_dispatch);
                 pthread_t* esperar_devolucion = malloc(sizeof(pthread_t));
@@ -295,6 +297,8 @@ void *planificar_largo_plazo_FIFO(void* arg){
                 cambiarEstado(proceso, READY);
                 wait_mutex(&mutex_queue_ready);
                 agregacion->funcion_agregacion(agregacion->cola_ready, proceso);
+                log_info(logger_kernel, "Cola de ready:");
+                mostrar_cola((t_queue**) &agregacion->cola_ready);
                 signal_mutex(&mutex_queue_ready);
 
                 signal_sem(&proceso_ready);
@@ -333,6 +337,8 @@ void *planificar_largo_plazo_PMCP(void* arg){
             cambiarEstado(proceso, READY);
             wait_mutex(&mutex_queue_ready);
 	        agregacion->funcion_agregacion(agregacion->cola_ready, proceso);
+            log_info(logger_kernel, "Cola de ready:");
+            mostrar_cola((t_queue**) &agregacion->cola_ready);
             signal_mutex(&mutex_queue_ready);
             
             signal_sem(&proceso_ready);
@@ -363,7 +369,7 @@ void *comprobar_espacio_memoria(void* arg){
 }
 
 bool espacio_en_memoria(t_pcb* proceso){
-    int conexion = crear_conexion_memoria();
+   /*  int conexion = crear_conexion_memoria();
 
     t_paquete* paqueteInfo = crear_paquete(INICIAR_PROCESO);
     agregar_a_paquete(paqueteInfo, &proceso->pid, sizeof(int));
@@ -375,7 +381,8 @@ bool espacio_en_memoria(t_pcb* proceso){
 
     int resultado;
     recv(conexion, &resultado, sizeof(int), 0);
-    return resultado==OK;
+    return resultado==OK; */
+    return 1;
 }
 
 /* void poner_en_ready(t_pcb* proceso){
