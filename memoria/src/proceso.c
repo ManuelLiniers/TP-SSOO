@@ -12,7 +12,9 @@ t_proceso* crear_proceso(int pid, int size, char* path_instruc){
 //  Cargo las instrucciones del proceso
 	proceso_nuevo->instrucciones = leer_archivo_y_cargar_instrucciones(path_instruc);
 
-    proceso_nuevo->tabla_paginas_raiz = crear_tabla_multinivel(1, CANTIDAD_NIVELES);
+    int paginas = size/TAM_PAGINA + 1;
+    int contador = 0;
+    proceso_nuevo->tabla_paginas_raiz = crear_tabla_multinivel(1, &paginas, &contador);
     pthread_mutex_init(&proceso_nuevo->mutex_TP, NULL);
 
 	return proceso_nuevo;

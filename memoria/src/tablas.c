@@ -4,31 +4,32 @@
 #include <stdint.h>
 
 // Crea una tabla de páginas multinivel recursivamente
-t_tabla_nivel* crear_tabla_multinivel(int nivel_actual, int nivel_final) {
+t_tabla_nivel* crear_tabla_multinivel(int nivel_actual, int* paginas_restantes, int* contador_paginas) {
+    if (*paginas_restantes == 0) return NULL;
+
     t_tabla_nivel* tabla = malloc(sizeof(t_tabla_nivel));
     tabla->nivel = nivel_actual;
     tabla->entradas = list_create();
 
-    for (int i = 0; i < ENTRADAS_POR_TABLA; i++) {
-        t_entrada_tabla* entrada = malloc(sizeof(t_entrada_tabla));
-        entrada->numero_entrada = i;
+    for (int i = 0; i < ENTRADAS_POR_TABLA && *paginas_restantes > 0; i++){
+        if (nivel_actual == CANTIDAD_NIVELES) {
 
-        if (nivel_actual == nivel_final) {
-            t_pagina* pagina = malloc(sizeof(t_pagina));
-            pagina->nro_pagina = i;
-            pagina->marco_asignado = -1;
-            entrada->siguiente_nivel = pagina;
-            entrada->es_ultimo_nivel = true;
+            t_pagina* pag = malloc(sizeof(t_pagina));
+            pag->nro_pagina = (*contador_paginas)++;
+            pag->marco_asignado = -1;
+
+            list_add(tabla->entradas, pag);
+            --(*paginas_restantes);
+
         } else {
-            entrada->siguiente_nivel = crear_tabla_multinivel(nivel_actual + 1, nivel_final);
-            entrada->es_ultimo_nivel = false;
+            t_tabla_nivel* sub = crear_tabla_multinivel(nivel_actual + 1, paginas_restantes, contador_paginas);
+
+            list_add(tabla->entradas, sub);
         }
-
-        list_add(tabla->entradas, entrada);
     }
-
     return tabla;
 }
+
 
 t_list* calcular_indices_por_nivel(uint32_t nro_pagina_logica) {
     t_list* indices = list_create();
@@ -47,20 +48,32 @@ t_pagina* buscar_pagina_en_tabla(t_tabla_nivel* raiz, uint32_t nro_pagina_logica
     t_list* indices = calcular_indices_por_nivel(nro_pagina_logica);
     t_tabla_nivel* actual = raiz;
 
-    for (int i = 0; i < list_size(indices); i++) {
+    int niveles = list_size(indices);
+
+    for (int i = 0; i < niveles; i++) {
         int idx = (int)(intptr_t)list_get(indices, i);
 
         usleep(RETARDO_MEMORIA);
         metricas->accesos_tablas_paginas++;
 
+        if (idx >= list_size(actual->entradas)) {
+            log_error(memoria_logger, "Error: Índice %d fuera de rango en nivel %d (tamaño: %d)",
+              idx, i, list_size(actual->entradas));
+            list_destroy(indices);
+            return NULL;
+        }
+
         if (i == CANTIDAD_NIVELES - 1) {
-            t_entrada_tabla* entrada = list_get(actual->entradas, idx);
-            t_pagina* pag = (t_pagina*) entrada->siguiente_nivel;
+            t_pagina* pag = (t_pagina*) list_get(actual->entradas, idx);
             list_destroy(indices);
             return pag;
         } else {
-            t_entrada_tabla* entrada = list_get(actual->entradas, idx);
-            actual = (t_tabla_nivel*) entrada->siguiente_nivel;
+            actual = (t_tabla_nivel*) list_get(actual->entradas, idx);
+            if (!actual) {
+                log_error(memoria_logger, "Error: Subtabla nula al intentar acceder al nivel %d", i);
+                list_destroy(indices);
+                return NULL;
+            }
         }
     }
 
@@ -68,24 +81,21 @@ t_pagina* buscar_pagina_en_tabla(t_tabla_nivel* raiz, uint32_t nro_pagina_logica
     return NULL;
 }
 
-void liberar_tablas(t_tabla_nivel* tabla) {
-    for (int i = 0; i < list_size(tabla->entradas); i++) {
-        t_entrada_tabla* entrada = list_get(tabla->entradas, i);
-
-        if (entrada->es_ultimo_nivel) {
-            liberar_pagina_y_marcos((t_pagina*)entrada->siguiente_nivel);
-        } else {
-            liberar_tablas((t_tabla_nivel*)entrada->siguiente_nivel);
-        }
-
-        free(entrada);
+void liberar_tablas(void* puntero) {
+    t_tabla_nivel* tabla = (t_tabla_nivel*) puntero;
+    if (tabla->nivel == CANTIDAD_NIVELES) {
+        /* Hojas: liberar cada t_pagina */
+        list_destroy_and_destroy_elements(tabla->entradas, liberar_pagina_y_marcos);
+    } else {
+        /* Intermedios: destruir sub‑tablas recursivamente */
+        list_iterate(tabla->entradas, liberar_tablas);
+        list_destroy(tabla->entradas);
     }
-
-    list_destroy(tabla->entradas);
     free(tabla);
 }
 
-void liberar_pagina_y_marcos(t_pagina* pagina){
+void liberar_pagina_y_marcos(void* puntero){
+    t_pagina* pagina = (t_pagina*) puntero;
     if(pagina->marco_asignado != -1){
         liberar_marco(pagina->marco_asignado);
     }

@@ -15,17 +15,18 @@ typedef struct {
     int escrituras_memoria;
 } t_metricas_proceso;
 
+/*
 // Entrada de tabla de páginas
 typedef struct {
     int numero_entrada;
     void* siguiente_nivel; // t_tabla_nivel* o t_pagina*
     bool es_ultimo_nivel;
-} t_entrada_tabla;
+} t_entrada_tabla;*/
 
 // Estructura de una tabla de nivel
 typedef struct {
     int nivel;                // 1 = raíz, 2 = segundo nivel, etc.
-    t_list* entradas;             // Lista de t_entrada_tabla*
+    t_list* entradas;             // Lista de t_tabla_nivel* o t_pagina*
 } t_tabla_nivel;
 
 // Página virtual de un proceso
