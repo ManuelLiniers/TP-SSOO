@@ -13,7 +13,7 @@ void inicializar_planificacion();
 void inicializar_servidores();
 
     // IO 
-void iniciar_servidor_io(void* arg);
+void iniciar_servidor_io();
 void atender_io(void* arg);
 void identificar_io(t_buffer* unBuffer,int socket_fd);
     // Dispatch

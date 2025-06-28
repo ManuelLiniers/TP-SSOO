@@ -25,10 +25,8 @@ typedef enum { NEW, READY, EXEC, BLOCKED, SUSP_READY, SUSP_BLOCKED, EXIT } t_est
 
 int id_estado(t_estado estado);
 
-extern t_queue* queue_new;
-extern t_list* queue_new_PMCP;
-extern t_queue* queue_ready;
-extern t_list* queue_ready_SJF;
+extern t_list* queue_new;
+extern t_list* queue_ready;
 extern t_list* queue_block;
 extern t_queue* queue_exit;
 

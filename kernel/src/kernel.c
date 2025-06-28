@@ -1,6 +1,5 @@
 #include "kernel.h"
 
-pthread_t servidor_io;
 pthread_t cpu_dispatch;
 pthread_t cpu_interrupt;
 
@@ -13,11 +12,9 @@ int main(int argc, char* argv[]) {
 
 	crear_proceso(argv[1], argv[2]); // Creo proceso inicial con valores recibidos por parametro
 	inicializar_planificacion();
-	
-    // log_debug(logger_kernel,"Iniciando servidor Kernel");
-	// int server_fd_kernel_io = iniciar_servidor(logger_kernel, ip_kernel, puerto_kernel); 
-	// Si esta ESCUCHANDO en PUERTO KERNEL -> SE CONECTA CON IO PORQUE IO ES CLIENTE NADA MÁS DE ESTE PUERTO. SI ESCUCHA OTRO PUERTO, SE CONECTA A ALGUNO DE CPU
 
+	iniciar_servidor_io();
+	
     return EXIT_SUCCESS;
 }
 
@@ -79,39 +76,15 @@ void inicializar_planificacion(){
 
 		log_debug(logger_kernel, "Planificacion largo plazo con FIFO");
 		pthread_t planificador_largo_plazo_FIFO;
-		void* arg = malloc(sizeof(void));
-		t_agregacion_ready* argumento = malloc(sizeof(t_agregacion_ready));
-		if(strcmp(algoritmo_corto_plazo, "SJF") == 0 || strcmp(algoritmo_corto_plazo, "SJFDESALOJO") == 0){
-			argumento->cola_ready = (void*) queue_ready_SJF;
-			argumento->funcion_agregacion = agregar_a_lista;
-			arg = (void*) argumento;
-		}
-		else{
-			argumento->cola_ready = (void*) queue_ready;
-			argumento->funcion_agregacion = agregar_a_cola;
-			arg = (void*) argumento;
-		}
-		pthread_create(&planificador_largo_plazo_FIFO, NULL, (void *) planificar_largo_plazo_FIFO, arg);
-		pthread_join(planificador_largo_plazo_FIFO, NULL);
+		pthread_create(&planificador_largo_plazo_FIFO, NULL, (void *) planificar_largo_plazo_FIFO, NULL);
+		pthread_detach(planificador_largo_plazo_FIFO);
 	}
 	if(strcmp(algoritmo_largo_plazo,"PMCP") == 0){
 
 		log_debug(logger_kernel, "Planificacion largo plazo con PMCP");
 		pthread_t planificador_largo_plazo_PMCP;
-		void* arg = malloc(sizeof(void));
-		t_agregacion_ready* argumento = malloc(sizeof(t_agregacion_ready));
-		if(strcmp(algoritmo_corto_plazo, "SJF") == 0 || strcmp(algoritmo_corto_plazo, "SJFDESALOJO") == 0){
-			argumento->cola_ready = (void*) queue_ready_SJF;
-			argumento->funcion_agregacion = agregar_a_lista;
-			arg = (void*) argumento;
-		}
-		else{
-			argumento->cola_ready = (void*) queue_ready;
-			argumento->funcion_agregacion = agregar_a_cola;
-			arg = (void*) argumento;
-		}
-		pthread_create(&planificador_largo_plazo_PMCP, NULL, (void *) planificar_largo_plazo_PMCP, arg);
-		pthread_join(planificador_largo_plazo_PMCP, NULL);
+		pthread_create(&planificador_largo_plazo_PMCP, NULL, (void *) planificar_largo_plazo_PMCP, NULL);
+		pthread_detach(planificador_largo_plazo_PMCP);
 	}
 
 	log_debug(logger_kernel, "Planificacion inicializada");
@@ -123,14 +96,9 @@ void inicializar_servidores(){
 
 	pthread_create(&cpu_dispatch, NULL, (void*) iniciar_cpu_dispatch, NULL);
 	pthread_detach(cpu_dispatch);
-	
-	pthread_create(&servidor_io, NULL, (void*) iniciar_servidor_io, NULL);
-	pthread_detach(servidor_io);
 
 	pthread_create(&cpu_interrupt, NULL, (void*) iniciar_cpu_interrupt, NULL);
 	pthread_detach(cpu_interrupt);
-
-	
 
 	log_debug(logger_kernel, "servidores iniciados");
 }
@@ -233,7 +201,7 @@ void modificar_interrupt(t_cpu* una_cpu, int socket_fd){
 	una_cpu->socket_interrupt = socket_fd;
 }
 
-void iniciar_servidor_io(void* arg){
+void iniciar_servidor_io(){
 	log_debug(logger_kernel, "entro al hilo IO");
 	int server_fd_kernel_io = iniciar_servidor(logger_kernel, NULL, puerto_io);
 
@@ -281,23 +249,12 @@ void crear_proceso(char* instrucciones, char* tamanio_proceso){
     pcb_nuevo->tamanio_proceso = atoi(tamanio_proceso);
 	pcb_nuevo->estimacion_anterior = estimacion_inicial;
 	pcb_nuevo->estimacion_actual = estimacion_inicial;
+	pcb_nuevo->estado = NEW;
 	log_info(logger_kernel, "## (<%d>) Se crea el proceso - Estado: NEW", pcb_nuevo->pid);
-    if(strcmp(algoritmo_largo_plazo,"FIFO") == 0){
-		wait_mutex(&mutex_queue_new);
-		queue_push(queue_new, pcb_nuevo);
-		log_info(logger_kernel, "Cola de NEW:");
-		mostrar_cola(&queue_new);
-		signal_mutex(&mutex_queue_new);
-		signal_sem(&nuevo_proceso);
-		cambiarEstado(pcb_nuevo, NEW);
-	}
-    if(strcmp(algoritmo_largo_plazo,"PMCP") == 0){
-		wait_mutex(&mutex_queue_new);
-		list_add_in_index(queue_new_PMCP, 0, pcb_nuevo); 
-		// pusheo el nuevo proceso adelante de todo para poder sacarlo en el planificador y verificar primero con este
-		cambiarEstado(pcb_nuevo, NEW);
-		signal_mutex(&mutex_queue_new);
-		signal_sem(&nuevo_proceso);
-    }
+
+	wait_mutex(&mutex_queue_new);
+	list_add(queue_new, pcb_nuevo);
+	signal_mutex(&mutex_queue_new);
+	signal_sem(&nuevo_proceso);
 }
 

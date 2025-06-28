@@ -10,9 +10,8 @@ int estimacion_inicial;
 double estimador_alfa;
 
 // Definición de las colas globales
-t_queue* queue_new;
-t_list* queue_new_PMCP;
-t_queue* queue_ready;
+t_list* queue_new;
+t_list* queue_ready;
 t_list* queue_ready_SJF;
 t_list* queue_block;
 t_queue* queue_exit;
@@ -26,10 +25,8 @@ void agregar_a_cola(void* cola_ready, t_pcb* proceso){
 }
 
 void scheduler_init(void) {
-    queue_new  = queue_create();
-    queue_new_PMCP = list_create();
-    queue_ready = queue_create();
-    queue_ready_SJF = list_create();
+    queue_new = list_create();
+    queue_ready = list_create();
     queue_block = list_create();
     queue_exit = queue_create();
     lista_procesos_ejecutando = list_create();
@@ -37,8 +34,8 @@ void scheduler_init(void) {
 }
 
 void scheduler_destroy(void) {
-    queue_destroy_and_destroy_elements(queue_new, pcb_destroy);
-    queue_destroy_and_destroy_elements(queue_ready, pcb_destroy);
+    list_destroy_and_destroy_elements(queue_new, pcb_destroy);
+    list_destroy_and_destroy_elements(queue_ready, pcb_destroy);
     list_destroy_and_destroy_elements(queue_block, pcb_destroy);
     queue_destroy_and_destroy_elements(queue_exit, pcb_destroy);
 }
@@ -54,7 +51,9 @@ void iniciar_cpus(){
 // Se crea un PCB con contador en 0 y en NEW
 t_pcb* pcb_create() {
     t_pcb* pcb = malloc(sizeof(t_pcb));
-    if (!pcb) return NULL;
+    if (pcb == NULL){ 
+        return NULL;
+    };
     pcb->pid = pid_incremental;
     pcb->program_counter = 0;
     pcb->estado = NEW;
@@ -66,13 +65,6 @@ t_pcb* pcb_create() {
     int metricas_estado[7] = {0, 0, 0, 0, 0, 0, 0};
     memcpy(pcb->metricas_estado, metricas_estado, sizeof(int[5]));
     pcb->metricas_tiempo = list_create();
-
-    /* tengo una idea para implementar las metricas que capaz es mas simple
-    no lo pense tanto en codigo pero capaz que sea un vector con 5 espacios
-    donde cada estado equivalga a cada espacio, hacemos una funcion que
-    devuelva la posicion segun el estado que pidas para poder acceder
-    ejemplo: pcb->metricas[id_estado(NEW)], id_estado(NEW) devolveria 0 
-    */
 
     return pcb;
 }
@@ -144,8 +136,6 @@ t_pcb* buscar_proceso_pid(uint32_t pid){
     for(int i=0; i<list_size(lista_procesos_ejecutando); i++){
         t_pcb* actual = list_get(lista_procesos_ejecutando, i);
         if(actual->pid == (uint32_t)pid){
-            //list_remove(lista_procesos_ejecutando, i); 
-            // no eliminar aca porque hay respuestas que no necesariamente sacan al proceso de ejecucion, ejemplo INIT_PROC
             return actual;
         }
     }
@@ -268,14 +258,14 @@ t_queue* obtener_cola_io(int io_id){
 
 void mostrar_cola(t_queue** cola){
     if(queue_is_empty(*cola)){
-        log_info(logger_kernel, "La cola esta vacia");
+        log_debug(logger_kernel, "La cola esta vacia");
     }
     else{
         t_queue* aux = queue_create();
         for(int i = 0; i<queue_size(*cola); i++){
             t_pcb* proceso = queue_pop(*cola);
             queue_push(aux, proceso);
-            log_info(logger_kernel, "PID: (<%d>)", proceso->pid);
+            log_debug(logger_kernel, "PID: (<%d>)", proceso->pid);
         }
         *cola=aux;
         log_info(logger_kernel, "------");
