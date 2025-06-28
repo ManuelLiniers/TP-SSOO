@@ -259,7 +259,6 @@ long calcular_tiempo(t_metricas_estado_tiempo* metrica){
 
 
 void *planificar_largo_plazo_FIFO(void* arg){
-    t_agregacion_ready* agregacion = arg;
 	while(1){
         wait_sem(&nuevo_proceso);
         wait_mutex(&mutex_queue_new);
@@ -273,9 +272,9 @@ void *planificar_largo_plazo_FIFO(void* arg){
                 signal_mutex(&mutex_queue_new);
 
                 // PONER EN READY
-                log_debug(logger_kernel, "Cola de ready:");
-                mostrar_cola((t_queue**) &agregacion->cola_ready);
                 poner_en_ready(proceso);
+                log_debug(logger_kernel, "Cola de ready:");
+                mostrar_lista(queue_ready);
 			}
             else{
                 signal_sem(&nuevo_proceso); // el proceso nuevo sigue en NEW, hago signal de vuelta
@@ -290,7 +289,6 @@ void *planificar_largo_plazo_FIFO(void* arg){
 }
 
 void *planificar_largo_plazo_PMCP(void* arg){
-    t_agregacion_ready* agregacion = arg;
     pthread_t hilo_comprobar_espacio;
     pthread_create(&hilo_comprobar_espacio, NULL, (void*) comprobar_espacio_memoria, arg);
     pthread_detach(hilo_comprobar_espacio);
@@ -308,7 +306,7 @@ void *planificar_largo_plazo_PMCP(void* arg){
 
             // PONER EN READY
             log_info(logger_kernel, "Cola de ready:");
-            mostrar_cola((t_queue**) &agregacion->cola_ready);
+            mostrar_lista(queue_ready);
             poner_en_ready(proceso);
         }
     }
@@ -375,10 +373,6 @@ bool shortest_job_first(void* a, void* b){
     return proceso_a->estimacion_actual < proceso_b->estimacion_actual;
 }
 void poner_en_ejecucion(t_pcb* proceso, t_cpu* cpu_encargada, int socket){
-
-    // t_cpu* cpu_libre = buscar_cpu_libre(lista_cpus);
-    // mandar a alguna cpu dependiendo de cual este libre
-
     t_paquete* paquete = crear_paquete(CONTEXTO_PROCESO);
     agregar_a_paquete(paquete, &proceso->pid, sizeof(int));
     agregar_a_paquete(paquete, &proceso->program_counter, sizeof(int));
@@ -391,10 +385,6 @@ void poner_en_ejecucion(t_pcb* proceso, t_cpu* cpu_encargada, int socket){
     nueva->proceso = proceso;
     list_add(lista_procesos_ejecutando, nueva);
     cambiarEstado(proceso, EXEC);
-
-    
-    // *cpu_encargada = cpu_libre;
-
 }
 
 void enviar_proceso_a_io(t_pcb* proceso, int io_id, int io_tiempo){
@@ -408,12 +398,12 @@ void enviar_proceso_a_io(t_pcb* proceso, int io_id, int io_tiempo){
 
     log_info(logger_kernel, "## %d - Bloqueado por IO: %s", proceso->pid, dispositivo->nombre);
 
-    int *args = malloc(sizeof(int));
-	*args = io_id;
-
     pthread_t hilo_vuelta_io;
-    pthread_create(&hilo_vuelta_io, NULL, (void*) vuelta_proceso_io, args); // creo hilo para esperar la vuelta de la io
+    pthread_create(&hilo_vuelta_io, NULL, (void*) vuelta_proceso_io, &(io_id)); // creo hilo para esperar la vuelta de la io
     pthread_detach(hilo_vuelta_io);
+    pthread_t comprobacion_suspendido;
+    pthread_create(&comprobacion_suspendido, NULL, (void*) comprobar_suspendido, proceso);
+    pthread_detach(comprobacion_suspendido);
 }
 
 void vuelta_proceso_io(void* args){
@@ -428,10 +418,16 @@ void vuelta_proceso_io(void* args){
 
     tiempo_en_io *proceso = queue_pop(obtener_cola_io(io->id));
 
-    cambiarEstado(proceso->pcb, READY);
-    wait_mutex(&mutex_queue_ready);
-    list_add(queue_ready, proceso->pcb);
-    signal_mutex(&mutex_queue_ready);
+    if(proceso->pcb->estado == SUSP_BLOCKED){
+        wait_mutex(&mutex_queue_susp_ready);
+        queue_push(queue_susp_ready, proceso);
+        signal_mutex(&mutex_queue_susp_ready);
+        cambiarEstado(proceso->pcb, SUSP_READY);
+    }
+    else{
+        poner_en_ready(proceso->pcb);
+    }
+    
 
     log_info(logger_kernel, "## %d finalizó IO y pasa a READY", *pid);
 
@@ -441,8 +437,14 @@ void vuelta_proceso_io(void* args){
     free(buffer);
 }
 
-void comprobar_cola_bloqueados(int io_id){
+void comprobar_suspendido(t_pcb* proceso){
+    usleep(tiempo_suspension / 1000); // tiempo_suspension en ms / 1000 = tiempo_suspension en us
+    if(proceso->estado == BLOCKED){
+        cambiarEstado(proceso, SUSP_BLOCKED);
+    }
+}
 
+void comprobar_cola_bloqueados(int io_id){
     t_queue* cola_io = obtener_cola_io(io_id);
 
     if(!queue_is_empty(cola_io)){

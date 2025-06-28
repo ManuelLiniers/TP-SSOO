@@ -39,6 +39,7 @@ void paquete_memoria_pid(t_pcb* proceso, op_code codigo);
 void enviar_proceso_a_io(t_pcb* proceso, int io_id, int io_tiempo);
 void vuelta_proceso_io(void* args);
 void comprobar_cola_bloqueados(int io_id);
+void comprobar_suspendido(t_pcb* proceso);
 
 bool hay_cpu_libre(t_cpu** cpu_encargada);
 bool espacio_en_memoria(t_pcb* proceso);

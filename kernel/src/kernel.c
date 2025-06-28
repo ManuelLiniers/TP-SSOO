@@ -44,30 +44,29 @@ void inicializar_kernel(char* instrucciones, char* tamanio_proceso){
 	algoritmo_largo_plazo = config_get_string_value(config_kernel, "ALGORITMO_INGRESO_A_READY"); // FIFO, PMCP
 	estimacion_inicial = config_get_int_value(config_kernel, "ESTIMACION_INICIAL");
 	estimador_alfa = config_get_double_value(config_kernel, "ALFA");
+	tiempo_suspension = config_get_int_value(config_kernel, "TIEMPO_SUSPENSION");
 
 	log_debug(logger_kernel, "kernel inicializado");
 }
 
 void inicializar_planificacion(){
 
+	pthread_t planificador_corto_plazo;
+	pthread_t planificador_largo_plazo;
 	if(strcmp(algoritmo_corto_plazo,"FIFO") == 0){
-
 		log_debug(logger_kernel, "Planificacion corto plazo con FIFO");
-		pthread_t planificador_corto_plazo;
 		pthread_create(&planificador_corto_plazo, NULL, (void*) planificar_corto_plazo_FIFO, NULL);
 		pthread_detach(planificador_corto_plazo);
 	}
 	if(strcmp(algoritmo_corto_plazo,"SJF") == 0){
 
 		log_debug(logger_kernel, "Planificacion corto plazo con SJF sin desalojo");
-		pthread_t planificador_corto_plazo;
 		pthread_create(&planificador_corto_plazo, NULL, (void*) planificar_corto_plazo_SJF, NULL);
 		pthread_detach(planificador_corto_plazo);
 	}
 	if(strcmp(algoritmo_corto_plazo,"SJFDESALOJO") == 0){
 
 		log_debug(logger_kernel, "Planificacion corto plazo con SJF sin desalojo");
-		pthread_t planificador_corto_plazo;
 		pthread_create(&planificador_corto_plazo, NULL, (void*) planificar_corto_plazo_SJF_desalojo, NULL);
 		pthread_detach(planificador_corto_plazo);
 	}
@@ -75,16 +74,14 @@ void inicializar_planificacion(){
 	if(strcmp(algoritmo_largo_plazo,"FIFO") == 0){
 
 		log_debug(logger_kernel, "Planificacion largo plazo con FIFO");
-		pthread_t planificador_largo_plazo_FIFO;
-		pthread_create(&planificador_largo_plazo_FIFO, NULL, (void *) planificar_largo_plazo_FIFO, NULL);
-		pthread_detach(planificador_largo_plazo_FIFO);
+		pthread_create(&planificador_largo_plazo, NULL, (void *) planificar_largo_plazo_FIFO, NULL);
+		pthread_detach(planificador_largo_plazo);
 	}
 	if(strcmp(algoritmo_largo_plazo,"PMCP") == 0){
 
 		log_debug(logger_kernel, "Planificacion largo plazo con PMCP");
-		pthread_t planificador_largo_plazo_PMCP;
-		pthread_create(&planificador_largo_plazo_PMCP, NULL, (void *) planificar_largo_plazo_PMCP, NULL);
-		pthread_detach(planificador_largo_plazo_PMCP);
+		pthread_create(&planificador_largo_plazo, NULL, (void *) planificar_largo_plazo_PMCP, NULL);
+		pthread_detach(planificador_largo_plazo);
 	}
 
 	log_debug(logger_kernel, "Planificacion inicializada");

@@ -19,6 +19,7 @@ extern t_list* lista_cpus;
 void iniciar_cpus();
 extern int estimacion_inicial;
 extern double estimador_alfa;
+extern int tiempo_suspension;
 
 // Estados posibles de un proceso
 typedef enum { NEW, READY, EXEC, BLOCKED, SUSP_READY, SUSP_BLOCKED, EXIT } t_estado;
@@ -28,6 +29,7 @@ int id_estado(t_estado estado);
 extern t_list* queue_new;
 extern t_list* queue_ready;
 extern t_list* queue_block;
+extern t_queue* queue_susp_ready;
 extern t_queue* queue_exit;
 
 typedef struct{

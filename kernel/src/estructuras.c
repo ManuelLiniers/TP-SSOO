@@ -7,6 +7,7 @@ t_list* lista_dispositivos_io;
 t_list* lista_cpus;
 t_list* lista_procesos_ejecutando;
 int estimacion_inicial;
+int tiempo_suspension;
 double estimador_alfa;
 
 // Definición de las colas globales
@@ -14,6 +15,7 @@ t_list* queue_new;
 t_list* queue_ready;
 t_list* queue_ready_SJF;
 t_list* queue_block;
+t_queue* queue_susp_ready;
 t_queue* queue_exit;
 
 void agregar_a_lista(void* cola_ready, t_pcb* proceso){
@@ -28,6 +30,7 @@ void scheduler_init(void) {
     queue_new = list_create();
     queue_ready = list_create();
     queue_block = list_create();
+    queue_susp_ready = queue_create();
     queue_exit = queue_create();
     lista_procesos_ejecutando = list_create();
 
