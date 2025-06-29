@@ -18,6 +18,7 @@ int cpu_fd;
 
 void* espacio_usuario;
 t_list* procesos_memoria;
+t_list* lista_swap;
 
 t_log* memoria_logger;
 t_config* memoria_config;

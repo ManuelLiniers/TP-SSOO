@@ -59,16 +59,17 @@ extern int cpu_fd;
 // Recursos de ejecución
 extern void* espacio_usuario;
 extern t_list* procesos_memoria;
+extern t_list* lista_swap;
 
 // Logs y config
 extern t_log* memoria_logger;
 extern t_config* memoria_config;
 
-// Paginas
+// Marcos
 extern t_bitarray* bit_marcos;
 extern int marcos_totales;
 
-// Semaforos
+// Mutex
 extern pthread_mutex_t m_tablas;
 extern pthread_mutex_t mutex_bit_marcos;
 extern pthread_mutex_t mutex_espacio_usuario;

@@ -15,6 +15,7 @@
 #include "marcos.h"
 #include "tablas.h"
 #include "lectura_escritura.h"
+#include "manejo_swap.h"
 
 
 

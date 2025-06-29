@@ -105,7 +105,10 @@ void atender_dump_memory(t_buffer* unBuffer, int cpu_fd) {
 
     int resultado = dump_de_memoria(pid);  // 0 si OK, -1 si hubo error
 
-    int codigo_respuesta = resultado == 0 ? OK : -1;
+    int codigo_respuesta = OK;
+	if(resultado != 0){
+		codigo_respuesta = -1;
+	}
     send(cpu_fd, &codigo_respuesta, sizeof(int), 0);
 
     if (codigo_respuesta == OK) {

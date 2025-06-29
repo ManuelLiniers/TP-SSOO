@@ -37,6 +37,8 @@ int escribir_espacio(uint32_t direccion_fisica, int tamanio, void* valor, int pi
 }
 
 int dump_de_memoria(uint32_t pid) {
+    log_info(memoria_logger, "## PID: %d - Memory Dump solicitado", pid);
+
     t_proceso* proceso = obtener_proceso_por_id(pid);
     if (!proceso) {
         log_error(memoria_logger, "PID: %d - No se encuentra el proceso para el dump", pid);
@@ -59,9 +61,7 @@ int dump_de_memoria(uint32_t pid) {
 
     fclose(archivo);
 
-    // Log obligatorio según el enunciado
-    log_info(memoria_logger, "## PID: %d - Memory Dump solicitado", pid);
-
+    log_debug(memoria_logger, "Marcos escritos");
     return 0;
 }
 
@@ -71,7 +71,7 @@ void escribir_marcos_en_archivo(FILE* archivo, t_tabla_nivel* tabla, int* pagina
         if (tabla->nivel == CANTIDAD_NIVELES) {
             t_pagina* pagina = (t_pagina*) list_get(tabla->entradas, i);
 
-            if (pagina->marco_asignado == -1) {
+            if (pagina->marco_asignado != -1) {
                 poner_marco_en_archivo(archivo, pagina->marco_asignado);
             }
         } else {
@@ -82,26 +82,17 @@ void escribir_marcos_en_archivo(FILE* archivo, t_tabla_nivel* tabla, int* pagina
 }
 
 void poner_marco_en_archivo(FILE* archivo, int marco){
-    // Validaciones iniciales
+
     if (archivo == NULL || marco < 0) {
         log_error(memoria_logger, "Parámetros inválidos");
         return;
     }
 
-    const uint8_t* inicio_marco = (uint8_t*)(espacio_usuario + marco);
-    const int bytes_por_linea = 16;
-    char buffer_linea[bytes_por_linea * 3 + 1]; // 2 chars por byte + espacio + \0
+    void* buffer_para_escritura = malloc(TAM_PAGINA);
 
-    for (int j = 0; j < TAM_PAGINA; j++) {
-        // Alternativa más segura para acceso a memoria
-        uint8_t valor = inicio_marco[j];
-        
-        // Formatear en buffer
-        sprintf(buffer_linea + (j % bytes_por_linea) * 3, "%02X ", valor);
+    pthread_mutex_lock(&mutex_espacio_usuario);
+    memcpy(buffer_para_escritura, espacio_usuario + marco * TAM_PAGINA, TAM_PAGINA);    
+    pthread_mutex_unlock(&mutex_espacio_usuario);
 
-        // Escribir línea completa
-        if ((j + 1) % bytes_por_linea == 0 || j == TAM_PAGINA - 1) {
-            fprintf(archivo, "%s\n", buffer_linea);
-        }
-    }
+    fwrite(buffer_para_escritura, 1, TAM_PAGINA, archivo);
 }
