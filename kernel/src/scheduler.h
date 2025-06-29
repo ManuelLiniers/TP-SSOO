@@ -30,7 +30,7 @@ bool shortest_job_first(void* a, void* b);
 void esperar_devolucion_proceso(void* arg);
 void esperar_dispatch(void* arg);
 void esperar_dispatch_SJF_desalojo(void* arg);
-void actualizar_estimacion(t_pcb* proceso);
+void actualizar_estimaciones();
 void log_metricas_estado(t_pcb* proceso);
 long calcular_tiempo(t_metricas_estado_tiempo* metrica);
 void* planificar_corto_plazo_FIFO(void* arg);

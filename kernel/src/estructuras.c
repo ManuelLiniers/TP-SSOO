@@ -159,11 +159,14 @@ void cambiarEstado(t_pcb* proceso, t_estado estado){
     t_metricas_estado_tiempo* metrica_anterior = obtener_ultima_metrica(proceso);
 
     if(metrica_anterior != NULL){
-        metrica_anterior->tiempo_fin = (double)time(NULL); // o se puede cambiar por time()
+        metrica_anterior->tiempo_fin = (double)time(NULL); 
         if(metrica_anterior->estado == EXEC && estado == BLOCKED ){
-            t_list* estados_exec = obtener_exec(proceso);
-            proceso->rafaga_real = calcular_rafaga(estados_exec);
+            // t_list* estados_exec = obtener_exec(proceso);
+            // proceso->rafaga_real = calcular_rafaga(estados_exec);
             calcular_estimacion(proceso);
+        }
+        if(metrica_anterior->estado == EXEC && estado == READY){
+            temporal_stop(proceso->rafaga_real);
         }
     }
 
@@ -187,7 +190,7 @@ void cambiarEstado(t_pcb* proceso, t_estado estado){
 }
 
 void calcular_estimacion(t_pcb* proceso){
-    proceso->estimacion_actual = proceso->rafaga_real * estimador_alfa + proceso->estimacion_anterior * (1-estimador_alfa);
+    proceso->estimacion_actual = temporal_gettime(proceso->rafaga_real) * estimador_alfa + proceso->estimacion_anterior * (1-estimador_alfa);
     proceso->estimacion_anterior = proceso->estimacion_actual;
 }
 

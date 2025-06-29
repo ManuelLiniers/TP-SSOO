@@ -154,6 +154,9 @@ void* planificar_corto_plazo_SJF(void* arg){
 void* planificar_corto_plazo_SJF_desalojo(void* arg){
       while(1){
         wait_sem(&proceso_ready);
+        wait_mutex(&mutex_procesos_ejecutando);
+        actualizar_estimaciones();
+        signal_mutex(&mutex_procesos_ejecutando);
         wait_mutex(&mutex_queue_ready);
         if(!list_is_empty(queue_ready)){
             list_sort(queue_ready, shortest_job_first);
@@ -197,16 +200,12 @@ void* planificar_corto_plazo_SJF_desalojo(void* arg){
     }
 }
 
-void actualizar_estimacion(t_pcb* proceso){
-    double tiempo_actual = (double)time(NULL);
-    t_metricas_estado_tiempo* metrica_anterior = obtener_ultima_metrica(proceso);
-    if(metrica_anterior->tiempo_fin == 0){
-        proceso->estimacion_actual-= (tiempo_actual - metrica_anterior->tiempo_inicio);
+void actualizar_estimaciones(){
+    for(int i = 0; i<list_size(lista_procesos_ejecutando); i++){
+        t_unidad_ejecucion* ejecucion = list_get(lista_procesos_ejecutando, i);
+        t_pcb* proceso = ejecucion->proceso;
+        proceso->estimacion_actual -= temporal_gettime(ejecucion->tiempo_ejecutando);
     }
-    else{
-        proceso->estimacion_actual-= (tiempo_actual - metrica_anterior->tiempo_fin);
-    }
-    metrica_anterior->tiempo_fin = tiempo_actual;
 }
 
 void log_metricas_estado(t_pcb* proceso){
@@ -425,6 +424,7 @@ void poner_en_ejecucion(t_pcb* proceso, t_cpu* cpu_encargada, int socket){
     t_unidad_ejecucion* nueva = malloc(sizeof(t_unidad_ejecucion));
     nueva->cpu = cpu_encargada;
     nueva->proceso = proceso;
+    nueva->tiempo_ejecutando = temporal_create();
     list_add(lista_procesos_ejecutando, nueva);
     cambiarEstado(proceso, EXEC);
 }

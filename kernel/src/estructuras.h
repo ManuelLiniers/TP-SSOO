@@ -59,9 +59,9 @@ typedef struct {
     int metricas_estado[5];         // Lista de veces que estuvo en cada estado
     t_list* metricas_tiempo;  // Lista de tiempo que estuvo en cada estado
     int registros[4];
-    long estimacion_anterior;
-    long rafaga_real;
-    long estimacion_actual;
+    int64_t estimacion_anterior;
+    t_temporal* rafaga_real;
+    int64_t estimacion_actual;
     // Más campos opcionales: tamaño de memoria, registros, métricas, etc.
 } t_pcb;
 
@@ -72,17 +72,13 @@ void cambiarEstado(t_pcb* proceso, t_estado estado);
 void calcular_estimacion(t_pcb* proceso);
 char* estado_to_string(t_estado estado);
 
-typedef struct{
-    void (*funcion_agregacion)(void* cola_ready, t_pcb* proceso);
-    void* cola_ready;
-} t_agregacion_ready;
-
 void agregar_a_lista(void* cola_ready, t_pcb* proceso);
 void agregar_a_cola(void* cola_ready, t_pcb* proceso);
 
 typedef struct {
     t_pcb* proceso;
     t_cpu* cpu;
+    t_temporal* tiempo_ejecutando;
 } t_unidad_ejecucion;
 
 extern t_list* lista_procesos_ejecutando;
