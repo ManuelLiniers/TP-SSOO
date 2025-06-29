@@ -54,9 +54,8 @@ int dump_de_memoria(uint32_t pid) {
         return -1;
     }
 
-    pthread_mutex_lock(&proceso->mutex_TP);
-    escribir_marcos_en_archivo(archivo, proceso->tabla_paginas_raiz);
-    pthread_mutex_unlock(&proceso->mutex_TP);
+    int paginas = proceso->paginas;
+    escribir_marcos_en_archivo(archivo, proceso->tabla_paginas_raiz, &paginas);
 
     fclose(archivo);
 
@@ -66,18 +65,18 @@ int dump_de_memoria(uint32_t pid) {
     return 0;
 }
 
-void escribir_marcos_en_archivo(FILE* archivo, t_tabla_nivel* tabla){
-    for (int i = 0; i < ENTRADAS_POR_TABLA; i++) {
-        t_entrada_tabla* entrada = list_get(tabla->entradas, i);
+void escribir_marcos_en_archivo(FILE* archivo, t_tabla_nivel* tabla, int* paginas_restantes){
+    for (int i = 0; i < ENTRADAS_POR_TABLA && *paginas_restantes > 0; i++) {
 
-        if (entrada->es_ultimo_nivel) {
-            t_pagina* pagina = (t_pagina*) entrada->siguiente_nivel;
-            if (pagina->marco_asignado != -1) {
+        if (tabla->nivel == CANTIDAD_NIVELES) {
+            t_pagina* pagina = (t_pagina*) list_get(tabla->entradas, i);
+
+            if (pagina->marco_asignado == -1) {
                 poner_marco_en_archivo(archivo, pagina->marco_asignado);
             }
         } else {
-            t_tabla_nivel* subtabla = (t_tabla_nivel*) entrada->siguiente_nivel;
-            escribir_marcos_en_archivo(archivo, subtabla);  // llamada recursiva
+            t_tabla_nivel* subtabla = (t_tabla_nivel*) list_get(tabla->entradas, i);
+            asignar_marcos_a_tabla(subtabla, paginas_restantes);
         }
     }
 }

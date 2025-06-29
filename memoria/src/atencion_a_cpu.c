@@ -12,6 +12,7 @@ void atender_cpu(int cpu_fd){
 	while (1) {
 		t_buffer* unBuffer;
         int op_code = recibir_operacion(cpu_fd);
+		usleep(RETARDO_MEMORIA);
 
 		switch (op_code) {
 			case PEDIR_INSTRUCCION: {

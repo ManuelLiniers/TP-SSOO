@@ -19,7 +19,7 @@ t_tabla_nivel* crear_tabla_multinivel(int nivel_actual, int* paginas_restantes, 
             pag->marco_asignado = -1;
 
             list_add(tabla->entradas, pag);
-            --(*paginas_restantes);
+            (*paginas_restantes)--;
 
         } else {
             t_tabla_nivel* sub = crear_tabla_multinivel(nivel_actual + 1, paginas_restantes, contador_paginas);

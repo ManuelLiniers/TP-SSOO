@@ -15,14 +15,6 @@ typedef struct {
     int escrituras_memoria;
 } t_metricas_proceso;
 
-/*
-// Entrada de tabla de páginas
-typedef struct {
-    int numero_entrada;
-    void* siguiente_nivel; // t_tabla_nivel* o t_pagina*
-    bool es_ultimo_nivel;
-} t_entrada_tabla;*/
-
 // Estructura de una tabla de nivel
 typedef struct {
     int nivel;                // 1 = raíz, 2 = segundo nivel, etc.
@@ -37,13 +29,12 @@ typedef struct {
 
 typedef struct{
 	int pid;
-	int size;
+	int paginas; // Cantidad de paginas
 	t_metricas_proceso* metricas;
 
 	t_list* instrucciones;
 
 	t_tabla_nivel* tabla_paginas_raiz;  // Puntero a la tabla de nivel 1
-	pthread_mutex_t mutex_TP;
 } t_proceso;
 
 

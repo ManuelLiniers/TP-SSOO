@@ -5,7 +5,7 @@
 t_proceso* crear_proceso(int pid, int size, char* path_instruc){
 	t_proceso* proceso_nuevo = malloc(sizeof(t_proceso));
 	proceso_nuevo->pid = pid;
-	proceso_nuevo->size = size;
+	proceso_nuevo->paginas = size/TAM_PAGINA + 1;
     t_metricas_proceso* metricas = calloc(1, sizeof(t_metricas_proceso));
     proceso_nuevo->metricas = metricas; 
 
@@ -15,7 +15,6 @@ t_proceso* crear_proceso(int pid, int size, char* path_instruc){
     int paginas = size/TAM_PAGINA + 1;
     int contador = 0;
     proceso_nuevo->tabla_paginas_raiz = crear_tabla_multinivel(1, &paginas, &contador);
-    pthread_mutex_init(&proceso_nuevo->mutex_TP, NULL);
 
 	return proceso_nuevo;
 }
@@ -105,14 +104,11 @@ void exponer_metricas(t_metricas_proceso* metricas, uint32_t pid){
 }
 
 void finalizar_proceso(t_proceso* proceso){
-    pthread_mutex_lock(&proceso->mutex_TP);
 
     liberar_tablas(proceso->tabla_paginas_raiz);
 
     list_destroy_and_destroy_elements(proceso->instrucciones, free);
     free(proceso->metricas);
 
-    pthread_mutex_unlock(&proceso->mutex_TP);
-    pthread_mutex_destroy(&proceso->mutex_TP);
     free(proceso);
 }
