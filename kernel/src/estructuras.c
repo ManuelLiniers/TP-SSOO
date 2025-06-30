@@ -159,14 +159,29 @@ void cambiarEstado(t_pcb* proceso, t_estado estado){
     t_metricas_estado_tiempo* metrica_anterior = obtener_ultima_metrica(proceso);
 
     if(metrica_anterior != NULL){
-        metrica_anterior->tiempo_fin = (double)time(NULL); 
-        if(metrica_anterior->estado == EXEC && estado == BLOCKED ){
-            // t_list* estados_exec = obtener_exec(proceso);
-            // proceso->rafaga_real = calcular_rafaga(estados_exec);
-            calcular_estimacion(proceso);
-        }
-        if(metrica_anterior->estado == EXEC && estado == READY){
-            temporal_stop(proceso->rafaga_real);
+        metrica_anterior->tiempo_fin = temporal_get_string_time("%H:%M:%S:%MS"); 
+        switch (metrica_anterior->estado)
+        {
+        case EXEC:
+            if(estado == BLOCKED){
+                temporal_stop(proceso->rafaga_real);
+                calcular_estimacion(proceso);
+                temporal_destroy(proceso->rafaga_real);
+            }
+            if(estado == READY){
+                temporal_stop(proceso->rafaga_real);
+            }
+            break;
+        case READY:
+            if(no_fue_desalojado(proceso)){
+                proceso->rafaga_real = temporal_create();
+            }
+            else{
+                temporal_resume(proceso->rafaga_real);
+            }
+            break;
+        default:
+            break;
         }
     }
 
@@ -176,8 +191,7 @@ void cambiarEstado(t_pcb* proceso, t_estado estado){
     if(estado != EXIT){
         t_metricas_estado_tiempo* metrica = malloc(sizeof(t_metricas_estado_tiempo));
         metrica->estado = estado;
-        metrica->tiempo_inicio = (double)time(NULL);
-        metrica->tiempo_fin = 0;
+        metrica->tiempo_inicio = temporal_get_string_time("%H:%M:%S:%MS");
         list_add(proceso->metricas_tiempo, metrica);
     }
 
@@ -187,6 +201,11 @@ void cambiarEstado(t_pcb* proceso, t_estado estado){
     else{
         log_info(logger_kernel, "## (<%d>) Pasa del estado <%s> al estado <%s>", proceso->pid, estado_to_string(metrica_anterior->estado), estado_to_string(estado));
     }
+}
+
+bool no_fue_desalojado(t_pcb* proceso){
+    t_metricas_estado_tiempo* metrica = list_get(proceso->metricas_tiempo, list_size(proceso->metricas_tiempo)-3);
+    return metrica->estado != EXEC;
 }
 
 void calcular_estimacion(t_pcb* proceso){

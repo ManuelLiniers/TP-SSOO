@@ -34,8 +34,8 @@ extern t_queue* queue_exit;
 
 typedef struct{
     t_estado estado;
-    double tiempo_inicio;
-    double tiempo_fin;
+    char* tiempo_inicio;
+    char* tiempo_fin;
  } t_metricas_estado_tiempo;
 
 typedef struct{
@@ -69,6 +69,7 @@ void crear_proceso(char* instrucciones, char* tamanio_proceso);
 
 t_pcb* buscar_proceso_pid(uint32_t pid);
 void cambiarEstado(t_pcb* proceso, t_estado estado);
+bool no_fue_desalojado(t_pcb* proceso);
 void calcular_estimacion(t_pcb* proceso);
 char* estado_to_string(t_estado estado);
 
