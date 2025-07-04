@@ -59,10 +59,11 @@ void escribir_marcos_en_archivo_con_desplazamiento(FILE* archivo, t_tabla_nivel*
                 list_remove(lista_desplazamientos, 0);
                 liberar_marco(marco);
                 pagina->marco_asignado = -1;
+                (*paginas_restantes)--;
             }
         } else {
             t_tabla_nivel* subtabla = (t_tabla_nivel*) list_get(tabla->entradas, i);
-            asignar_marcos_a_tabla(subtabla, paginas_restantes);
+            escribir_marcos_en_archivo_con_desplazamiento(archivo, subtabla, paginas_restantes, lista_desplazamientos);
         }
     }
 }

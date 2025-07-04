@@ -57,6 +57,9 @@ int dump_de_memoria(uint32_t pid) {
     }
 
     int paginas = proceso->paginas;
+    int fd = fileno(archivo);
+    ftruncate(fd, paginas * TAM_PAGINA);
+
     escribir_marcos_en_archivo(archivo, proceso->tabla_paginas_raiz, &paginas);
 
     fclose(archivo);
@@ -73,10 +76,11 @@ void escribir_marcos_en_archivo(FILE* archivo, t_tabla_nivel* tabla, int* pagina
 
             if (pagina->marco_asignado != -1) {
                 poner_marco_en_archivo(archivo, pagina->marco_asignado);
+                (*paginas_restantes)--;
             }
         } else {
             t_tabla_nivel* subtabla = (t_tabla_nivel*) list_get(tabla->entradas, i);
-            asignar_marcos_a_tabla(subtabla, paginas_restantes);
+            escribir_marcos_en_archivo(archivo, subtabla, paginas_restantes);
         }
     }
 }
