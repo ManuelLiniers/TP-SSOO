@@ -1,21 +1,23 @@
 #include "../include/manejo_swap.h"
 
-void enviar_a_swap(int pid) {
+int enviar_a_swap(int pid) {
     t_proceso* proceso = obtener_proceso_por_id(pid);
 
     FILE* archivo = fopen(PATH_SWAPFILE, "w");
     if (!archivo) {
         log_error(memoria_logger, "No existe el swapfile");
-        return;
+        return -1;
     }
 
     int paginas = proceso->paginas;
     t_list* lista_desplazamiento = obtener_espacios_swap(pid,  paginas);
 
-    escribir_marcos_en_archivo(archivo, proceso->tabla_paginas_raiz, &paginas);
+    escribir_marcos_en_archivo_con_desplazamiento(archivo, proceso->tabla_paginas_raiz, &paginas, lista_desplazamiento);
 
     list_destroy(lista_desplazamiento);
     fclose(archivo);
+
+    return 0;
 }
 
 t_list* obtener_espacios_swap(int pid, int cantidad_paginas){

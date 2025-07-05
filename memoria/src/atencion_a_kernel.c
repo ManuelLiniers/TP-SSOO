@@ -31,6 +31,13 @@ void atender_kernel(int kernel_fd){ // agregar que reciba el buffer
 
 				break;
 			}
+			case SWAP: {
+				unBuffer = recibir_paquete(kernel_fd);
+				
+				atender_swap(unBuffer, kernel_fd);
+
+				break;
+			}
 			case -1:{
 				log_debug(memoria_logger, "[KERNEL] se desconecto. Terminando consulta");
 				exit(0);
@@ -104,6 +111,24 @@ void atender_dump_memory(t_buffer* unBuffer, int cpu_fd) {
     uint32_t pid = recibir_uint32_del_buffer(unBuffer);
 
     int resultado = dump_de_memoria(pid);  // 0 si OK, -1 si hubo error
+
+    int codigo_respuesta = OK;
+	if(resultado != 0){
+		codigo_respuesta = -1;
+	}
+    send(cpu_fd, &codigo_respuesta, sizeof(int), 0);
+
+    if (codigo_respuesta == OK) {
+        log_debug(memoria_logger, "Dump de memoria exitoso para PID: %d", pid);
+    } else {
+        log_error(memoria_logger, "Fallo el dump de memoria para PID: %d", pid);
+    }
+}
+
+void atender_swap(t_buffer* unBuffer, int cpu_fd){
+	uint32_t pid = recibir_uint32_del_buffer(unBuffer);
+
+    int resultado = enviar_a_swap(pid);  // 0 si OK, -1 si hubo error
 
     int codigo_respuesta = OK;
 	if(resultado != 0){
