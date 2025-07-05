@@ -74,6 +74,8 @@ char* inicializar_memoria(){
 	// Aca se almacenan los procesos que llegan,  
 	procesos_memoria = list_create();
 
+	procesos_swap = list_create();
+
 	server_fd_memoria = iniciar_servidor(memoria_logger, NULL, PUERTO_ESCUCHA);
 
 	return bits;

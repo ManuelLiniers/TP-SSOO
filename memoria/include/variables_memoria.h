@@ -59,6 +59,7 @@ extern int cpu_fd;
 // Recursos de ejecución
 extern void* espacio_usuario;
 extern t_list* procesos_memoria;
+extern t_list* procesos_swap;
 extern t_list* lista_swap;
 
 // Logs y config

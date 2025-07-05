@@ -67,11 +67,11 @@ t_list* leer_archivo_y_cargar_instrucciones(char* path_archivo) {
     return instrucciones;
 }
 
-t_proceso* obtener_proceso_por_id(int pid){
+t_proceso* obtener_proceso_por_id(int pid, t_list* lista_procesos){
     bool buscar_el_pid(t_proceso* proceso){
 		return proceso->pid == pid;
 	};
-	t_proceso* un_proceso = list_find(procesos_memoria, (void*)buscar_el_pid);
+	t_proceso* un_proceso = list_find(lista_procesos, (void*)buscar_el_pid);
 	if(un_proceso == NULL){
 		log_error(memoria_logger, "PID<%d> No encontrado en la lista de procesos", pid);
 		exit(EXIT_FAILURE);

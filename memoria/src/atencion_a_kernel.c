@@ -96,13 +96,11 @@ void fin_proceso(t_buffer* unBuffer, int kernel_fd){
 
 	pid = recibir_int_del_buffer(unBuffer);
 
-	t_proceso* proceso = obtener_proceso_por_id(pid);
+	t_proceso* proceso = obtener_proceso_por_id(pid, procesos_memoria);
 
 	exponer_metricas(proceso->metricas, pid);
 
-	// 
-//		Liberar SWAP
-	//
+	list_remove_element(procesos_memoria, proceso);
 
 	finalizar_proceso(proceso);
 }
