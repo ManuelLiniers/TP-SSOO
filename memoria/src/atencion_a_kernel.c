@@ -38,6 +38,13 @@ void atender_kernel(int kernel_fd){ // agregar que reciba el buffer
 
 				break;
 			}
+			case VUELTA_SWAP: {
+				unBuffer = recibir_paquete(kernel_fd);
+				
+				atender_vuelta_swap(unBuffer, kernel_fd);
+
+				break;
+			}
 			case -1:{
 				log_debug(memoria_logger, "[KERNEL] se desconecto. Terminando consulta");
 				exit(0);
@@ -75,9 +82,7 @@ void iniciar_proceso(t_buffer* unBuffer, int kernel_fd){
 		t_proceso* procesoNuevo = crear_proceso(pid, tamanio, path_instrucciones);
 
 		int paginas = procesoNuevo->paginas;
-		pthread_mutex_lock(&mutex_bit_marcos);
 		asignar_marcos_a_tabla(procesoNuevo->tabla_paginas_raiz, &paginas);
-		pthread_mutex_unlock(&mutex_bit_marcos);
 
 		procesoNuevo->metricas->subidas_memoria++;
 	
@@ -105,7 +110,7 @@ void fin_proceso(t_buffer* unBuffer, int kernel_fd){
 	finalizar_proceso(proceso);
 }
 
-void atender_dump_memory(t_buffer* unBuffer, int cpu_fd) {
+void atender_dump_memory(t_buffer* unBuffer, int kernel_fd) {
     uint32_t pid = recibir_uint32_del_buffer(unBuffer);
 
     int resultado = dump_de_memoria(pid);  // 0 si OK, -1 si hubo error
@@ -114,7 +119,7 @@ void atender_dump_memory(t_buffer* unBuffer, int cpu_fd) {
 	if(resultado != 0){
 		codigo_respuesta = -1;
 	}
-    send(cpu_fd, &codigo_respuesta, sizeof(int), 0);
+    send(kernel_fd, &codigo_respuesta, sizeof(int), 0);
 
     if (codigo_respuesta == OK) {
         log_debug(memoria_logger, "Dump de memoria exitoso para PID: %d", pid);
@@ -123,7 +128,7 @@ void atender_dump_memory(t_buffer* unBuffer, int cpu_fd) {
     }
 }
 
-void atender_swap(t_buffer* unBuffer, int cpu_fd){
+void atender_swap(t_buffer* unBuffer, int kernel_fd){
 	uint32_t pid = recibir_uint32_del_buffer(unBuffer);
 
     int resultado = enviar_a_swap(pid);  // 0 si OK, -1 si hubo error
@@ -132,11 +137,44 @@ void atender_swap(t_buffer* unBuffer, int cpu_fd){
 	if(resultado != 0){
 		codigo_respuesta = -1;
 	}
-    send(cpu_fd, &codigo_respuesta, sizeof(int), 0);
+    send(kernel_fd, &codigo_respuesta, sizeof(int), 0);
 
     if (codigo_respuesta == OK) {
-        log_debug(memoria_logger, "Dump de memoria exitoso para PID: %d", pid);
+        log_debug(memoria_logger, "Swap exitoso para PID: %d", pid);
     } else {
-        log_error(memoria_logger, "Fallo el dump de memoria para PID: %d", pid);
+        log_error(memoria_logger, "Fallo el envio a swap para PID: %d", pid);
     }
+}
+
+void atender_vuelta_swap(t_buffer* unBuffer, int kernel_fd){
+	uint32_t pid = recibir_uint32_del_buffer(unBuffer);
+
+	t_proceso* proceso = obtener_proceso_por_id(pid, procesos_swap);
+	if(!proceso){
+		log_error(memoria_logger, "Error al obtener proceso de lista de procesos en swap");
+	}
+
+	uint32_t marcos_libres = cantidad_de_marcos_libres();
+	uint32_t espacio_disponible = marcos_libres * ((uint32_t) TAM_PAGINA);
+
+	if(espacio_disponible >= proceso->paginas * TAM_PAGINA){
+    	int resultado = sacar_de_swap(pid);  // 0 si OK, -1 si hubo error
+
+		int codigo_respuesta = OK;
+		if(resultado != 0){
+			codigo_respuesta = -1;
+		}
+		send(kernel_fd, &codigo_respuesta, sizeof(int), 0);
+
+		if (codigo_respuesta == OK) {
+    		log_debug(memoria_logger, "Dump de memoria exitoso para PID: %d", pid);
+    	} else {
+        	log_error(memoria_logger, "Fallo el dump de memoria para PID: %d", pid);
+    	}
+	
+	} else {
+		int respuesta = SIN_ESPACIO;
+    	send(kernel_fd, &respuesta, sizeof(int), 0);
+		log_debug(memoria_logger, "No hay espacio para proceso PID %d", pid);
+	}
 }

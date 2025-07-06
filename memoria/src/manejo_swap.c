@@ -4,15 +4,21 @@ int enviar_a_swap(int pid) {
     t_proceso* proceso = obtener_proceso_por_id(pid, procesos_memoria);
 
     int paginas = proceso->paginas;
-    t_list* lista_desplazamiento = obtener_espacios_swap(pid,  paginas);
+    bool paginas_extra = false;
+    t_list* lista_desplazamiento = obtener_espacios_swap(pid,  paginas, &paginas_extra);
 
     FILE* archivo = fopen(PATH_SWAPFILE, "r+b");
     if(!archivo){
-        archivo = fopen(PATH_SWAPFILE, "w+b");
+        archivo = fopen(PATH_SWAPFILE, "w+b"); // no deberia entrar porque ya se crea en inicializar memoria
     }
     if(!archivo){
         log_error(memoria_logger, "No se pudo abrir el swapfile");
         return -1;
+    }
+
+    if(paginas_extra){
+        int fd = fileno(archivo);
+        ftruncate(fd, list_size(lista_swap) * TAM_PAGINA);
     }
 
     escribir_marcos_en_archivo_con_desplazamiento(archivo, proceso->tabla_paginas_raiz, &paginas, lista_desplazamiento);
@@ -26,7 +32,7 @@ int enviar_a_swap(int pid) {
     return 0;
 }
 
-t_list* obtener_espacios_swap(int pid, int cantidad_paginas){
+t_list* obtener_espacios_swap(int pid, int cantidad_paginas, bool* paginas_extra){
     t_list* lista_desplazamiento = list_create();
     for(int i = 0; i < cantidad_paginas; i++){
         int espacio_libre = primer_hueco_libre();
@@ -42,6 +48,7 @@ t_list* obtener_espacios_swap(int pid, int cantidad_paginas){
         } else {
             *desplazamiento = list_size(lista_swap) * TAM_PAGINA;
             list_add(lista_swap, pid_lista);
+            (*paginas_extra) = true;
         }
             list_add(lista_desplazamiento, desplazamiento);
     }
@@ -96,12 +103,12 @@ void poner_marco_en_archivo_con_desplazamiento(FILE* archivo, int marco, int des
     free(buffer_para_escritura);
 }
 
-void sacar_de_swap(int pid){
+int sacar_de_swap(int pid){
     t_proceso* proceso = obtener_proceso_por_id(pid, procesos_swap);
 
     if (!proceso) {
         log_error(memoria_logger, "No se encontró el proceso con PID %d en SWAP", pid);
-        return;
+        return -1;
     }
 
     int paginas = proceso->paginas;
@@ -114,7 +121,7 @@ void sacar_de_swap(int pid){
     }
     if(!archivo){
         log_error(memoria_logger, "No se pudo abrir el swapfile");
-        return;
+        return -1;
     }
 
     escribir_paginas_en_marcos(archivo, proceso->tabla_paginas_raiz, &paginas, lista_desplazamiento);
@@ -124,6 +131,7 @@ void sacar_de_swap(int pid){
 
     list_add(procesos_memoria, proceso);
     list_remove_element(procesos_swap, proceso);
+    return 0;
 }
 
 t_list* obtener_desplazamientos_swap(int pid, int cantidad_paginas){

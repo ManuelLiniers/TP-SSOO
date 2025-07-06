@@ -8,5 +8,6 @@ void iniciar_proceso(t_buffer* unBuffer, int kernel_fd);
 void fin_proceso(t_buffer* unBuffer, int kernel_fd);
 void atender_dump_memory(t_buffer* unBuffer, int cpu_fd);
 void atender_swap(t_buffer* unBuffer, int cpu_fd);
+void atender_vuelta_swap(t_buffer* unBuffer, int kernel_fd);
 
 #endif /* ATENCION_A_KERNEL_H_ */

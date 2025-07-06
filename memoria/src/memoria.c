@@ -76,6 +76,12 @@ char* inicializar_memoria(){
 
 	procesos_swap = list_create();
 
+	FILE* swap = fopen(PATH_SWAPFILE, "w");
+	if(!swap){
+		log_error(memoria_logger, "Error al crear archivo de swap");
+	}
+	fclose(swap);
+
 	server_fd_memoria = iniciar_servidor(memoria_logger, NULL, PUERTO_ESCUCHA);
 
 	return bits;
