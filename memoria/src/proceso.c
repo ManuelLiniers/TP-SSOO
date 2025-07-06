@@ -23,48 +23,35 @@ void agregar_proceso_a_lista(t_proceso* un_proceso ,t_list* una_lista) {
 	list_add(una_lista, un_proceso);
 }
 
-t_list* leer_archivo_y_cargar_instrucciones(char* path_archivo) {
-    FILE* archivo = fopen(path_archivo, "rt");
+t_list* leer_archivo_y_cargar_instrucciones(char* nombre_proceso) {
+    char path_archivo[256];
+    snprintf(path_archivo, sizeof(path_archivo), "%s%s", PATH_INSTRUCCIONES, nombre_proceso);
+    log_debug(memoria_logger, "Path:%s", path_archivo);
+    FILE* archivo = fopen(path_archivo, "r");
     if (archivo == NULL) {
-        log_error(memoria_logger, "No se encontró el archivode instrucciones");
+        log_error(memoria_logger, "No se encontró el archivo de instrucciones");
         return NULL;
     }
 
-    t_list* instrucciones = list_create();
-    char linea_instruccion[256];
 
-    while (fgets(linea_instruccion, sizeof(linea_instruccion), archivo)) {
-        // Remover salto de línea si lo hay
-        linea_instruccion[strcspn(linea_instruccion, "\n")] = '\0';
-
-        log_debug(memoria_logger, "Instrucción: [%s]", linea_instruccion);
-
-        char** tokens = string_split(linea_instruccion, " ");
-
-        int i = 0;
-        while (tokens[i]) i++;
-
-        // Armar instrucción formateada como string
-        char* instruccion_formateada = NULL;
-        if (i == 3) {
-            instruccion_formateada = string_from_format("%s %s %s", tokens[0], tokens[1], tokens[2]);
-        } else if (i == 2) {
-            instruccion_formateada = string_from_format("%s %s", tokens[0], tokens[1]);
-        } else {
-            instruccion_formateada = strdup(tokens[0]);
+    t_list* lista_instrucciones = list_create();
+    char linea[200];
+    
+    while (fgets(linea, sizeof(linea), archivo)) {
+        if (linea[strlen(linea)-1] == '\n') {
+            linea[strlen(linea)-1] = '\0';
         }
-
-        list_add(instrucciones, instruccion_formateada);
-
-        // Liberar tokens
-        for (int j = 0; j < i; j++) {
-            free(tokens[j]);
-        }
-        free(tokens);
+        
+        char* instruccion = malloc(strlen(linea) + 1);
+        strcpy(instruccion, linea);
+        
+        list_add(lista_instrucciones, instruccion);
+        
+        log_debug(memoria_logger, "Leída instrucción: %s", instruccion);
     }
 
     fclose(archivo);
-    return instrucciones;
+    return lista_instrucciones;
 }
 
 t_proceso* obtener_proceso_por_id(int pid, t_list* lista_procesos){
