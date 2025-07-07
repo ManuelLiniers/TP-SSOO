@@ -24,7 +24,7 @@ void* planificar_largo_plazo_FIFO(void* arg);
 void* planificar_corto_plazo_SJF(void* arg);
 void* planificar_corto_plazo_SJF_desalojo(void* arg);
 void* planificar_largo_plazo_PMCP(void* arg);
-void *comprobar_espacio_memoria(void* arg);
+void *comprobar_procesos_nuevos(void* arg);
 bool proceso_es_mas_chico(void* a, void* b);
 bool shortest_job_first(void* a, void* b);
 void esperar_devolucion_proceso(void* arg);

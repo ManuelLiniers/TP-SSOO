@@ -149,10 +149,10 @@ void sacar_proceso_ejecucion(t_pcb* proceso){
     for(int i = 0; i<list_size(lista_procesos_ejecutando); i++){
         t_unidad_ejecucion* actual = list_get(lista_procesos_ejecutando, i);
         if(actual->proceso->pid == proceso->pid){
-            list_remove_element(lista_procesos_ejecutando, actual); 
+            list_remove_element(lista_procesos_ejecutando, actual);
+            actual->cpu->esta_libre = 1; 
         }
     }
-    signal_sem(&espacio_memoria);
 }
 
 void cambiarEstado(t_pcb* proceso, t_estado estado){

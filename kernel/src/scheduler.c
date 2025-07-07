@@ -15,8 +15,9 @@ void *planificar_corto_plazo_FIFO(void* arg){
                 t_pcb* proceso = list_get(queue_ready, 0);
                 signal_mutex(&mutex_queue_ready);
                 poner_en_ejecucion(proceso, cpu_encargada, cpu_encargada->socket_dispatch);
-                pthread_t* esperar_devolucion = malloc(sizeof(pthread_t));
-                pthread_create(esperar_devolucion, NULL, (void*) esperar_dispatch, (void*) cpu_encargada);
+                pthread_t esperar_devolucion;
+                pthread_create(&esperar_devolucion, NULL, (void*) esperar_dispatch, (void*) cpu_encargada);
+                pthread_detach(esperar_devolucion);
                 free(cpu_encargada);
             }
         }
@@ -61,8 +62,8 @@ void esperar_dispatch(void* arg){
         log_info(logger_kernel, "## %d - Finaliza el proceso", proceso->pid);
 
         log_metricas_estado(proceso);
-
         paquete_memoria_pid(proceso, FINALIZAR_PROCESO);
+        signal_sem(&espacio_memoria);
 
         free(proceso);
 
@@ -138,8 +139,9 @@ void* planificar_corto_plazo_SJF(void* arg){
                 t_pcb* proceso = list_remove(queue_ready, 0);
                 signal_mutex(&mutex_queue_ready);
                 poner_en_ejecucion(proceso, cpu_encargada, cpu_encargada->socket_dispatch);
-                pthread_t* esperar_devolucion = malloc(sizeof(pthread_t));
-                pthread_create(esperar_devolucion, NULL, (void*) esperar_dispatch, (void*) cpu_encargada);
+                pthread_t esperar_devolucion;
+                pthread_create(&esperar_devolucion, NULL, (void*) esperar_dispatch, (void*) cpu_encargada);
+                pthread_detach(esperar_devolucion);
                 free(cpu_encargada);
             }
             signal_mutex(&mutex_queue_ready);
@@ -166,15 +168,37 @@ void* planificar_corto_plazo_SJF_desalojo(void* arg){
                 signal_mutex(&mutex_queue_ready);
                 poner_en_ejecucion(proceso, cpu_encargada, cpu_encargada->socket_dispatch);
                 cambiarEstado(proceso, EXEC);
-                pthread_t* esperar_devolucion = malloc(sizeof(pthread_t));
-                pthread_create(esperar_devolucion, NULL, (void*) esperar_dispatch, (void*) cpu_encargada);
+                pthread_t esperar_devolucion;
+                pthread_create(&esperar_devolucion, NULL, (void*) esperar_dispatch, (void*) cpu_encargada);
+                pthread_detach(esperar_devolucion);
                 free(cpu_encargada);
+            }
+            else{
+                signal_mutex(&mutex_queue_ready);
             }
             /*  
                 Hay que ir iterando la lista de procesos en ready para ver si hay procesos en ejecucion
                 que tienen una estimacion mas grande que los que estan en ready. Si es asi hay que desalojarlos
             */ 
-            int cant_procesos;
+
+            wait_mutex(&mutex_queue_ready);
+            list_sort(queue_ready, shortest_job_first);
+            t_pcb* proceso_prueba = list_get(queue_ready, 0);
+            signal_mutex(&mutex_queue_ready);
+
+            for(int i = 0; i<list_size(lista_procesos_ejecutando); i++){
+                t_unidad_ejecucion* proceso_ejecutando = list_get(lista_procesos_ejecutando, i);
+                if(shortest_job_first((void*) proceso_prueba, (void*) proceso_ejecutando->proceso)){
+                    wait_mutex(&mutex_queue_ready);
+                    list_remove_element(queue_ready, proceso_prueba);
+                    signal_mutex(&mutex_queue_ready);
+                    sacar_proceso_ejecucion(proceso_ejecutando->proceso);
+                    poner_en_ejecucion(proceso_prueba, proceso_ejecutando->cpu, proceso_ejecutando->cpu->socket_interrupt);
+                    log_info(logger_kernel, "## (<%d>) - Desalojado por algoritmo SJF/SRT", proceso_ejecutando->proceso->pid);
+                    list_add(queue_ready, proceso_ejecutando->proceso);
+                }
+            }
+            /* int cant_procesos;
             for(int i = 0; i<list_size(queue_ready);i++){
                 t_pcb* otro_proceso = list_get(queue_ready, i);
                 for(int j = 0; j<list_size(lista_procesos_ejecutando); j++){
@@ -191,8 +215,7 @@ void* planificar_corto_plazo_SJF_desalojo(void* arg){
             }
             for(int i=0; i<cant_procesos ; i++){
                 list_remove(queue_ready, i);
-            }
-            signal_mutex(&mutex_queue_ready);
+            } */
         }
         else{
             signal_mutex(&mutex_queue_ready);
@@ -357,7 +380,7 @@ void *comprobar_procesos_nuevos(void* arg){
         t_pcb* proceso = list_get(queue_new, 0);
         signal_mutex(&mutex_queue_new);
 
-        if(list_is_empty(queue_susp_ready) && espacio_en_memoria(proceso)){
+        if(queue_is_empty(queue_susp_ready) && espacio_en_memoria(proceso)){
 
             wait_mutex(&mutex_queue_new);
             list_remove_element(queue_new, proceso);
@@ -421,6 +444,7 @@ void poner_en_ejecucion(t_pcb* proceso, t_cpu* cpu_encargada, int socket){
     enviar_paquete(paquete, socket);
     eliminar_paquete(paquete);
 
+    cpu_encargada->esta_libre = 0;
     t_unidad_ejecucion* nueva = malloc(sizeof(t_unidad_ejecucion));
     nueva->cpu = cpu_encargada;
     nueva->proceso = proceso;
@@ -484,20 +508,19 @@ void comprobar_suspendido(t_pcb* proceso){
     if(proceso->estado == BLOCKED){
         cambiarEstado(proceso, SUSP_BLOCKED);
         paquete_memoria_pid(proceso, SWAP);
-        verificar_procesos_ready();
+        signal_sem(&espacio_memoria);
     }
 }
 
-void verificar_procesos_ready(){
+/* void verificar_procesos_ready(){
     wait_mutex(&mutex_queue_susp_ready);
     if(!queue_is_empty(queue_susp_ready)){
         t_pcb* proceso = queue_peek(queue_susp_ready);
         signal_mutex(&mutex_queue_susp_ready);
-        if(comprobar_espacio_memoria(proceso)){
+        if(espacio_en_memoria(proceso)){
             wait_mutex(&mutex_queue_susp_ready);
 			queue_pop(queue_susp_ready);
             signal_mutex(&mutex_queue_susp_ready);
-
             // PONER EN READY
             poner_en_ready(proceso);
             log_debug(logger_kernel, "Cola de ready:");
@@ -509,11 +532,10 @@ void verificar_procesos_ready(){
         if(!list_is_empty(queue_new)){
             t_pcb* proceso = list_get(queue_new, 0);
             signal_mutex(&mutex_queue_new);
-            if(comprobar_espacio_memoria(proceso)){
+            if(espacio_en_memoria(proceso)){
                 wait_mutex(&mutex_queue_new);
                 list_remove_element(queue_new, proceso);
                 signal_mutex(&mutex_queue_new);
-
                 // PONER EN READY
                 poner_en_ready(proceso);
                 log_debug(logger_kernel, "Cola de ready:");
@@ -521,11 +543,10 @@ void verificar_procesos_ready(){
             }
         }
     }
-}
+} */
 
 void comprobar_cola_bloqueados(int io_id){
     t_queue* cola_io = obtener_cola_io(io_id);
-
     if(!queue_is_empty(cola_io)){
         tiempo_en_io *proceso = queue_peek(cola_io);
 
