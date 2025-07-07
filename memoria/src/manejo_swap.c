@@ -23,6 +23,7 @@ int enviar_a_swap(int pid) {
 
     escribir_marcos_en_archivo_con_desplazamiento(archivo, proceso->tabla_paginas_raiz, &paginas, lista_desplazamiento);
 
+    proceso->metricas->bajadas_swap++;
     list_destroy_and_destroy_elements(lista_desplazamiento, free);
     fclose(archivo);
 
