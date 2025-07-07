@@ -309,13 +309,13 @@ void *planificar_largo_plazo_FIFO(void* arg){
 
 void *planificar_largo_plazo_PMCP(void* arg){
     pthread_t hilo_comprobar_espacio;
-    pthread_create(&hilo_comprobar_espacio, NULL, (void*) comprobar_espacio_memoria, arg);
+    pthread_create(&hilo_comprobar_espacio, NULL, (void*) comprobar_procesos_nuevos, arg);
     pthread_detach(hilo_comprobar_espacio);
 
     while(1){
-        wait_sem(&nuevo_proceso);
-        wait_mutex(&mutex_queue_susp_ready);
+        wait_sem(&espacio_memoria);
         if(!queue_is_empty(queue_susp_ready)){
+            wait_mutex(&mutex_queue_susp_ready);
             t_pcb* proceso = queue_peek(queue_susp_ready);
             signal_mutex(&mutex_queue_susp_ready);
             if(espacio_en_memoria(proceso)){
@@ -323,16 +323,11 @@ void *planificar_largo_plazo_PMCP(void* arg){
                 wait_mutex(&mutex_queue_susp_ready);
 				queue_pop(queue_susp_ready);
                 signal_mutex(&mutex_queue_susp_ready);
-
                 // PONER EN READY
                 poner_en_ready(proceso);
                 log_debug(logger_kernel, "Cola de ready:");
                 mostrar_lista(queue_ready);
 			}
-            else{
-                signal_sem(&nuevo_proceso); // el proceso nuevo sigue en NEW, hago signal de vuelta
-                wait_sem(&espacio_memoria); // espero que algun proceso finalice 
-            }
         }
         else{
             wait_mutex(&mutex_queue_new);
@@ -353,16 +348,16 @@ void *planificar_largo_plazo_PMCP(void* arg){
     }
 }
 
-void *comprobar_espacio_memoria(void* arg){
+void *comprobar_procesos_nuevos(void* arg){
     while(1){
-        wait_sem(&espacio_memoria);
+        wait_sem(&nuevo_proceso);
 
         wait_mutex(&mutex_queue_new);
-        list_sort(queue_new, proceso_es_mas_chico); // no se si hay q ordenar otra vez, lo puse x las dudas
+        list_sort(queue_new, proceso_es_mas_chico);
         t_pcb* proceso = list_get(queue_new, 0);
         signal_mutex(&mutex_queue_new);
 
-        if(espacio_en_memoria(proceso)){
+        if(list_is_empty(queue_susp_ready) && espacio_en_memoria(proceso)){
 
             wait_mutex(&mutex_queue_new);
             list_remove_element(queue_new, proceso);
@@ -394,6 +389,9 @@ bool espacio_en_memoria(t_pcb* proceso){
 
 void poner_en_ready(t_pcb* proceso){
 
+    if(proceso->estado == SUSP_READY){
+        paquete_memoria_pid(proceso, VUELTA_SWAP);
+    }
     cambiarEstado(proceso, READY);
     wait_mutex(&mutex_queue_ready);
 	list_add(queue_ready, proceso);
@@ -485,19 +483,9 @@ void comprobar_suspendido(t_pcb* proceso){
     usleep(tiempo_suspension / 1000); // tiempo_suspension en ms / 1000 = tiempo_suspension en us
     if(proceso->estado == BLOCKED){
         cambiarEstado(proceso, SUSP_BLOCKED);
-        notificar_suspension_memoria(proceso);
+        paquete_memoria_pid(proceso, SWAP);
         verificar_procesos_ready();
     }
-}
-
-void notificar_suspension_memoria(t_pcb* proceso){
-    int conexion = crear_conexion_memoria();
-
-    t_paquete* paqueteInfo = crear_paquete(SWAP);
-    agregar_a_paquete(paqueteInfo, &proceso->pid, sizeof(int));
-    enviar_paquete(paqueteInfo, conexion);
-
-    eliminar_paquete(paqueteInfo);
 }
 
 void verificar_procesos_ready(){
