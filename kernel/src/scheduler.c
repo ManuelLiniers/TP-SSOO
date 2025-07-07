@@ -374,20 +374,22 @@ void *comprobar_espacio_memoria(void* arg){
 }
 
 bool espacio_en_memoria(t_pcb* proceso){
-   /*  int conexion = crear_conexion_memoria();
+   int conexion = crear_conexion_memoria();
 
     t_paquete* paqueteInfo = crear_paquete(INICIAR_PROCESO);
     agregar_a_paquete(paqueteInfo, &proceso->pid, sizeof(int));
     agregar_a_paquete(paqueteInfo, &proceso->tamanio_proceso, sizeof(int));
-    agregar_a_paquete(paqueteInfo, &proceso->instrucciones, sizeof(char*));
+    int longitud = strlen(proceso->instrucciones) + 1;
+    agregar_a_paquete(paqueteInfo, &longitud, sizeof(int));
+    agregar_a_paquete(paqueteInfo, proceso->instrucciones, longitud);
     enviar_paquete(paqueteInfo, conexion);
 
     eliminar_paquete(paqueteInfo);
 
     int resultado;
     recv(conexion, &resultado, sizeof(int), 0);
-    return resultado==OK; */
-    return 1;
+    return resultado==OK;
+    //return 1;
 }
 
 void poner_en_ready(t_pcb* proceso){

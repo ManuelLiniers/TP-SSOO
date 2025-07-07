@@ -76,13 +76,15 @@ void iniciar_proceso(t_buffer* unBuffer, int kernel_fd){
     	send(kernel_fd, &respuesta, sizeof(int), 0);
 		log_debug(memoria_logger, "Creando proceso PID %d", pid);
 
-		char* path_instrucciones;
-		path_instrucciones = recibir_informacion_del_buffer(unBuffer, sizeof(char*));
+		int longitud = recibir_int_del_buffer(unBuffer);
+		char* path_instrucciones = recibir_informacion_del_buffer(unBuffer, longitud);
 
 		t_proceso* procesoNuevo = crear_proceso(pid, tamanio, path_instrucciones);
 
-		int paginas = procesoNuevo->paginas;
-		asignar_marcos_a_tabla(procesoNuevo->tabla_paginas_raiz, &paginas);
+		if(tamanio != 0){
+			int paginas = procesoNuevo->paginas;
+			asignar_marcos_a_tabla(procesoNuevo->tabla_paginas_raiz, &paginas);
+		}
 
 		procesoNuevo->metricas->subidas_memoria++;
 	
