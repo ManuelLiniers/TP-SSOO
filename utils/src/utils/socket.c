@@ -125,7 +125,6 @@ int recibir_operacion(int socket_cliente)
 {
 	op_code cod_op;
 	if(recv(socket_cliente, &cod_op, sizeof(op_code), MSG_WAITALL) > 0){
-		printf("cod_op en recibir operacion %d \n", cod_op);
 		return cod_op;
 	}
 	else

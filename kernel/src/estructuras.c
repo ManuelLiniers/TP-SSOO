@@ -293,38 +293,38 @@ void mostrar_cola(t_queue** cola){
             log_debug(logger_kernel, "PID: (<%d>)", proceso->pid);
         }
         *cola=aux;
-        log_info(logger_kernel, "------");
+        log_debug(logger_kernel, "------");
     }
 }
 
 void mostrar_lista(t_list* lista){
     if(list_is_empty(lista)){
-        log_info(logger_kernel, "La lista esta vacia");
+        log_debug(logger_kernel, "La lista esta vacia");
     }
     else{
         for(int i = 0; i<list_size(lista); i++){
             t_pcb* proceso = list_get(lista, i);
-            log_info(logger_kernel, "PID: (<%d>)", proceso->pid);
+            log_debug(logger_kernel, "PID: (<%d>)", proceso->pid);
         }
-        log_info(logger_kernel, "------");
+        log_debug(logger_kernel, "------");
     }
 }
 
 void mostrar_cpus(){
-    log_info(logger_kernel, "Lista de CPUs:");
+    log_debug(logger_kernel, "Lista de CPUs:");
     if(list_is_empty(lista_cpus)){
-        log_info(logger_kernel, "La lista esta vacia");
+        log_debug(logger_kernel, "La lista esta vacia");
     }
     else{
         for(int i = 0; i<list_size(lista_cpus); i++){
             t_cpu* cpu = list_get(lista_cpus, i);
             mostrar_cpu(cpu);
         }
-        log_info(logger_kernel, "------");
+        log_debug(logger_kernel, "------");
     }
 }
 
 void mostrar_cpu(t_cpu* cpu){
-    log_info(logger_kernel, "ID: (<%d>)", cpu->cpu_id);
-    log_info(logger_kernel, "Estado: %d", cpu->esta_libre);
+    log_debug(logger_kernel, "ID: (<%d>)", cpu->cpu_id);
+    log_debug(logger_kernel, "Estado: %d", cpu->esta_libre);
 }

@@ -228,7 +228,7 @@ void* escuchar_interrupt(void* arg) {
                 flag_interrupcion = true;  //FALG QUE PROTEJO CON UN MUTEX PARA QUE AMBOS HILOS NO LA USEN A LA VEZ
                 pthread_mutex_unlock(&mutex_interrupt);
 
-                log_debug(logger, "Llega interrupción al puerto Interrupt");
+                log_info(logger, "## Llega interrupción al puerto Interrupt");
             }
         }
     }
@@ -507,7 +507,7 @@ uint32_t traducir_direccion_logica(uint32_t direccion_logica, int tamanio_pagina
         return marco * tamanio_pagina + desplazamiento;
     }
 
-    log_info(logger, "PID: %d - OBTENER MARCO - Página: %d", contexto->pid, nro_pagina);
+    log_debug(logger, "PID: %d - OBTENER MARCO - Página: %d", contexto->pid, nro_pagina);
 
     //SI LA PAGINA NO ESTÁ NI EN LAS ENTRADAS DE CACHE NI EN LAS DE TLB ENTONCES BUSCA DIRECTO EN MEMORIA (HUBO DOBLE MISS)
 
@@ -518,7 +518,7 @@ uint32_t traducir_direccion_logica(uint32_t direccion_logica, int tamanio_pagina
     eliminar_paquete(paquete);
 
     recv(conexion_memoria, &marco, sizeof(uint32_t), 0);  //recibo marco de la memoria
-    log_debug(logger, "PID: %d - Marco recibido: %d", contexto->pid, marco);
+    log_info(logger, "PID: %d - OBTENER MARCO - Página: %d - Marco recibido: %d", contexto->pid, nro_pagina, marco);
 
     t_paquete* paquete_contenido = crear_paquete(LEER_PAGINA_COMPLETA);   //pido contenido a memoria 
     agregar_a_paquete(paquete_contenido, &(contexto->pid), sizeof(uint32_t));

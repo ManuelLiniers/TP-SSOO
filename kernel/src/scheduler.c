@@ -4,11 +4,11 @@ char* algoritmo_corto_plazo;
 char* algoritmo_largo_plazo;
 
 void *planificar_corto_plazo_FIFO(void* arg){
-    log_info(logger_kernel, "Entre a Corto Plazo FIFO");
+    log_debug(logger_kernel, "Entre a Corto Plazo FIFO");
 	while(1){
         wait_sem(&proceso_ready);
         if(!list_is_empty(queue_ready)){
-            log_info(logger_kernel, "Busco una CPU libre");
+            log_debug(logger_kernel, "Busco una CPU libre");
             t_cpu* cpu_encargada = malloc(sizeof(t_cpu));
             if(hay_cpu_libre(&cpu_encargada)){
                 wait_mutex(&mutex_queue_ready);
