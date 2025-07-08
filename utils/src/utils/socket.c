@@ -255,9 +255,10 @@ void* recibir_informacion_del_buffer(t_buffer* unBuffer, size_t tamanio){
 // revisar para que saltee el size cuando viene de un paquete
 
 uint32_t recibir_uint32_del_buffer(t_buffer* unBuffer){
-	uint32_t value;
-    obtener_del_buffer(unBuffer, &value, sizeof(uint32_t));
-	return value;
+	uint32_t* ptr = (uint32_t*) recibir_informacion_del_buffer(unBuffer, sizeof(uint32_t));
+	uint32_t valor = *ptr;
+	free(ptr);
+	return valor;
 }
 
 void obtener_del_buffer(t_buffer *buffer, void *dest, int size){

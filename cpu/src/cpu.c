@@ -81,7 +81,7 @@ retardo_cache = config_get_int_value(cpu_config, "RETARDO_CACHE");
 
         if (cod_op == CONTEXTO_PROCESO) {
             log_debug(logger, "Recibido CONTEXTO_PROCESO");
-            t_buffer* buffer = recibir_buffer_contexto(conexion_kernel_dispatch);
+            t_buffer* buffer = recibir_paquete(conexion_kernel_dispatch);
             t_contexto* contexto = deserializar_contexto(buffer);
             atender_proceso_del_kernel(contexto, logger);
             free(buffer->stream);
@@ -108,7 +108,7 @@ t_buffer* recibir_buffer_contexto(int socket) {
 t_contexto* deserializar_contexto(t_buffer* buffer) {
     t_contexto* contexto = malloc(sizeof(t_contexto));
 
-    int offset = 0;
+    /*int offset = 0;
     memcpy(&(contexto->pid), buffer->stream + offset, sizeof(uint32_t));
     offset += sizeof(uint32_t);
 
@@ -125,7 +125,15 @@ t_contexto* deserializar_contexto(t_buffer* buffer) {
     offset += sizeof(uint32_t);
 
     memcpy(&(contexto->DX), buffer->stream + offset, sizeof(uint32_t));
-    offset += sizeof(uint32_t);
+    offset += sizeof(uint32_t);*/
+
+    contexto->pid = recibir_int_del_buffer(buffer);
+    contexto->program_counter = recibir_int_del_buffer(buffer);
+    /* Iria de esta manera pero KERNEL no manda los registros
+    contexto->AX = recibir_int_del_buffer(buffer);
+    contexto->BX = recibir_int_del_buffer(buffer);
+    contexto->CX = recibir_int_del_buffer(buffer);
+    contexto->DX = recibir_int_del_buffer(buffer);*/
 
     return contexto;
 }
@@ -194,7 +202,12 @@ void atender_proceso_del_kernel(t_contexto* contexto, t_log* logger) {
             break;
         }
 
-        if (contexto->program_counter == -1) break;
+        if (contexto->program_counter == -1){
+            break;
+        } else {
+            contexto->program_counter++;
+        }
+            
 
         destruir_instruccion_decodificada(instruccion);
     }
@@ -321,7 +334,7 @@ else if (string_equals_ignore_case(opcode, "INIT_PROC")) {
     enviar_contexto_a_kernel_init_proc(contexto, INIT_PROC, conexion_kernel_dispatch, logger, archivo_instrucciones, tamanio);
 
     // Como el proceso no se bloquea ni finaliza, avanzo al siguiente ciclo de instrucción
-    contexto->program_counter++;
+    //contexto->program_counter++;
 }
 
 
