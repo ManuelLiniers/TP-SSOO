@@ -46,6 +46,7 @@ uint32_t traducir_direccion_logica(uint32_t direccion_logica, int tamanio_pagina
 bool hay_interrupcion();
 void enviar_contexto_a_kernel(t_contexto* contexto, motivo_desalojo motivo, int fd, t_log* logger); 
 void enviar_contexto_a_kernel_io(t_contexto* contexto, motivo_desalojo motivo, int fd, t_log* logger, int id_io, int tiempo_io);
+void enviar_contexto_a_kernel_dump(t_contexto* contexto, motivo_desalojo motivo, int fd, t_log* logger);
 void enviar_contexto_a_kernel_init_proc(t_contexto* contexto, motivo_desalojo motivo, int fd, t_log* logger, char* archivo, int tamanio);
 t_buffer* recibir_buffer_contexto(int socket);
 t_contexto* deserializar_contexto(t_buffer* buffer);

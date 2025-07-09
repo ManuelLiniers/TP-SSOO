@@ -343,10 +343,12 @@ void ciclo_de_instruccion_execute(t_instruccion_decodificada* instruccion, t_con
         log_info(logger, "PID: %d - Ejecutando: DUMP_MEMORY", contexto->pid);
 
         // envio la petición de Dump a Memoria
-        t_paquete* paquete = crear_paquete(DUMP_MEMORY);
+/*        t_paquete* paquete = crear_paquete(DUMP_MEMORY);
         agregar_a_paquete(paquete, &(contexto->pid), sizeof(uint32_t));
         enviar_paquete(paquete, conexion_memoria);
-        eliminar_paquete(paquete);
+        eliminar_paquete(paquete);*/
+
+        enviar_contexto_a_kernel_dump(contexto, MEMORY_DUMP, conexion_kernel_dispatch, logger);
 
         // espero respuesta de Memoria
         int resultado_dump;
@@ -447,7 +449,7 @@ void enviar_contexto_a_kernel(t_contexto* contexto, motivo_desalojo motivo, int 
 }
 
 void enviar_contexto_a_kernel_init_proc(t_contexto* contexto, motivo_desalojo motivo, int fd, t_log* logger, char* archivo, int tamanio) {
-    t_paquete* paquete = crear_paquete(DEVOLVER_CONTEXTO);
+    t_paquete* paquete = crear_paquete(CONTEXTO_PROCESO);
 
     agregar_a_paquete(paquete, &(contexto->pid), sizeof(uint32_t));
     agregar_a_paquete(paquete, &(contexto->program_counter), sizeof(uint32_t));
@@ -457,6 +459,8 @@ void enviar_contexto_a_kernel_init_proc(t_contexto* contexto, motivo_desalojo mo
     agregar_a_paquete(paquete, &(contexto->DX), sizeof(uint32_t));
     agregar_a_paquete(paquete, &motivo, sizeof(int));
     agregar_a_paquete(paquete, &tamanio, sizeof(int));
+    int longitud = strlen(archivo) + 1;
+    agregar_a_paquete(paquete, &longitud, sizeof(int));
     agregar_a_paquete(paquete, archivo, strlen(archivo) + 1); // string con '\0'
 
     enviar_paquete(paquete, fd);
@@ -466,7 +470,7 @@ void enviar_contexto_a_kernel_init_proc(t_contexto* contexto, motivo_desalojo mo
 }
 
 void enviar_contexto_a_kernel_io(t_contexto* contexto, motivo_desalojo motivo, int fd, t_log* logger, int id_io, int tiempo_io) {
-    t_paquete* paquete = crear_paquete(DEVOLVER_CONTEXTO);
+    t_paquete* paquete = crear_paquete(CONTEXTO_PROCESO);
 
     agregar_a_paquete(paquete, &(contexto->pid), sizeof(uint32_t));
     agregar_a_paquete(paquete, &(contexto->program_counter), sizeof(uint32_t));
@@ -482,6 +486,23 @@ void enviar_contexto_a_kernel_io(t_contexto* contexto, motivo_desalojo motivo, i
     eliminar_paquete(paquete);
 
     log_debug(logger, "Se envio el contexto actualizado con motivo IO al Kernel.");
+}
+
+void enviar_contexto_a_kernel_dump(t_contexto* contexto, motivo_desalojo motivo, int fd, t_log* logger) {
+    t_paquete* paquete = crear_paquete(CONTEXTO_PROCESO);
+
+    agregar_a_paquete(paquete, &(contexto->pid), sizeof(uint32_t));
+    agregar_a_paquete(paquete, &(contexto->program_counter), sizeof(uint32_t));
+    agregar_a_paquete(paquete, &(contexto->AX), sizeof(uint32_t));
+    agregar_a_paquete(paquete, &(contexto->BX), sizeof(uint32_t));
+    agregar_a_paquete(paquete, &(contexto->CX), sizeof(uint32_t));
+    agregar_a_paquete(paquete, &(contexto->DX), sizeof(uint32_t));
+    agregar_a_paquete(paquete, &motivo, sizeof(int));
+
+    enviar_paquete(paquete, fd);
+    eliminar_paquete(paquete);
+
+    log_debug(logger, "Se envio el contexto actualizado con motivo DUMP al Kernel.");
 }
 
 

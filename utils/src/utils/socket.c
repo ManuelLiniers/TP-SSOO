@@ -124,12 +124,18 @@ void recibir_mensaje(t_log* logger, int socket_cliente)
 int recibir_operacion(int socket_cliente)
 {
 	op_code cod_op;
-	if(recv(socket_cliente, &cod_op, sizeof(op_code), MSG_WAITALL) > 0){
+	int bytes = recv(socket_cliente, &cod_op, sizeof(op_code), MSG_WAITALL); 
+	if(bytes > 0){
+		printf("Operacion recibida: %d", cod_op);
 		return cod_op;
 	}
-	else
+	else if(bytes == 0)
 	{
 		close(socket_cliente);
+		return -1;
+	}
+	else {
+		printf("Error en recibir el codigo de operacion");
 		return -1;
 	}
 }

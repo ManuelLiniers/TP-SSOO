@@ -9,16 +9,16 @@ void *planificar_corto_plazo_FIFO(void* arg){
         wait_sem(&proceso_ready);
         if(!list_is_empty(queue_ready)){
             log_debug(logger_kernel, "Busco una CPU libre");
-            t_cpu* cpu_encargada = malloc(sizeof(t_cpu));
+            t_cpu* cpu_encargada = NULL;
             if(hay_cpu_libre(&cpu_encargada)){
                 wait_mutex(&mutex_queue_ready);
-                t_pcb* proceso = list_get(queue_ready, 0);
+                t_pcb* proceso = (t_pcb*) list_remove(queue_ready, 0);
                 signal_mutex(&mutex_queue_ready);
                 poner_en_ejecucion(proceso, cpu_encargada, cpu_encargada->socket_dispatch);
                 pthread_t esperar_devolucion;
-                pthread_create(&esperar_devolucion, NULL, (void*) esperar_dispatch, (void*) cpu_encargada);
+                pthread_create(&esperar_devolucion, NULL, esperar_dispatch, (void*) cpu_encargada);
                 pthread_detach(esperar_devolucion);
-                free(cpu_encargada);
+                // free(cpu_encargada);
             }
         }
 	}
@@ -32,8 +32,13 @@ bool hay_cpu_libre(t_cpu** cpu_encargada){
     return cpu_libre != NULL;
 }
 
-void esperar_dispatch(void* arg){
+void* esperar_dispatch(void* arg){
     t_cpu* cpu_encargada = (t_cpu*) arg;
+
+    if(CONTEXTO_PROCESO != recibir_operacion(cpu_encargada->socket_dispatch)){
+        log_error(logger_kernel, "Se esperaba recibir CONTEXTO_PROCESO");
+        return NULL;
+    }
     t_buffer* paquete = recibir_paquete(cpu_encargada->socket_dispatch);
 
     uint32_t pid = recibir_uint32_del_buffer(paquete);
@@ -43,6 +48,8 @@ void esperar_dispatch(void* arg){
         proceso->registros[i] = recibir_uint32_del_buffer(paquete);
     };
     int motivo = recibir_int_del_buffer(paquete);
+
+    log_debug(logger_kernel, "Motivo: %d", motivo);
 
     proceso->program_counter = pc;
     
@@ -65,7 +72,7 @@ void esperar_dispatch(void* arg){
         paquete_memoria_pid(proceso, FINALIZAR_PROCESO);
         signal_sem(&espacio_memoria);
 
-        free(proceso);
+        //free(proceso);
 
         break;
     case CAUSA_IO:
@@ -94,22 +101,24 @@ void esperar_dispatch(void* arg){
 
         cambiarEstado(proceso, BLOCKED);
 
-        free(paquete);
+        // free(paquete);
         break;
 
     case INIT_PROC:
         int tamanio_proceso = recibir_int_del_buffer(paquete);
-        char* archivo = recibir_string_del_buffer(paquete);
-        char* nombre = malloc(sizeof(char));
-        sprintf(nombre, "%d",tamanio_proceso);
+        int longitud = recibir_int_del_buffer(paquete);
+        char* archivo = recibir_informacion_del_buffer(paquete, longitud);
+        //char* nombre = malloc(sizeof(char));
+        //sprintf(nombre, "%d",tamanio_proceso);
 
         log_info(logger_kernel, "## (<%d>) - Solicito syscall: <%s>", proceso->pid, "INIT_PROC");
 
-        crear_proceso(archivo, nombre);
-        free(nombre);
+        crear_proceso(archivo, tamanio_proceso);
+        //crear_proceso(archivo, nombre);
+        //free(nombre);
         break;
     case MEMORY_DUMP:
-        paquete_memoria_pid(proceso, MEMORY_DUMP);
+        paquete_memoria_pid(proceso, DUMP_MEMORY);
         // bloquear proceso?
         break;
     default:
@@ -117,6 +126,7 @@ void esperar_dispatch(void* arg){
         break;
     }
     free(paquete);
+    return NULL;
 }
 
 void paquete_memoria_pid(t_pcb* proceso, op_code codigo){
@@ -142,7 +152,7 @@ void* planificar_corto_plazo_SJF(void* arg){
                 pthread_t esperar_devolucion;
                 pthread_create(&esperar_devolucion, NULL, (void*) esperar_dispatch, (void*) cpu_encargada);
                 pthread_detach(esperar_devolucion);
-                free(cpu_encargada);
+                //free(cpu_encargada);
             }
             signal_mutex(&mutex_queue_ready);
         }
@@ -171,7 +181,7 @@ void* planificar_corto_plazo_SJF_desalojo(void* arg){
                 pthread_t esperar_devolucion;
                 pthread_create(&esperar_devolucion, NULL, (void*) esperar_dispatch, (void*) cpu_encargada);
                 pthread_detach(esperar_devolucion);
-                free(cpu_encargada);
+                //free(cpu_encargada);
             }
             else{
                 signal_mutex(&mutex_queue_ready);
@@ -304,6 +314,7 @@ void *planificar_largo_plazo_FIFO(void* arg){
             }
         }
         else{
+            signal_mutex(&mutex_queue_susp_ready);
             wait_mutex(&mutex_queue_new);
             if(!list_is_empty(queue_new)){
 			t_pcb* proceso = list_get(queue_new, 0);

@@ -10,7 +10,7 @@ int main(int argc, char* argv[]) {
 	printf("Ingrese ENTER para comenzar la planificacion >> \n");
 	getchar(); // bloquea el programa hasta que se ingrese enter
 
-	crear_proceso(argv[1], argv[2]); // Creo proceso inicial con valores recibidos por parametro
+	crear_proceso(argv[1], atoi(argv[2])); // Creo proceso inicial con valores recibidos por parametro
 	inicializar_planificacion();
 
 	iniciar_servidor_io();
@@ -240,10 +240,10 @@ void identificar_io(t_buffer* unBuffer, int socket_fd){
 }
 
 // Se crea un proceso y se pushea a new
-void crear_proceso(char* instrucciones, char* tamanio_proceso){
+void crear_proceso(char* instrucciones, int tamanio_proceso){
     t_pcb* pcb_nuevo = pcb_create();
     pcb_nuevo->instrucciones = instrucciones;
-    pcb_nuevo->tamanio_proceso = atoi(tamanio_proceso);
+    pcb_nuevo->tamanio_proceso = tamanio_proceso;
 	pcb_nuevo->estimacion_anterior = estimacion_inicial;
 	pcb_nuevo->estimacion_actual = estimacion_inicial;
 	pcb_nuevo->estado = NEW;

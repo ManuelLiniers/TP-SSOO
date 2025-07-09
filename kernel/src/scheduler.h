@@ -28,7 +28,7 @@ void *comprobar_procesos_nuevos(void* arg);
 bool proceso_es_mas_chico(void* a, void* b);
 bool shortest_job_first(void* a, void* b);
 void esperar_devolucion_proceso(void* arg);
-void esperar_dispatch(void* arg);
+void* esperar_dispatch(void* arg);
 void esperar_dispatch_SJF_desalojo(void* arg);
 void actualizar_estimaciones();
 void log_metricas_estado(t_pcb* proceso);

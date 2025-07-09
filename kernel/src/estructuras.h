@@ -65,7 +65,7 @@ typedef struct {
     // Más campos opcionales: tamaño de memoria, registros, métricas, etc.
 } t_pcb;
 
-void crear_proceso(char* instrucciones, char* tamanio_proceso);
+void crear_proceso(char* instrucciones, int tamanio_proceso);
 
 t_pcb* buscar_proceso_pid(uint32_t pid);
 void cambiarEstado(t_pcb* proceso, t_estado estado);

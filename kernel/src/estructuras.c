@@ -137,9 +137,9 @@ t_cpu* buscar_cpu_libre(t_list* lista_cpus){
 
 t_pcb* buscar_proceso_pid(uint32_t pid){
     for(int i=0; i<list_size(lista_procesos_ejecutando); i++){
-        t_pcb* actual = list_get(lista_procesos_ejecutando, i);
-        if(actual->pid == (uint32_t)pid){
-            return actual;
+        t_unidad_ejecucion* actual = list_get(lista_procesos_ejecutando, i);
+        if(actual->proceso->pid == (uint32_t)pid){
+            return actual->proceso;
         }
     }
     return NULL;
