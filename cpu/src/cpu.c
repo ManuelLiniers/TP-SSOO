@@ -204,8 +204,8 @@ void atender_proceso_del_kernel(t_contexto* contexto, t_log* logger) {
 
         if (contexto->program_counter == -1){
             break;
-        } else {
-            contexto->program_counter++;
+        //} else {
+          //  contexto->program_counter++;   //ya lo hace al final del execute, sino se estaria haciendo dos veces
         }
             
 
@@ -304,6 +304,7 @@ void ciclo_de_instruccion_execute(t_instruccion_decodificada* instruccion, t_con
         if (instruccion->cantidad_operandos >= 1) {
             int nuevo_pc = atoi(instruccion->operandos[0]);
             contexto->program_counter = nuevo_pc;
+            break;     //revisar el break (si cambia el pc entonces cambia de instruccion?)
         } else {
             log_error(logger, "GOTO sin operando");
         }
@@ -363,7 +364,7 @@ else if (string_equals_ignore_case(opcode, "DUMP_MEMORY")) {
     else if (string_equals_ignore_case(opcode, "READ")) {
     uint32_t direccion_logica = atoi(instruccion->operandos[0]); //el primer parametro de READ es la dir logica, el segundo el tamanio
     uint32_t tamanio = atoi(instruccion->operandos[1]);
-    uint32_t direccion_fisica = traducir_direccion_logica(direccion_logica, 256, contexto, conexion_memoria);
+    uint32_t direccion_fisica = traducir_direccion_logica(direccion_logica, TAMANIO_PAGINA, contexto, conexion_memoria);
     int pid = contexto->pid;
 
     log_info(logger, "PID: %d - Acción: LEER - Dirección Física: %d", pid, direccion_fisica);
@@ -420,9 +421,10 @@ else if (string_equals_ignore_case(opcode, "WRITE")) {
     }
 }
 
-    // Si la instrucción no fue GOTO (que cambia el PC)y avanza1 para buscar una instruccion a ejecutar
+    // Si la instrucción no fue GOTO (que cambia el PC),ninguna o alguna que no haya modificado el pc avanza1 para buscar una instruccion a ejecutar
     else {
-        contexto->program_counter++;
+        if(conetxto -> program_counter != -1){
+        contexto->program_counter++;}
 }
 
 }
