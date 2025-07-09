@@ -304,7 +304,7 @@ void ciclo_de_instruccion_execute(t_instruccion_decodificada* instruccion, t_con
         if (instruccion->cantidad_operandos >= 1) {
             int nuevo_pc = atoi(instruccion->operandos[0]);
             contexto->program_counter = nuevo_pc;
-            break;     //revisar el break (si cambia el pc entonces cambia de instruccion?)
+            return;   //sale de la funcion???
         } else {
             log_error(logger, "GOTO sin operando");
         }
