@@ -423,7 +423,7 @@ else if (string_equals_ignore_case(opcode, "WRITE")) {
 
     // Si la instrucción no fue GOTO (que cambia el PC),ninguna o alguna que no haya modificado el pc avanza1 para buscar una instruccion a ejecutar
     else {
-        if(conetxto -> program_counter != -1){
+        if(contexto -> program_counter != -1){
         contexto->program_counter++;}
 }
 

@@ -21,7 +21,7 @@ t_instruccion_decodificada* decodificar_instruccion(char* instruccion_cruda) {
         instruccion->operandos[i] = strdup(tokens[i + 1]);
     }
 
-    // Determinar si requiere traducción de dirección
+    // Determinar si requiere traducción de direccion
     if (string_equals_ignore_case(instruccion->opcode, "READ") ||
         string_equals_ignore_case(instruccion->opcode, "WRITE")) {
         instruccion->necesita_traduccion = true;

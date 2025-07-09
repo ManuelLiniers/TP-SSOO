@@ -19,7 +19,7 @@ extern int puntero_clock;
 typedef struct {
     int pid;
     uint32_t pagina;
-    char* contenido;       // contenido de la página (simulado)
+    char* contenido;       
     bool bit_uso;          // para CLOCK y CLOCK-M
     bool bit_modificado;   // solo CLOCK-M
     uint32_t marco;

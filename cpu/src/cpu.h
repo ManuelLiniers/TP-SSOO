@@ -24,7 +24,7 @@ void terminar_programa(int conexion_memoria, int conexion_kernel_dispatch, int c
 extern bool flag_interrupcion;
 extern pthread_mutex_t mutex_interrupt;
 
-// Estructura de contexto de ejecución (PCB)
+// Estructura de contexto de ejecucion (PCB)
 typedef struct {
     int pid;
     int program_counter;
@@ -35,7 +35,6 @@ typedef struct {
 } t_contexto;
 
 
-// Funciones que vamos a implementar en etapas
 void atender_proceso_del_kernel(t_contexto* contexto, t_log* logger);
 void destruir_estructuras_del_contexto_actual(t_contexto* contexto);
 void* escuchar_interrupt(void* arg);
