@@ -1,7 +1,5 @@
 #include "kernel.h"
 
-pthread_t cpu_dispatch;
-pthread_t cpu_interrupt;
 
 int main(int argc, char* argv[]) {
     inicializar_kernel();
@@ -13,8 +11,10 @@ int main(int argc, char* argv[]) {
 	crear_proceso(argv[1], atoi(argv[2])); // Creo proceso inicial con valores recibidos por parametro
 	inicializar_planificacion();
 
-	iniciar_servidor_io();
-	
+	while(1){
+		wait_sem(&bloqueante_sem);
+	}
+
     return EXIT_SUCCESS;
 }
 
@@ -90,6 +90,12 @@ void inicializar_planificacion(){
 void inicializar_servidores(){
 	iniciar_dispositivos_io();
 	iniciar_cpus();
+	pthread_t cpu_dispatch;
+	pthread_t cpu_interrupt;
+	pthread_t io;
+
+	pthread_create(&io, NULL, (void*) iniciar_servidor_io, NULL);
+	pthread_detach(io);
 
 	pthread_create(&cpu_dispatch, NULL, (void*) iniciar_cpu_dispatch, NULL);
 	pthread_detach(cpu_dispatch);
@@ -198,7 +204,7 @@ void modificar_interrupt(t_cpu* una_cpu, int socket_fd){
 	una_cpu->socket_interrupt = socket_fd;
 }
 
-void iniciar_servidor_io(){
+void iniciar_servidor_io(void* arg){
 	log_debug(logger_kernel, "entro al hilo IO");
 	int server_fd_kernel_io = iniciar_servidor(logger_kernel, NULL, puerto_io);
 
