@@ -39,16 +39,6 @@ void atender_cpu(int cpu_fd){
 
 				break;
 			}
-			case LEER_PAGINA_COMPLETA: {
-				unBuffer = recibir_paquete(cpu_fd);
-				atender_lectura_pagina_completa(unBuffer, cpu_fd);
-				break;
-			}
-			case ESCRIBIR_PAGINA_COMPLETA: {
-				unBuffer = recibir_paquete(cpu_fd);
-				atender_escritura_pagina_completa(unBuffer, cpu_fd);
-				break;
-			}
 			case -1:{
 				log_debug(memoria_logger, "[CPU] se desconecto. Terminando consulta");
 				pthread_cancel(pthread_self());
@@ -166,64 +156,6 @@ void atender_escritura_espacio_usuario(t_buffer* unBuffer, int cpu_fd){
 
 	int respuesta = OK;
 	if(escribir_espacio(direccion_fisica, tamanio, valor, pid) == -1){
-		respuesta = -1;
-	}
-
-	send(cpu_fd, &respuesta, sizeof(int), 0);
-
-	free(valor);
-}
-
-void atender_lectura_pagina_completa(t_buffer* unBuffer, int cpu_fd) {
-	uint32_t pid;
-	uint32_t nro_marco;
-
-	pid = recibir_uint32_del_buffer(unBuffer);
-	nro_marco = recibir_uint32_del_buffer(unBuffer);
-
-	if (bitarray_test_bit(bit_marcos, nro_marco)) {
-		log_error(memoria_logger, "No se pudo leer marco %d: inválido o libre", nro_marco);
-		uint32_t tamanio_error = 0;
-		send(cpu_fd, &tamanio_error, sizeof(uint32_t), 0);
-		return;
-	}
-
-	void* lectura = obtener_lectura(nro_marco * TAM_PAGINA, TAM_PAGINA, pid);
-
-    if (lectura == NULL) {
-        log_error(memoria_logger, "Fallo al leer memoria: dirección inválida o fuera de rango");
-        return;
-    }
-
-	// Extraer contenido
-	void* contenido = malloc(TAM_PAGINA);
-	pthread_mutex_lock(&mutex_espacio_usuario);
-	memcpy(contenido, lectura, TAM_PAGINA);
-	pthread_mutex_unlock(&mutex_espacio_usuario);
-
-	// Enviar tamaño
-	uint32_t tamanio = TAM_PAGINA;
-	send(cpu_fd, &tamanio, sizeof(uint32_t), 0);
-
-	// Enviar contenido
-	send(cpu_fd, contenido, tamanio, 0);
-
-	log_debug(memoria_logger, "Marco %d leído y enviado a CPU", nro_marco);
-
-	free(contenido);
-}
-
-void atender_escritura_pagina_completa(t_buffer* unBuffer, int cpu_fd){
-	int pid;
-	uint32_t direccion_fisica;
-
-	pid = recibir_int_del_buffer(unBuffer);
-	direccion_fisica = recibir_uint32_del_buffer(unBuffer);
-	void* valor = malloc(TAM_PAGINA);
-	valor = recibir_informacion_del_buffer(unBuffer, TAM_PAGINA);
-
-	int respuesta = OK;
-	if(escribir_espacio(direccion_fisica, TAM_PAGINA, valor, pid) == -1){
 		respuesta = -1;
 	}
 

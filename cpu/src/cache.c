@@ -103,7 +103,7 @@ void limpiar_cache_por_pid(int pid, int conexion_memoria, t_log* logger) {
 }
 
 void escribir_pagina_memoria(int pid, uint32_t direccion_fisica, void* valor, int conexion_memoria, t_log* logger, uint32_t pagina, uint32_t marco) {
-    t_paquete* paquete = crear_paquete(ESCRIBIR_PAGINA_COMPLETA);
+    t_paquete* paquete = crear_paquete(ESCRIBIR_MEMORIA);
     agregar_a_paquete(paquete, &pid, sizeof(int));
     agregar_a_paquete(paquete, &direccion_fisica, sizeof(uint32_t));
     agregar_a_paquete(paquete, valor, TAMANIO_PAGINA);

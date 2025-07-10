@@ -542,24 +542,27 @@ uint32_t traducir_direccion_logica(uint32_t direccion_logica, int tamanio_pagina
     recv(conexion_memoria, &marco, sizeof(uint32_t), 0);  //recibo marco de la memoria
     log_info(logger, "PID: %d - OBTENER MARCO - Página: %d - Marco recibido: %d", contexto->pid, nro_pagina, marco);
 
-    t_paquete* paquete_contenido = crear_paquete(LEER_PAGINA_COMPLETA);   //pido contenido a memoria 
+    t_paquete* paquete_contenido = crear_paquete(LEER_MEMORIA);   //pido contenido a memoria 
     agregar_a_paquete(paquete_contenido, &(contexto->pid), sizeof(uint32_t));
-    agregar_a_paquete(paquete_contenido, &marco, sizeof(uint32_t)); // le paso el marco asociado a la pagina que tiene el contenido q pido
+    uint32_t dir_fisica = marco * tamanio_pagina;
+    agregar_a_paquete(paquete_contenido, &dir_fisica, sizeof(uint32_t)); // le paso el marco asociado a la pagina que tiene el contenido q pido
+    agregar_a_paquete(paquete_contenido, &tamanio_pagina, sizeof(int));
     enviar_paquete(paquete_contenido, conexion_memoria);
     eliminar_paquete(paquete_contenido);
 
-    uint32_t tamanio_contenido;  //creo variable del tamaño del contenido
-    recv(conexion_memoria, &tamanio_contenido, sizeof(uint32_t), 0);
-    char* contenido_real = malloc(tamanio_contenido);
-    recv(conexion_memoria, contenido_real, tamanio_contenido, 0);
+    //uint32_t tamanio_contenido;  //creo variable del tamaño del contenido
+    //recv(conexion_memoria, &tamanio_contenido, sizeof(uint32_t), 0);
+    char* contenido_real = malloc(tamanio_pagina);
+    recv(conexion_memoria, contenido_real, tamanio_pagina, 0);
 
 
     if (entradas_cache > 0) {
         agregar_a_cache(contexto->pid, nro_pagina, contenido_real, logger, conexion_memoria); 
         free(contenido_real);
     }
-
-    agregar_a_tlb(contexto->pid, nro_pagina, marco, logger);
+    if (entradas_tlb > 0) {
+        agregar_a_tlb(contexto->pid, nro_pagina, marco, logger);
+    }
 
     return marco * tamanio_pagina + desplazamiento;
 }

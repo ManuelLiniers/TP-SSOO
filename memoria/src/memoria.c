@@ -75,6 +75,7 @@ char* inicializar_memoria(){
 	procesos_memoria = list_create();
 
 	procesos_swap = list_create();
+	lista_swap = list_create();
 
 	FILE* swap = fopen(PATH_SWAPFILE, "w");
 	if(!swap){

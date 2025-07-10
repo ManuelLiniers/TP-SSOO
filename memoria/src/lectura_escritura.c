@@ -7,8 +7,6 @@
 void* obtener_lectura(uint32_t direccion_fisica, uint32_t tamanio, int pid) {
     if (direccion_fisica + tamanio > TAM_MEMORIA) return NULL;
 
-    if (direccion_fisica / TAM_PAGINA != (direccion_fisica + tamanio - 1) / TAM_PAGINA) return NULL;
-
     log_info(memoria_logger, "## PID: %d - Lectura - Dir. Física: %d - Tamaño: %d",
              pid, direccion_fisica, tamanio);
 

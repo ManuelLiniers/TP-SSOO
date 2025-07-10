@@ -126,7 +126,7 @@ int recibir_operacion(int socket_cliente)
 	op_code cod_op;
 	int bytes = recv(socket_cliente, &cod_op, sizeof(op_code), MSG_WAITALL); 
 	if(bytes > 0){
-		printf("Operacion recibida: %d", cod_op);
+		//printf("Operacion recibida: %d", cod_op);
 		return cod_op;
 	}
 	else if(bytes == 0)
@@ -135,7 +135,7 @@ int recibir_operacion(int socket_cliente)
 		return -1;
 	}
 	else {
-		printf("Error en recibir el codigo de operacion");
+		//printf("Error en recibir el codigo de operacion");
 		return -1;
 	}
 }

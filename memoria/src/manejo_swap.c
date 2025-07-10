@@ -38,7 +38,7 @@ t_list* obtener_espacios_swap(int pid, int cantidad_paginas, bool* paginas_extra
     for(int i = 0; i < cantidad_paginas; i++){
         int espacio_libre = primer_hueco_libre();
         
-        int* desplazamiento = malloc(sizeof(int));
+        int* desplazamiento = calloc(1, sizeof(int));
         int* pid_lista = malloc(sizeof(int));
         *pid_lista = pid;
 

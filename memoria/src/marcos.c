@@ -75,6 +75,7 @@ void asignar_marcos_a_tabla(t_tabla_nivel* tabla, int* paginas_restantes) {
                     // No hay más marcos libres (No deberia pasar)
                     log_error(memoria_logger, "No hay marcos libres disponibles para la página %d\n", pagina->nro_pagina);
                 }
+                (*paginas_restantes)--;
             }
         } else {
             t_tabla_nivel* subtabla = (t_tabla_nivel*) list_get(tabla->entradas, i);
