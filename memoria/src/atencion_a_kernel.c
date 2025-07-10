@@ -91,6 +91,8 @@ void iniciar_proceso(t_buffer* unBuffer, int kernel_fd){
 		log_info(memoria_logger, "## PID: <%d> - Proceso Creado - Tamaño: <%d>", pid, tamanio);
 
 		agregar_proceso_a_lista(procesoNuevo, procesos_memoria);
+		int aviso = PROC_CREADO;
+    	send(kernel_fd, &aviso, sizeof(int), 0);
 	} else {
 		int respuesta = SIN_ESPACIO;
     	send(kernel_fd, &respuesta, sizeof(int), 0);

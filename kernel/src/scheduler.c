@@ -417,7 +417,14 @@ bool espacio_en_memoria(t_pcb* proceso){
 
     int resultado;
     recv(conexion, &resultado, sizeof(int), 0);
-    return resultado==OK;
+    if(resultado == OK){
+        int avisoCreado;
+        recv(conexion, &avisoCreado, sizeof(int), 0);
+        return true;
+    }
+    else{
+        return false;
+    }
     //return 1;
 }
 
@@ -476,7 +483,7 @@ void enviar_proceso_a_io(t_pcb* proceso, int io_id, int io_tiempo){
     log_info(logger_kernel, "## %d - Bloqueado por IO: %s", proceso->pid, dispositivo->nombre);
 
     pthread_t hilo_vuelta_io;
-    pthread_create(&hilo_vuelta_io, NULL, (void*) vuelta_proceso_io, &(io_id)); // creo hilo para esperar la vuelta de la io
+    pthread_create(&hilo_vuelta_io, NULL, (void*) vuelta_proceso_io, dispositivo); // creo hilo para esperar la vuelta de la io
     pthread_detach(hilo_vuelta_io);
     pthread_t comprobacion_suspendido;
     pthread_create(&comprobacion_suspendido, NULL, (void*) comprobar_suspendido, proceso);
@@ -484,34 +491,30 @@ void enviar_proceso_a_io(t_pcb* proceso, int io_id, int io_tiempo){
 }
 
 void vuelta_proceso_io(void* args){
-    int *id_io = (int*) args;
-    t_dispositivo_io* io = buscar_io(*id_io);
+    t_dispositivo_io* io = (t_dispositivo_io*) args;
 
+    int respuesta;
+    recv(io->socket, &respuesta, sizeof(int), 0);
+    if(respuesta == FINALIZACION_IO){
+        tiempo_en_io *proceso = queue_pop(obtener_cola_io(io->id));
 
-    t_buffer* buffer = malloc(sizeof(t_buffer));
-    int *pid = malloc(sizeof(int));
-    recv(io->socket, buffer, sizeof(int), 0);
-    memcpy(pid, buffer->stream, sizeof(int));
+        if(proceso->pcb->estado == SUSP_BLOCKED){
+            wait_mutex(&mutex_queue_susp_ready);
+            queue_push(queue_susp_ready, proceso);
+            signal_mutex(&mutex_queue_susp_ready);
+            cambiarEstado(proceso->pcb, SUSP_READY);
+        }
+        else{
+            poner_en_ready(proceso->pcb);
+        }
 
-    tiempo_en_io *proceso = queue_pop(obtener_cola_io(io->id));
+        log_info(logger_kernel, "## %d finalizó IO", proceso->pcb->pid);
 
-    if(proceso->pcb->estado == SUSP_BLOCKED){
-        wait_mutex(&mutex_queue_susp_ready);
-        queue_push(queue_susp_ready, proceso);
-        signal_mutex(&mutex_queue_susp_ready);
-        cambiarEstado(proceso->pcb, SUSP_READY);
+        comprobar_cola_bloqueados(io->id);
     }
     else{
-        poner_en_ready(proceso->pcb);
+        log_debug(logger_kernel, "Codigo de vuelta de io incorrecto");
     }
-    
-
-    log_info(logger_kernel, "## %d finalizó IO y pasa a READY", *pid);
-
-    comprobar_cola_bloqueados(io->id);
-
-    free(pid);
-    free(buffer);
 }
 
 void comprobar_suspendido(t_pcb* proceso){

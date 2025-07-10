@@ -13,6 +13,8 @@ sem_t nuevo_proceso;
 sem_t espacio_memoria;
 sem_t proceso_ready;
 
+sem_t bloqueante_sem;
+
 
 // wait y signal para semaforos
 void wait_mutex(pthread_mutex_t *mutex){
@@ -42,6 +44,7 @@ void iniciar_semaforos(){
     sem_init(&nuevo_proceso, 0, 0);
     sem_init(&proceso_ready, 0, 0);
     sem_init(&espacio_memoria, 0, 0);
+    sem_init(&bloqueante_sem, 0, 0);
 };
 
 void destruir_semaforos() {
