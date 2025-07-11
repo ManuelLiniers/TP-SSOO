@@ -31,6 +31,8 @@ void identificar_cpu(t_buffer* buffer, int socket_fd, void (*funcion)(t_cpu*, in
 bool comparar_cpu_id(t_cpu* cpu_a, t_cpu* cpu_b);
 t_cpu* cpu_ya_existe(t_list* cpus, t_cpu* cpu);
 
+void escuchar_socket_io(void* arg);
+
 // SEMAFOROS
 
 

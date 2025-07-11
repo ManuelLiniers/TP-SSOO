@@ -219,6 +219,7 @@ void iniciar_servidor_io(void* arg){
 			log_debug(logger_kernel, "[THREAD] Creo hilo para atender io");
 			pthread_detach(hilo_cliente);
 		}
+		
 	}
 
 }
@@ -240,9 +241,47 @@ void identificar_io(t_buffer* unBuffer, int socket_fd){
 
 	t_queue* cola_io = queue_create();
 	list_add_in_index(queue_block, id_io_incremental, (void*) cola_io);
-
 	id_io_incremental++;
+
+	pthread_t hilo_escucha_io;
+	pthread_create(&hilo_escucha_io, NULL, (void*) escuchar_socket_io, dispositivo);
+	pthread_detach(hilo_escucha_io);
+
 	log_debug(logger_kernel,"Se registro dispositivo: %s", dispositivo->nombre);
+}
+
+void escuchar_socket_io(void* arg){
+	t_dispositivo_io* dispositivo = (t_dispositivo_io*) arg;
+	while(1){
+		op_code codigo = recibir_operacion(dispositivo->socket);
+		switch (codigo){
+			case FINALIZACION_IO:{
+				tiempo_en_io *proceso = queue_pop(obtener_cola_io(dispositivo->id));
+
+				if(proceso->pcb->estado == SUSP_BLOCKED){
+					wait_mutex(&mutex_queue_susp_ready);
+					queue_push(queue_susp_ready, proceso);
+					signal_mutex(&mutex_queue_susp_ready);
+					cambiarEstado(proceso->pcb, SUSP_READY);
+				}
+				else{
+					poner_en_ready(proceso->pcb);
+				}
+
+				log_info(logger_kernel, "## %d finalizó IO", proceso->pcb->pid);
+
+				comprobar_cola_bloqueados(dispositivo->id);
+				break;
+			}
+			case -1:
+				log_debug(logger_kernel, "[Dispositivo %s IO Desconectado]", dispositivo->nombre);
+				pthread_cancel(pthread_self());
+				break;
+			default:
+				log_warning(logger_kernel, "Operación desconocida de IO");
+				break;
+		}
+	}
 }
 
 // Se crea un proceso y se pushea a new

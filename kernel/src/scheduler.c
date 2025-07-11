@@ -482,9 +482,11 @@ void enviar_proceso_a_io(t_pcb* proceso, int io_id, int io_tiempo){
 
     log_info(logger_kernel, "## %d - Bloqueado por IO: %s", proceso->pid, dispositivo->nombre);
 
+    /* 
     pthread_t hilo_vuelta_io;
     pthread_create(&hilo_vuelta_io, NULL, (void*) vuelta_proceso_io, dispositivo); // creo hilo para esperar la vuelta de la io
-    pthread_detach(hilo_vuelta_io);
+    pthread_detach(hilo_vuelta_io); 
+    */
     pthread_t comprobacion_suspendido;
     pthread_create(&comprobacion_suspendido, NULL, (void*) comprobar_suspendido, proceso);
     pthread_detach(comprobacion_suspendido);
