@@ -5,7 +5,6 @@
 t_proceso* crear_proceso(int pid, int size, char* path_instruc){
 	t_proceso* proceso_nuevo = malloc(sizeof(t_proceso));
 	proceso_nuevo->pid = pid;
-	proceso_nuevo->paginas = size/TAM_PAGINA + 1;
     t_metricas_proceso* metricas = calloc(1, sizeof(t_metricas_proceso));
     proceso_nuevo->metricas = metricas; 
 
@@ -14,9 +13,11 @@ t_proceso* crear_proceso(int pid, int size, char* path_instruc){
 
     if(size != 0){
         int paginas = size/TAM_PAGINA + 1;
+	    proceso_nuevo->paginas = paginas;
         int contador = 0;
         proceso_nuevo->tabla_paginas_raiz = crear_tabla_multinivel(1, &paginas, &contador);
     } else {
+        proceso_nuevo->paginas = 0;
         proceso_nuevo->tabla_paginas_raiz = NULL;
     }
 

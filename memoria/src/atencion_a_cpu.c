@@ -12,11 +12,11 @@ void atender_cpu(int cpu_fd){
 	while (1) {
 		t_buffer* unBuffer;
         int op_code = recibir_operacion(cpu_fd);
-		usleep(RETARDO_MEMORIA);
 
 		switch (op_code) {
 			case PEDIR_INSTRUCCION: {
 				unBuffer = recibir_paquete(cpu_fd);
+				usleep(RETARDO_MEMORIA);
 				atender_peticion_de_instruccion(unBuffer, cpu_fd);
 
 				break;
@@ -29,12 +29,14 @@ void atender_cpu(int cpu_fd){
 			}
 			case LEER_MEMORIA: {
 				unBuffer = recibir_paquete(cpu_fd);
+				usleep(RETARDO_MEMORIA);
 				atender_lectura_espacio_usuario(unBuffer, cpu_fd);
 
 				break;
 			}
 			case ESCRIBIR_MEMORIA: {
 				unBuffer = recibir_paquete(cpu_fd);
+				usleep(RETARDO_MEMORIA);
 				atender_escritura_espacio_usuario(unBuffer, cpu_fd);
 
 				break;

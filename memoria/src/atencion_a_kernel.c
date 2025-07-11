@@ -33,14 +33,16 @@ void atender_kernel(int kernel_fd){ // agregar que reciba el buffer
 			}
 			case SWAP: {
 				unBuffer = recibir_paquete(kernel_fd);
-				
+
+				usleep(RETARDO_SWAP);
 				atender_swap(unBuffer, kernel_fd);
 
 				break;
 			}
 			case VUELTA_SWAP: {
 				unBuffer = recibir_paquete(kernel_fd);
-				
+
+				usleep(RETARDO_SWAP);
 				atender_vuelta_swap(unBuffer, kernel_fd);
 
 				break;

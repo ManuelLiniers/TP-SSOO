@@ -7,25 +7,28 @@ int enviar_a_swap(int pid) {
     bool paginas_extra = false;
     t_list* lista_desplazamiento = obtener_espacios_swap(pid,  paginas, &paginas_extra);
 
-    FILE* archivo = fopen(PATH_SWAPFILE, "r+b");
-    if(!archivo){
-        archivo = fopen(PATH_SWAPFILE, "w+b"); // no deberia entrar porque ya se crea en inicializar memoria
-    }
-    if(!archivo){
-        log_error(memoria_logger, "No se pudo abrir el swapfile");
-        return -1;
-    }
+    if(paginas > 0){
+        FILE* archivo = fopen(PATH_SWAPFILE, "r+b");
+        if(!archivo){
+            archivo = fopen(PATH_SWAPFILE, "w+b"); // no deberia entrar porque ya se crea en inicializar memoria
+        }
+        if(!archivo){
+            log_error(memoria_logger, "No se pudo abrir el swapfile");
+            return -1;
+        }
 
-    if(paginas_extra){
-        int fd = fileno(archivo);
-        ftruncate(fd, list_size(lista_swap) * TAM_PAGINA);
-    }
+        if(paginas_extra){
+            int fd = fileno(archivo);
+            ftruncate(fd, list_size(lista_swap) * TAM_PAGINA);
+        }
 
-    escribir_marcos_en_archivo_con_desplazamiento(archivo, proceso->tabla_paginas_raiz, &paginas, lista_desplazamiento);
+        escribir_marcos_en_archivo_con_desplazamiento(archivo, proceso->tabla_paginas_raiz, &paginas, lista_desplazamiento);
+
+        fclose(archivo);
+    }
 
     proceso->metricas->bajadas_swap++;
     list_destroy_and_destroy_elements(lista_desplazamiento, free);
-    fclose(archivo);
 
     list_add(procesos_swap, proceso);
     list_remove_element(procesos_memoria, proceso);
