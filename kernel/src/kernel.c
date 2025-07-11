@@ -253,10 +253,10 @@ void identificar_io(t_buffer* unBuffer, int socket_fd){
 void escuchar_socket_io(void* arg){
 	t_dispositivo_io* dispositivo = (t_dispositivo_io*) arg;
 	while(1){
-		op_code codigo = recibir_operacion(dispositivo->socket);
+		int codigo = recibir_operacion(dispositivo->socket);
 		switch (codigo){
 			case FINALIZACION_IO:{
-				tiempo_en_io *proceso = queue_pop(obtener_cola_io(dispositivo->id));
+				tiempo_en_io* proceso = queue_pop(obtener_cola_io(dispositivo->id));
 
 				if(proceso->pcb->estado == SUSP_BLOCKED){
 					wait_mutex(&mutex_queue_susp_ready);
@@ -270,7 +270,7 @@ void escuchar_socket_io(void* arg){
 
 				log_info(logger_kernel, "## %d finalizó IO", proceso->pcb->pid);
 
-				comprobar_cola_bloqueados(dispositivo->id);
+				comprobar_cola_bloqueados(dispositivo);
 				break;
 			}
 			case -1:

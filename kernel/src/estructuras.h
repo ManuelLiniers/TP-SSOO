@@ -110,7 +110,9 @@ typedef struct{
     int socket;
 } t_dispositivo_io;
 
-t_dispositivo_io* buscar_io(int id_io);
+t_dispositivo_io* buscar_io(char* nombre_io);
+t_dispositivo_io* buscar_io_libre(char* nombre_io);
+t_dispositivo_io* buscar_io_menos_ocupada(char* nombre_io);
 t_queue* obtener_cola_io(int io_id);
 
 typedef struct{

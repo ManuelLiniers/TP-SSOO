@@ -76,18 +76,9 @@ void* esperar_dispatch(void* arg){
 
         break;
     case CAUSA_IO:
-
-        int io_id = recibir_int_del_buffer(paquete);
+        int tamanio = recibir_int_del_buffer(paquete);
+        char* nombre_io = recibir_informacion_del_buffer(paquete, tamanio);
         int io_tiempo = recibir_int_del_buffer(paquete);
-        t_dispositivo_io* dispositivo = buscar_io(io_id);
-        if(dispositivo == NULL){
-            log_error(logger_kernel, "No se encontro la IO: %d", io_id);
-            break;
-        }
-
-        if(queue_is_empty(obtener_cola_io(io_id))){
-            enviar_proceso_a_io(proceso, io_id, io_tiempo);
-        }
 
         tiempo_en_io proceso_bloqueado;
         proceso_bloqueado.pcb = proceso;
@@ -95,13 +86,24 @@ void* esperar_dispatch(void* arg){
 
         sacar_proceso_ejecucion(proceso);
 
+        t_dispositivo_io* dispositivo = buscar_io_libre(nombre_io);
+        if(dispositivo != NULL){
+            enviar_proceso_a_io(proceso, dispositivo, io_tiempo);
+        }
+        else{
+            dispositivo = buscar_io_menos_ocupada(nombre_io);
+        }
+
+        if(dispositivo == NULL){
+            log_error(logger_kernel, "No se encontro la IO: %s", nombre_io);
+            break;
+        }
+
         wait_mutex(&mutex_queue_block);
-        queue_push(obtener_cola_io(io_id), &proceso_bloqueado);
+        queue_push(obtener_cola_io(dispositivo->id), &proceso_bloqueado);
         signal_mutex(&mutex_queue_block);
 
         cambiarEstado(proceso, BLOCKED);
-
-        // free(paquete);
         break;
 
     case INIT_PROC:
@@ -471,9 +473,7 @@ void poner_en_ejecucion(t_pcb* proceso, t_cpu* cpu_encargada, int socket){
     cambiarEstado(proceso, EXEC);
 }
 
-void enviar_proceso_a_io(t_pcb* proceso, int io_id, int io_tiempo){
-
-    t_dispositivo_io* dispositivo = buscar_io(io_id);
+void enviar_proceso_a_io(t_pcb* proceso, t_dispositivo_io* dispositivo, int io_tiempo){
     
     t_paquete* paquete = crear_paquete(PETICION_IO);
     agregar_a_paquete(paquete, &(proceso->pid), sizeof(int));
@@ -512,7 +512,7 @@ void vuelta_proceso_io(void* args){
 
         log_info(logger_kernel, "## %d finalizó IO", proceso->pcb->pid);
 
-        comprobar_cola_bloqueados(io->id);
+        comprobar_cola_bloqueados(io);
     }
     else{
         log_debug(logger_kernel, "Codigo de vuelta de io incorrecto");
@@ -561,11 +561,13 @@ void comprobar_suspendido(t_pcb* proceso){
     }
 } */
 
-void comprobar_cola_bloqueados(int io_id){
-    t_queue* cola_io = obtener_cola_io(io_id);
+void comprobar_cola_bloqueados(t_dispositivo_io* dispositivo){
+    t_queue* cola_io = obtener_cola_io(dispositivo->id);
     if(!queue_is_empty(cola_io)){
-        tiempo_en_io *proceso = queue_peek(cola_io);
+        wait_mutex(&mutex_queue_block);
+        tiempo_en_io *proceso = queue_pop(cola_io);
+        signal_mutex(&mutex_queue_block);
 
-        enviar_proceso_a_io(proceso->pcb, io_id, proceso->tiempo);
+        enviar_proceso_a_io(proceso->pcb, dispositivo, proceso->tiempo);
     }
 }

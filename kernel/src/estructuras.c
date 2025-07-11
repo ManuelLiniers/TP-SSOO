@@ -113,14 +113,35 @@ void pcb_destroy(void* pcb_void) {
     free(pcb);
 }
 
-t_dispositivo_io* buscar_io(int id_io){
+t_dispositivo_io* buscar_io(char* nombre_io){
     for(int i = 0; i<list_size(lista_dispositivos_io); i++){
         t_dispositivo_io* actual = (t_dispositivo_io*) list_get(lista_dispositivos_io, i);
-        if(actual->id == id_io){
+        if(actual->nombre == nombre_io){
             return actual;
         }
     }
     return NULL;
+}
+
+t_dispositivo_io* buscar_io_libre(char* nombre_io){
+    for(int i = 0; i<list_size(lista_dispositivos_io); i++){
+        t_dispositivo_io* actual = (t_dispositivo_io*) list_get(lista_dispositivos_io, i);
+        if(actual->nombre == nombre_io && queue_is_empty(obtener_cola_io(actual->id))){
+            return actual;
+        }
+    }
+    return NULL;
+}
+
+t_dispositivo_io* buscar_io_menos_ocupada(char* nombre_io){
+    t_dispositivo_io* dispositivo = buscar_io(nombre_io);
+    for(int i=0; i<list_size(lista_dispositivos_io); i++){
+        t_dispositivo_io* siguiente = (t_dispositivo_io*) list_get(lista_dispositivos_io, i);
+        if(siguiente->nombre == nombre_io && queue_size(obtener_cola_io(siguiente->id)) < queue_size(obtener_cola_io(dispositivo->id))){
+            dispositivo = siguiente;
+        }
+    }
+    return dispositivo;
 }
 
 t_cpu* buscar_cpu_libre(t_list* lista_cpus){

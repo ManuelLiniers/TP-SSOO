@@ -317,10 +317,10 @@ void ciclo_de_instruccion_execute(t_instruccion_decodificada* instruccion, t_con
     }
 
     else if (string_equals_ignore_case(opcode, "IO")) {
-        int id_dispositivo = atoi(instruccion->operandos[0]);
+        char* id_dispositivo = instruccion->operandos[0];
         int tiempo = atoi(instruccion->operandos[1]);
 
-        log_info(logger, "PID: %d - Ejecutando: IO - Dispositivo: %d - Tiempo: %d", contexto->pid, id_dispositivo, tiempo);
+        log_info(logger, "PID: %d - Ejecutando: IO - Dispositivo: %s - Tiempo: %d", contexto->pid, id_dispositivo, tiempo);
 
         enviar_contexto_a_kernel_io(contexto, CAUSA_IO, conexion_kernel_dispatch, logger, id_dispositivo, tiempo);
         contexto->program_counter = -1;  //desalojo al proceso
@@ -469,7 +469,7 @@ void enviar_contexto_a_kernel_init_proc(t_contexto* contexto, motivo_desalojo mo
     log_debug(logger, "Se envio el contexto actualizado con motivo INIT_PROC al Kernel.");
 }
 
-void enviar_contexto_a_kernel_io(t_contexto* contexto, motivo_desalojo motivo, int fd, t_log* logger, int id_io, int tiempo_io) {
+void enviar_contexto_a_kernel_io(t_contexto* contexto, motivo_desalojo motivo, int fd, t_log* logger, char* nombre_io, int tiempo_io) {
     t_paquete* paquete = crear_paquete(CONTEXTO_PROCESO);
 
     agregar_a_paquete(paquete, &(contexto->pid), sizeof(uint32_t));
@@ -479,7 +479,9 @@ void enviar_contexto_a_kernel_io(t_contexto* contexto, motivo_desalojo motivo, i
     agregar_a_paquete(paquete, &(contexto->CX), sizeof(uint32_t));
     agregar_a_paquete(paquete, &(contexto->DX), sizeof(uint32_t));
     agregar_a_paquete(paquete, &motivo, sizeof(int));
-    agregar_a_paquete(paquete, &id_io, sizeof(int));
+    int longitud = strlen(nombre_io) + 1;
+    agregar_a_paquete(paquete, &longitud, sizeof(int));
+    agregar_a_paquete(paquete, nombre_io, strlen(nombre_io) + 1);
     agregar_a_paquete(paquete, &tiempo_io, sizeof(int));
 
     enviar_paquete(paquete, fd);

@@ -36,9 +36,9 @@ long calcular_tiempo(t_metricas_estado_tiempo* metrica);
 void* planificar_corto_plazo_FIFO(void* arg);
 void paquete_memoria_pid(t_pcb* proceso, op_code codigo);
 
-void enviar_proceso_a_io(t_pcb* proceso, int io_id, int io_tiempo);
+void enviar_proceso_a_io(t_pcb* proceso, t_dispositivo_io* dispositivo, int io_tiempo);
 void vuelta_proceso_io(void* args);
-void comprobar_cola_bloqueados(int io_id);
+void comprobar_cola_bloqueados(t_dispositivo_io* dispositivo);
 void comprobar_suspendido(t_pcb* proceso);
 void notificar_suspension_memoria(t_pcb* proceso);
 void verificar_procesos_ready();
