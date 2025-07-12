@@ -334,8 +334,7 @@ void ciclo_de_instruccion_execute(t_instruccion_decodificada* instruccion, t_con
 
         enviar_contexto_a_kernel_init_proc(contexto, INIT_PROC, conexion_kernel_dispatch, logger, archivo_instrucciones, tamanio);
 
-        // Como el proceso no se bloquea ni finaliza, avanzo al siguiente ciclo de instrucción
-        //contexto->program_counter++;
+        contexto->program_counter = -1;
     }
 
 
@@ -351,14 +350,14 @@ void ciclo_de_instruccion_execute(t_instruccion_decodificada* instruccion, t_con
         enviar_contexto_a_kernel_dump(contexto, MEMORY_DUMP, conexion_kernel_dispatch, logger);
 
         // espero respuesta de Memoria
-        int resultado_dump;
-        recv(conexion_memoria, &resultado_dump, sizeof(int), 0);
+        //int resultado_dump;
+        //recv(conexion_memoria, &resultado_dump, sizeof(int), 0);
 
-        if (resultado_dump == OK) {
-            enviar_contexto_a_kernel(contexto, SIGNAL, conexion_kernel_dispatch, logger);
-        } else {
-            enviar_contexto_a_kernel(contexto, FINALIZADO, conexion_kernel_dispatch, logger);
-        }
+        //if (resultado_dump == OK) {
+          //  enviar_contexto_a_kernel(contexto, SIGNAL, conexion_kernel_dispatch, logger);
+        //} else {
+        //    enviar_contexto_a_kernel(contexto, FINALIZADO, conexion_kernel_dispatch, logger);
+        //}
 
         contexto->program_counter = -1; // fin del proceso en CPU
     }  
@@ -385,43 +384,54 @@ void ciclo_de_instruccion_execute(t_instruccion_decodificada* instruccion, t_con
         log_debug(logger, "Valor leído: %d", valor);
     }
     else if (string_equals_ignore_case(opcode, "WRITE")) {
-        uint32_t direccion_logica = atoi(instruccion->operandos[0]);  //el primer parametro de WRITE es la dir logica, el segundo son los datos
-        char* valor = instruccion->operandos[1];
-        int tamanio = strlen(valor) + 1; 
+    uint32_t direccion_logica = atoi(instruccion->operandos[0]);
+    char* valor = instruccion->operandos[1];
+    int tamanio = strlen(valor) + 1;
 
-        //ahora se actualiza la cache con el contenido y el BM si estaba la pagina presente, si no está no pasa nada xq dsp se busca en traducir_direccion
+    int pid = contexto->pid;
+    uint32_t nro_pagina = direccion_logica / TAMANIO_PAGINA;
+    uint32_t desplazamiento = direccion_logica % TAMANIO_PAGINA;
 
-        for (int i = 0; i < list_size(cache_paginas); i++) {
-            t_entrada_cache* entrada = list_get(cache_paginas, i);
-            if (entrada->pid == contexto->pid && entrada->pagina == (direccion_logica / TAMANIO_PAGINA)) { //compara por pid y num pagina
-                free(entrada->contenido);
-                entrada->contenido = strdup(valor);
-                entrada->bit_modificado = true;
-                entrada->bit_uso = true;
-                usleep(retardo_cache * 1000); // retardo de acceso a cache
-                break;
-            }
-        }
+    bool esta_en_cache = false;
+    uint32_t marco = 0;
 
-        uint32_t direccion_fisica = traducir_direccion_logica(direccion_logica, TAMANIO_PAGINA, contexto, conexion_memoria);
-        int pid = contexto->pid;
-
-        log_info(logger, "PID: %d - Acción: ESCRIBIR - Dirección Física: %d - Valor: %s", pid, direccion_fisica, valor);
-
-        t_paquete* paquete = crear_paquete(ESCRIBIR_MEMORIA);
-        agregar_a_paquete(paquete, &pid, sizeof(int));
-        agregar_a_paquete(paquete, &direccion_fisica, sizeof(uint32_t));
-        agregar_a_paquete(paquete, &tamanio, sizeof(int));
-        agregar_a_paquete(paquete, valor, tamanio);
-        enviar_paquete(paquete, conexion_memoria);
-        eliminar_paquete(paquete);
-
-        int respuesta;
-        recv(conexion_memoria, &respuesta, sizeof(int), 0);
-        if(respuesta != OK){
-            log_error(logger, "No se escribio correctamente");
+    for (int i = 0; i < list_size(cache_paginas); i++) {    //verifico que la pagina esta en cache
+        t_entrada_cache* entrada = list_get(cache_paginas, i);
+        if (entrada->pid == pid && entrada->pagina == nro_pagina) {
+            free(entrada->contenido);
+            entrada->contenido = strdup(valor);
+            entrada->bit_modificado = true;         //BM en 1 xq quiere escribirse
+            entrada->bit_uso = true;
+            marco = entrada->marco; 
+            usleep(retardo_cache * 1000);    //retardo xq accede a cache
+            esta_en_cache = true;
+            break;
         }
     }
+
+    uint32_t direccion_fisica;
+    if (esta_en_cache) {     //si esta en cache hace el calculo de la dfisica directamente en cache y escribe sin ir a memoria
+        direccion_fisica = marco * TAMANIO_PAGINA + desplazamiento;
+    } else {
+        direccion_fisica = traducir_direccion_logica(direccion_logica, TAMANIO_PAGINA, contexto, conexion_memoria);
+    }
+
+    log_info(logger, "PID: %d - Acción: ESCRIBIR - Dirección Física: %d - Valor: %s", pid, direccion_fisica, valor);
+
+    t_paquete* paquete = crear_paquete(ESCRIBIR_MEMORIA);
+    agregar_a_paquete(paquete, &pid, sizeof(int));
+    agregar_a_paquete(paquete, &direccion_fisica, sizeof(uint32_t));
+    agregar_a_paquete(paquete, &tamanio, sizeof(int));
+    agregar_a_paquete(paquete, valor, tamanio);
+    enviar_paquete(paquete, conexion_memoria);
+    eliminar_paquete(paquete);
+
+    int respuesta;
+    recv(conexion_memoria, &respuesta, sizeof(int), 0);
+    if (respuesta != OK) {
+        log_error(logger, "No se escribió correctamente");
+    }
+}
 
     // Si la instrucción no fue GOTO (que cambia el PC),ninguna o alguna que no haya modificado el pc avanza1 para buscar una instruccion a ejecutar
 
@@ -439,10 +449,6 @@ void enviar_contexto_a_kernel(t_contexto* contexto, motivo_desalojo motivo, int 
 
     agregar_a_paquete(paquete, &(contexto->pid), sizeof(uint32_t));
     agregar_a_paquete(paquete, &(contexto->program_counter), sizeof(uint32_t));
-    agregar_a_paquete(paquete, &(contexto->AX), sizeof(uint32_t));
-    agregar_a_paquete(paquete, &(contexto->BX), sizeof(uint32_t));
-    agregar_a_paquete(paquete, &(contexto->CX), sizeof(uint32_t));
-    agregar_a_paquete(paquete, &(contexto->DX), sizeof(uint32_t));
     agregar_a_paquete(paquete, &motivo, sizeof(motivo_desalojo));  
     enviar_paquete(paquete, fd);
     eliminar_paquete(paquete);
@@ -453,10 +459,6 @@ void enviar_contexto_a_kernel_init_proc(t_contexto* contexto, motivo_desalojo mo
 
     agregar_a_paquete(paquete, &(contexto->pid), sizeof(uint32_t));
     agregar_a_paquete(paquete, &(contexto->program_counter), sizeof(uint32_t));
-    agregar_a_paquete(paquete, &(contexto->AX), sizeof(uint32_t));
-    agregar_a_paquete(paquete, &(contexto->BX), sizeof(uint32_t));
-    agregar_a_paquete(paquete, &(contexto->CX), sizeof(uint32_t));
-    agregar_a_paquete(paquete, &(contexto->DX), sizeof(uint32_t));
     agregar_a_paquete(paquete, &motivo, sizeof(int));
     agregar_a_paquete(paquete, &tamanio, sizeof(int));
     int longitud = strlen(archivo) + 1;
@@ -474,10 +476,6 @@ void enviar_contexto_a_kernel_io(t_contexto* contexto, motivo_desalojo motivo, i
 
     agregar_a_paquete(paquete, &(contexto->pid), sizeof(uint32_t));
     agregar_a_paquete(paquete, &(contexto->program_counter), sizeof(uint32_t));
-    agregar_a_paquete(paquete, &(contexto->AX), sizeof(uint32_t));
-    agregar_a_paquete(paquete, &(contexto->BX), sizeof(uint32_t));
-    agregar_a_paquete(paquete, &(contexto->CX), sizeof(uint32_t));
-    agregar_a_paquete(paquete, &(contexto->DX), sizeof(uint32_t));
     agregar_a_paquete(paquete, &motivo, sizeof(int));
     int longitud = strlen(nombre_io) + 1;
     agregar_a_paquete(paquete, &longitud, sizeof(int));
@@ -495,10 +493,6 @@ void enviar_contexto_a_kernel_dump(t_contexto* contexto, motivo_desalojo motivo,
 
     agregar_a_paquete(paquete, &(contexto->pid), sizeof(uint32_t));
     agregar_a_paquete(paquete, &(contexto->program_counter), sizeof(uint32_t));
-    agregar_a_paquete(paquete, &(contexto->AX), sizeof(uint32_t));
-    agregar_a_paquete(paquete, &(contexto->BX), sizeof(uint32_t));
-    agregar_a_paquete(paquete, &(contexto->CX), sizeof(uint32_t));
-    agregar_a_paquete(paquete, &(contexto->DX), sizeof(uint32_t));
     agregar_a_paquete(paquete, &motivo, sizeof(int));
 
     enviar_paquete(paquete, fd);
