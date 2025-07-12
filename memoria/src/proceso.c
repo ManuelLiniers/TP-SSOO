@@ -79,7 +79,6 @@ char* obtener_instruccion_por_indice(t_proceso* un_proceso, int indice_instrucci
     }
 
 	if(indice_instruccion >= 0 && indice_instruccion < list_size(un_proceso->instrucciones)){
-        un_proceso->metricas->instrucciones_solicitadas++;
 		return list_get(un_proceso->instrucciones, indice_instruccion);
 	}
 	else{
@@ -97,7 +96,9 @@ void exponer_metricas(t_metricas_proceso* metricas, uint32_t pid){
 
 void finalizar_proceso(t_proceso* proceso){
 
-    liberar_tablas(proceso->tabla_paginas_raiz);
+    if(proceso->paginas != 0){
+        liberar_tablas(proceso->tabla_paginas_raiz);
+    }
 
     list_destroy_and_destroy_elements(proceso->instrucciones, free);
     free(proceso->metricas);

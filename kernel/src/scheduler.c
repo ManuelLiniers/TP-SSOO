@@ -74,7 +74,10 @@ void* esperar_dispatch(void* arg){
         paquete_memoria_pid(proceso, FINALIZAR_PROCESO);
         signal_sem(&espacio_memoria);
 
-
+    //
+//              ############# AVISAR A SEMAFOROS PARA QUE SIGA CORRIENDO EL PROCESO #############
+    //
+        //signal_sem(&proceso_ready);
         //free(proceso);
 
         break;
@@ -121,7 +124,16 @@ void* esperar_dispatch(void* arg){
 
         log_info(logger_kernel, "## (<%d>) - Solicito syscall: <%s>", proceso->pid, "INIT_PROC");
 
+        sacar_proceso_ejecucion(proceso);
+        cpu_encargada->esta_libre = 1;
+        list_add(lista_cpus, cpu_encargada);
+
         crear_proceso(archivo, tamanio_proceso);
+
+    //
+//              ############# AVISAR A SEMAFOROS PARA QUE SIGA CORRIENDO EL PROCESO #############
+    //
+        //signal_sem(&proceso_ready);
         //crear_proceso(archivo, nombre);
         //free(nombre);
         break;

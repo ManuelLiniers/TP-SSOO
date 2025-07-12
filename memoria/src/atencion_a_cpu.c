@@ -69,6 +69,7 @@ void atender_peticion_de_instruccion(t_buffer* unBuffer, int cpu_fd){
 	char* instruccion = obtener_instruccion_por_indice(un_proceso, pc);
 
 	log_info(memoria_logger, "## PID: %d - Obtener instruccion: %d - Instruccion: %s", pid, pc, instruccion);
+	un_proceso->metricas->instrucciones_solicitadas++;
 	
 	enviar_instruccion_a_cpu(instruccion, cpu_fd);
 }
