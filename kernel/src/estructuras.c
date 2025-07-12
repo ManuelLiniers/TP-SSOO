@@ -9,6 +9,7 @@ t_list* lista_procesos_ejecutando;
 int estimacion_inicial;
 int tiempo_suspension;
 double estimador_alfa;
+char* log_level;
 
 // Definición de las colas globales
 t_list* queue_new;
@@ -125,19 +126,12 @@ t_dispositivo_io* buscar_io_libre(char* nombre_io){
     log_debug(logger_kernel, "Dispositivo a buscar: %s", nombre_io);
     for(int i = 0; i<list_size(lista_dispositivos_io); i++){
         t_dispositivo_io* actual =list_get(lista_dispositivos_io, i);
-        if(actual != NULL){
-            log_debug(logger_kernel, "Buscando IO libre, dispositivo actual: %s, ID: %d, Queue size: %d", actual->nombre, actual->id, queue_size(obtener_cola_io(actual->id)));
-        }
-        else{
-            log_debug(logger_kernel, "Buscando IO libre, dispositivo actual: no hay dispositivo");
-        }
+        wait_mutex(&mutex_queue_block);
         if(strcmp(nombre_io, actual->nombre) == 0 && queue_is_empty(obtener_cola_io(actual->id))){
-            log_debug(logger_kernel, "entro if en true");
+            signal_mutex(&mutex_queue_block);
             return actual;
         }
-        else{
-            log_debug(logger_kernel, "entro if en false");
-        }
+        signal_mutex(&mutex_queue_block);
     }
     return NULL;
 }
@@ -152,9 +146,11 @@ t_dispositivo_io* buscar_io_menos_ocupada(char* nombre_io){
             log_debug(logger_kernel, "Buscando IO menos ocupada, dispositivo actual: no hay dispositivo");
         }
         t_dispositivo_io* siguiente = (t_dispositivo_io*) list_get(lista_dispositivos_io, i);
+        wait_mutex(&mutex_queue_block);
         if(siguiente->nombre == nombre_io && queue_size(obtener_cola_io(siguiente->id)) < queue_size(obtener_cola_io(dispositivo->id))){
             dispositivo = siguiente;
         }
+        signal_mutex(&mutex_queue_block);
     }
     return dispositivo;
 }
@@ -169,6 +165,15 @@ t_cpu* buscar_cpu_libre(t_list* lista_cpus){
     }
     log_error(logger_kernel, "No hay CPUs libres");
     return NULL;
+}
+
+void liberar_cpu(t_cpu* cpu_encargada){
+    for(int i=0; i<list_size(lista_cpus); i++){
+        t_cpu* actual = list_get(lista_cpus, i);
+        if(actual->cpu_id == cpu_encargada->cpu_id){
+            actual->esta_libre = 1;
+        }
+    }
 }
 
 t_pcb* buscar_proceso_pid(uint32_t pid){
@@ -186,15 +191,18 @@ void sacar_proceso_ejecucion(t_pcb* proceso){
         t_unidad_ejecucion* actual = list_get(lista_procesos_ejecutando, i);
         if(actual->proceso->pid == proceso->pid){
             list_remove_element(lista_procesos_ejecutando, actual);
+            temporal_destroy(actual->tiempo_ejecutando);
         }
     }
+    signal_sem(&cpu_libre);
 }
 
-void cambiarEstado(t_pcb* proceso, t_estado estado){
+void cambiar_estado(t_pcb* proceso, t_estado estado){
     t_metricas_estado_tiempo* metrica_anterior = obtener_ultima_metrica(proceso);
 
     if(metrica_anterior != NULL){
-        metrica_anterior->tiempo_fin = temporal_get_string_time("%H:%M:%S:%MS"); 
+        metrica_anterior->tiempo_fin = temporal_get_string_time("%H:%M:%S:%MS");
+        log_info(logger_kernel, "Tiempo de fin en estado %s: %s", estado_to_string(metrica_anterior->estado), metrica_anterior->tiempo_fin); 
         switch (metrica_anterior->estado)
         {
         case EXEC:
@@ -227,6 +235,7 @@ void cambiarEstado(t_pcb* proceso, t_estado estado){
         t_metricas_estado_tiempo* metrica = malloc(sizeof(t_metricas_estado_tiempo));
         metrica->estado = estado;
         metrica->tiempo_inicio = temporal_get_string_time("%H:%M:%S:%MS");
+        log_info(logger_kernel, "Tiempo de inicio en estado %s: %s", estado_to_string(estado), metrica->tiempo_inicio);
         list_add(proceso->metricas_tiempo, metrica);
     }
 
@@ -235,11 +244,13 @@ void cambiarEstado(t_pcb* proceso, t_estado estado){
     }
     else{
         log_info(logger_kernel, "## (<%d>) Pasa del estado <%s> al estado <%s>", proceso->pid, estado_to_string(metrica_anterior->estado), estado_to_string(estado));
+        log_info(logger_kernel, "Tiempo en estado %s: %ld", estado_to_string(metrica_anterior->estado),
+        obtener_diferencia_tiempo(metrica_anterior->tiempo_inicio, metrica_anterior->tiempo_fin));
     }
 }
 
 bool no_fue_desalojado(t_pcb* proceso){
-    t_metricas_estado_tiempo* metrica = list_get(proceso->metricas_tiempo, list_size(proceso->metricas_tiempo)-3);
+    t_metricas_estado_tiempo* metrica = list_get(proceso->metricas_tiempo, list_size(proceso->metricas_tiempo)-2);
     return metrica->estado != EXEC;
 }
 
@@ -345,7 +356,7 @@ void mostrar_cola_io(t_queue** cola){
                 return;
             }
             queue_push(aux, proceso);
-            log_debug(logger_kernel, "PID: (<%d>), ESTADO:%s", proceso->pcb->pid, estado_to_string(proceso->pcb->estado));
+            log_debug(logger_kernel, "PID: (<%d>), ESTADO: %s", proceso->pcb->pid, estado_to_string(proceso->pcb->estado));
         }
         *cola=aux;
         log_debug(logger_kernel, "------");

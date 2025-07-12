@@ -20,6 +20,7 @@ void iniciar_cpus();
 extern int estimacion_inicial;
 extern double estimador_alfa;
 extern int tiempo_suspension;
+extern char* log_level;
 
 // Estados posibles de un proceso
 typedef enum { NEW, READY, EXEC, BLOCKED, SUSP_READY, SUSP_BLOCKED, EXIT } t_estado;
@@ -67,7 +68,7 @@ typedef struct {
 void crear_proceso(char* instrucciones, int tamanio_proceso);
 
 t_pcb* buscar_proceso_pid(uint32_t pid);
-void cambiarEstado(t_pcb* proceso, t_estado estado);
+void cambiar_estado(t_pcb* proceso, t_estado estado);
 bool no_fue_desalojado(t_pcb* proceso);
 void calcular_estimacion(t_pcb* proceso);
 char* estado_to_string(t_estado estado);
@@ -83,6 +84,7 @@ typedef struct {
 
 extern t_list* lista_procesos_ejecutando;
 void sacar_proceso_ejecucion(t_pcb* proceso);
+void liberar_cpu(t_cpu* cpu_encargada);
 
 t_metricas_estado_tiempo* obtener_ultima_metrica(t_pcb* proceso);
 t_list* obtener_exec(t_pcb* proceso);

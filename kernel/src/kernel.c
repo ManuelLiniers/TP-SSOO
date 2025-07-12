@@ -23,12 +23,11 @@ void iniciar_config(){
     if(config_kernel == NULL){
         log_error(logger_kernel, "Error al crear el config del Kernel");
     }
-	log_debug(logger_kernel, "Config creada existosamente");
+	//log_debug(logger_kernel, "Config creada existosamente");
 }
 
 
 void inicializar_kernel(char* instrucciones, char* tamanio_proceso){
-	logger_kernel = log_create("kernel.log", "[Kernel]", 1, LOG_LEVEL_DEBUG);
     iniciar_config();
 	iniciar_semaforos();
 	scheduler_init();
@@ -45,7 +44,9 @@ void inicializar_kernel(char* instrucciones, char* tamanio_proceso){
 	estimacion_inicial = config_get_int_value(config_kernel, "ESTIMACION_INICIAL");
 	estimador_alfa = config_get_double_value(config_kernel, "ALFA");
 	tiempo_suspension = config_get_int_value(config_kernel, "TIEMPO_SUSPENSION");
+	log_level = config_get_string_value(config_kernel, "LOG_LEVEL");
 
+	logger_kernel = log_create("kernel.log", "[Kernel]", 1, log_level_from_string(log_level));
 	log_debug(logger_kernel, "kernel inicializado");
 }
 
@@ -162,6 +163,7 @@ void identificar_cpu(t_buffer* buffer, int socket_fd, void (*funcion)(t_cpu*, in
 		cpu_nueva->esta_libre = 1;
 		funcion(cpu_nueva, socket_fd);
 		list_add(lista_cpus, cpu_nueva);
+		signal_sem(&cpu_libre);
 		//log_debug(logger_kernel, "Tamanio del nombre: %d", tamanio_nombre);
 		log_debug(logger_kernel, "Se identifico la CPU: %d", cpu_nueva->cpu_id);
 	}
@@ -264,13 +266,16 @@ void* escuchar_socket_io(void* arg){
 	while(1){
 		int codigo = recibir_operacion(dispositivo->socket);
 		switch (codigo){
-			case FINALIZACION_IO:{
+			case FINALIZACION_IO:
+				wait_mutex(&mutex_queue_block);
 				t_queue* cola = obtener_cola_io(dispositivo->id);
-				mostrar_cola_io(&cola);
 				tiempo_en_io* proceso = queue_pop(cola);
+				signal_mutex(&mutex_queue_block);
 
+				/* log_debug(logger_kernel, "Cola de bloqueados de %s:\n", dispositivo->nombre);
+				mostrar_cola_io(&cola); */
 				if(proceso->pcb->estado == SUSP_BLOCKED){
-					cambiarEstado(proceso->pcb, SUSP_READY);
+					cambiar_estado(proceso->pcb, SUSP_READY);
 					wait_mutex(&mutex_queue_susp_ready);
 					queue_push(queue_susp_ready, proceso);
 					signal_mutex(&mutex_queue_susp_ready);
@@ -284,9 +289,9 @@ void* escuchar_socket_io(void* arg){
 
 				comprobar_cola_bloqueados(dispositivo);
 				break;
-			}
 			case -1:
 				log_debug(logger_kernel, "[Dispositivo %s IO Desconectado]", dispositivo->nombre);
+				list_remove_element(lista_dispositivos_io, dispositivo);
 				pthread_exit(NULL);
 				break;
 			default:
@@ -305,6 +310,11 @@ void crear_proceso(char* instrucciones, int tamanio_proceso){
 	pcb_nuevo->estimacion_anterior = estimacion_inicial;
 	pcb_nuevo->estimacion_actual = estimacion_inicial;
 	pcb_nuevo->estado = NEW;
+	pcb_nuevo->metricas_estado[0] = 1;
+	t_metricas_estado_tiempo* metrica = malloc(sizeof(t_metricas_estado_tiempo));
+	metrica->estado = NEW;
+	metrica->tiempo_inicio =  temporal_get_string_time("%H:%M:%S:%MS");
+	list_add(pcb_nuevo->metricas_tiempo, metrica);
 	log_info(logger_kernel, "## (<%d>) Se crea el proceso - Estado: NEW", pcb_nuevo->pid);
 
 	wait_mutex(&mutex_queue_new);
