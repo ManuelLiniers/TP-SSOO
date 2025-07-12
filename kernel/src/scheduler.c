@@ -47,14 +47,11 @@ void* esperar_dispatch(void* arg){
     uint32_t pid = recibir_uint32_del_buffer(paquete);
     t_pcb* proceso = buscar_proceso_pid(pid);
     uint32_t pc = recibir_uint32_del_buffer(paquete);
-    for(int i=0; i<4; i++){
-        proceso->registros[i] = recibir_uint32_del_buffer(paquete);
-    };
     int motivo = recibir_int_del_buffer(paquete);
 
     log_debug(logger_kernel, "Motivo: %d", motivo);
 
-    proceso->program_counter = pc;
+    proceso->program_counter = pc + 1;
     
     switch (motivo)
     {
@@ -129,7 +126,26 @@ void* esperar_dispatch(void* arg){
         //free(nombre);
         break;
     case MEMORY_DUMP:
-        paquete_memoria_pid(proceso, DUMP_MEMORY);
+        bool resultado_dump = paquete_memoria_pid(proceso, DUMP_MEMORY); 
+
+        sacar_proceso_ejecucion(proceso);
+        cpu_encargada->esta_libre = 1;
+        list_add(lista_cpus, cpu_encargada);
+        if(resultado_dump){
+            poner_en_ready(proceso);
+        } else {
+            cambiarEstado(proceso, EXIT);
+
+            wait_mutex(&mutex_queue_exit);
+            queue_push(queue_exit, proceso);
+            signal_mutex(&mutex_queue_exit);
+
+            log_info(logger_kernel, "## %d - Finaliza el proceso", proceso->pid);
+
+            log_metricas_estado(proceso);
+            paquete_memoria_pid(proceso, FINALIZAR_PROCESO);
+            signal_sem(&espacio_memoria);
+        }
         break;
     default:
         log_error(logger_kernel, "Motivo de desalojo desconocido");
@@ -139,13 +155,18 @@ void* esperar_dispatch(void* arg){
     return NULL;
 }
 
-void paquete_memoria_pid(t_pcb* proceso, op_code codigo){
+bool paquete_memoria_pid(t_pcb* proceso, op_code codigo){
     int conexion = crear_conexion_memoria();
     
     t_paquete* paquete = crear_paquete(codigo);
     agregar_a_paquete(paquete, &(proceso->pid), sizeof(int));
     enviar_paquete(paquete, conexion);
     eliminar_paquete(paquete);
+
+    int resultado;
+    recv(conexion, &resultado, sizeof(int), 0);
+    liberar_conexion(conexion);
+    return resultado == OK;
 }
 
 void* planificar_corto_plazo_SJF(void* arg){

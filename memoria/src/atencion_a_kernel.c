@@ -49,7 +49,7 @@ void atender_kernel(int kernel_fd){ // agregar que reciba el buffer
 			}
 			case -1:{
 				log_debug(memoria_logger, "[KERNEL] se desconecto. Terminando consulta");
-				exit(0);
+				pthread_exit(NULL);
 			}
             default: {
 				log_warning(memoria_logger, "Operación desconocida de KERNEL");
