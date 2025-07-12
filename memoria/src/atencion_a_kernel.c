@@ -153,7 +153,7 @@ void atender_swap(t_buffer* unBuffer, int kernel_fd){
 }
 
 void atender_vuelta_swap(t_buffer* unBuffer, int kernel_fd){
-	uint32_t pid = recibir_uint32_del_buffer(unBuffer);
+	int pid = recibir_int_del_buffer(unBuffer);
 
 	t_proceso* proceso = obtener_proceso_por_id(pid, procesos_swap);
 	if(!proceso){

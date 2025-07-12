@@ -106,7 +106,7 @@ void inicializar_servidores(){
 	log_debug(logger_kernel, "servidores iniciados");
 }
 
-void iniciar_cpu_dispatch(void* arg){
+void* iniciar_cpu_dispatch(void* arg){
 	log_debug(logger_kernel, "entro al hilo dispatch");
 	int server_fd_kernel_dispatch = iniciar_servidor(logger_kernel, NULL, puerto_dispatch);
 
@@ -123,14 +123,17 @@ void iniciar_cpu_dispatch(void* arg){
 			pthread_detach(hilo_cliente);
 		}
 	}
+	return NULL;
 }
 
-void atender_dispatch(void* arg){
+void* atender_dispatch(void* arg){
 	saludar_cliente_generico(logger_kernel, arg, (void*) identificar_cpu_distpatch);
+	return NULL;
 }
 
-void identificar_cpu_distpatch(t_buffer* buffer, int socket){
+void* identificar_cpu_distpatch(t_buffer* buffer, int socket){
 	identificar_cpu(buffer, socket, modificar_dispatch);
+	return NULL;
 }
 
 
@@ -173,7 +176,7 @@ void modificar_dispatch(t_cpu* una_cpu, int socket_fd){
 	una_cpu->socket_dispatch = socket_fd;
 }
 
-void iniciar_cpu_interrupt(void* arg){
+void* iniciar_cpu_interrupt(void* arg){
 	log_debug(logger_kernel, "entre al hilo interrupt");
 	int server_fd_kernel_interrupt = iniciar_servidor(logger_kernel, NULL, puerto_interrupt);
 
@@ -190,21 +193,24 @@ void iniciar_cpu_interrupt(void* arg){
 			pthread_detach(hilo_cliente);
 		}
 	}
+	return NULL;
 }
 
-void atender_interrupt(void* arg){
+void* atender_interrupt(void* arg){
 	saludar_cliente_generico(logger_kernel, arg, (void*) identificar_cpu_interrupt);
+	return NULL;
 }
 
-void identificar_cpu_interrupt(t_buffer* buffer, int socket){
+void* identificar_cpu_interrupt(t_buffer* buffer, int socket){
 	identificar_cpu(buffer, socket, modificar_interrupt);
+	return NULL;
 }
 
 void modificar_interrupt(t_cpu* una_cpu, int socket_fd){
 	una_cpu->socket_interrupt = socket_fd;
 }
 
-void iniciar_servidor_io(void* arg){
+void* iniciar_servidor_io(void* arg){
 	log_debug(logger_kernel, "entro al hilo IO");
 	int server_fd_kernel_io = iniciar_servidor(logger_kernel, NULL, puerto_io);
 
@@ -221,14 +227,15 @@ void iniciar_servidor_io(void* arg){
 		}
 		
 	}
-
+	return NULL;
 }
 
-void atender_io(void* arg){
+void* atender_io(void* arg){
 	saludar_cliente_generico(logger_kernel, arg, (void*) identificar_io);
+	return NULL;
 }
 
-void identificar_io(t_buffer* unBuffer, int socket_fd){
+void* identificar_io(t_buffer* unBuffer, int socket_fd){
 	int tamanio_nombre = recibir_int_del_buffer(unBuffer);
 	char* nombre_disp = recibir_informacion_del_buffer(unBuffer, tamanio_nombre);
 
@@ -249,9 +256,10 @@ void identificar_io(t_buffer* unBuffer, int socket_fd){
 	pthread_detach(hilo_escucha_io);
 
 	log_debug(logger_kernel,"Se registro dispositivo: %s", dispositivo->nombre);
+	return NULL;
 }
 
-void escuchar_socket_io(void* arg){
+void* escuchar_socket_io(void* arg){
 	t_dispositivo_io* dispositivo = (t_dispositivo_io*) arg;
 	while(1){
 		int codigo = recibir_operacion(dispositivo->socket);
@@ -279,13 +287,14 @@ void escuchar_socket_io(void* arg){
 			}
 			case -1:
 				log_debug(logger_kernel, "[Dispositivo %s IO Desconectado]", dispositivo->nombre);
-				pthread_cancel(pthread_self());
+				pthread_exit(NULL);
 				break;
 			default:
 				log_warning(logger_kernel, "Operación desconocida de IO");
 				break;
 		}
 	}
+	return NULL;
 }
 
 // Se crea un proceso y se pushea a new

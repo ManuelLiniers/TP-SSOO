@@ -67,6 +67,7 @@ void* esperar_dispatch(void* arg){
 
         sacar_proceso_ejecucion(proceso);
         cpu_encargada->esta_libre = 1;
+        list_add(lista_cpus, cpu_encargada);
 
         log_info(logger_kernel, "## (<%d>) - Solicito syscall: <%s>", proceso->pid, "EXIT");
 
@@ -75,6 +76,7 @@ void* esperar_dispatch(void* arg){
         log_metricas_estado(proceso);
         paquete_memoria_pid(proceso, FINALIZAR_PROCESO);
         signal_sem(&espacio_memoria);
+
 
         //free(proceso);
 
@@ -89,6 +91,8 @@ void* esperar_dispatch(void* arg){
         proceso_bloqueado->tiempo = io_tiempo;
 
         sacar_proceso_ejecucion(proceso);
+        cpu_encargada->esta_libre = 1;
+        list_add(lista_cpus, cpu_encargada);
 
         t_dispositivo_io* dispositivo = buscar_io_libre(nombre_io);
         //log_debug(logger_kernel, "Dispositivo libre encontrado: ", dispositivo->nombre);
@@ -126,7 +130,6 @@ void* esperar_dispatch(void* arg){
         break;
     case MEMORY_DUMP:
         paquete_memoria_pid(proceso, DUMP_MEMORY);
-        // bloquear proceso?
         break;
     default:
         log_error(logger_kernel, "Motivo de desalojo desconocido");
@@ -302,7 +305,8 @@ void *planificar_largo_plazo_FIFO(void* arg){
         wait_sem(&nuevo_proceso);
         wait_mutex(&mutex_queue_susp_ready);
         if(!queue_is_empty(queue_susp_ready)){
-            t_pcb* proceso = queue_peek(queue_susp_ready);
+            tiempo_en_io* proceso_a_desuspender = queue_peek(queue_susp_ready);
+            t_pcb* proceso = proceso_a_desuspender->pcb;
             signal_mutex(&mutex_queue_susp_ready);
             if(vuelta_swap(proceso)){
 
