@@ -40,20 +40,18 @@ void leer_log(t_log* logger){
 }
 
 
-char* inicializar_memoria(){
-	
-	memoria_logger = log_create("Memoria.log", "[Memoria]", 1, LOG_LEVEL_DEBUG);
-	
+char* inicializar_memoria(){	
     memoria_config = config_create("/home/utnso/tp-2025-1c-queCompileALaPrimera/memoria/Memoria.config");
-
+	
 	if (memoria_config == NULL) {
 		log_error(memoria_logger, "No se pudo crear el config de la memoria");
 		exit(1);
 	}
-
+	
 	leer_config(memoria_config);
 	//  leer_log(memoria_logger);  		(Para pruebas)
-
+	
+	memoria_logger = log_create("Memoria.log", "[Memoria]", 1, log_level_from_string(LOG_LEVEL));
 
 	espacio_usuario = calloc(1, TAM_MEMORIA);
 	if(espacio_usuario == NULL){

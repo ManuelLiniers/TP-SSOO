@@ -15,6 +15,7 @@ void atender_kernel(int kernel_fd){ // agregar que reciba el buffer
 				
 				iniciar_proceso(unBuffer, kernel_fd);
 
+				eliminar_buffer(unBuffer);
 				break;
 			}
 			case FINALIZAR_PROCESO: {
@@ -22,6 +23,7 @@ void atender_kernel(int kernel_fd){ // agregar que reciba el buffer
 				
 				fin_proceso(unBuffer, kernel_fd);
 
+				eliminar_buffer(unBuffer);
 				break;
 			}
 			case DUMP_MEMORY: {
@@ -29,6 +31,7 @@ void atender_kernel(int kernel_fd){ // agregar que reciba el buffer
 				
 				atender_dump_memory(unBuffer, kernel_fd);
 
+				eliminar_buffer(unBuffer);
 				break;
 			}
 			case SWAP: {
@@ -37,6 +40,7 @@ void atender_kernel(int kernel_fd){ // agregar que reciba el buffer
 				usleep(RETARDO_SWAP);
 				atender_swap(unBuffer, kernel_fd);
 
+				eliminar_buffer(unBuffer);
 				break;
 			}
 			case VUELTA_SWAP: {
@@ -45,6 +49,7 @@ void atender_kernel(int kernel_fd){ // agregar que reciba el buffer
 				usleep(RETARDO_SWAP);
 				atender_vuelta_swap(unBuffer, kernel_fd);
 
+				eliminar_buffer(unBuffer);
 				break;
 			}
 			case -1:{
@@ -56,7 +61,6 @@ void atender_kernel(int kernel_fd){ // agregar que reciba el buffer
                 break;
 			}
 		}
-		eliminar_buffer(unBuffer);
 	}
 }
 

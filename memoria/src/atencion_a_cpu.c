@@ -19,12 +19,14 @@ void atender_cpu(int cpu_fd){
 				usleep(RETARDO_MEMORIA);
 				atender_peticion_de_instruccion(unBuffer, cpu_fd);
 
+				eliminar_buffer(unBuffer);
 				break;
 			}
 			case PEDIR_MARCO: {
 				unBuffer = recibir_paquete(cpu_fd);
 				atender_peticion_marco(unBuffer, cpu_fd);
 
+				eliminar_buffer(unBuffer);
 				break;
 			}
 			case LEER_MEMORIA: {
@@ -32,6 +34,7 @@ void atender_cpu(int cpu_fd){
 				usleep(RETARDO_MEMORIA);
 				atender_lectura_espacio_usuario(unBuffer, cpu_fd);
 
+				eliminar_buffer(unBuffer);
 				break;
 			}
 			case ESCRIBIR_MEMORIA: {
@@ -39,18 +42,18 @@ void atender_cpu(int cpu_fd){
 				usleep(RETARDO_MEMORIA);
 				atender_escritura_espacio_usuario(unBuffer, cpu_fd);
 
+				eliminar_buffer(unBuffer);
 				break;
 			}
 			case -1:{
 				log_debug(memoria_logger, "[CPU] se desconecto. Terminando consulta");
-				pthread_cancel(pthread_self());
+				pthread_exit(NULL);
 			}
             default: {
 				log_warning(memoria_logger, "Operación desconocida de CPU");
                 break;
 			}
         }
-		eliminar_buffer(unBuffer);
     }
 }
 
