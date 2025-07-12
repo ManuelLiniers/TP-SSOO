@@ -45,11 +45,9 @@ int main(int argc, char* argv[]) {
     
     hacer_handshake(logger, conexion_kernel);
     t_paquete* paqueteID = crear_paquete(IDENTIFICACION);
-    int* longitud_nombre_disp = malloc(sizeof(int));
-    *longitud_nombre_disp = strlen(nombre_dispositivo) + 1;
-    agregar_a_paquete(paqueteID, longitud_nombre_disp, sizeof(int));
-    agregar_a_paquete(paqueteID, nombre_dispositivo, *longitud_nombre_disp);
-    free(longitud_nombre_disp);
+    int longitud_nombre_disp = strlen(nombre_dispositivo) + 1;
+    agregar_a_paquete(paqueteID, &longitud_nombre_disp, sizeof(int));
+    agregar_a_paquete(paqueteID, nombre_dispositivo, strlen(nombre_dispositivo) + 1);
     
     enviar_paquete(paqueteID, conexion_kernel);
     eliminar_paquete(paqueteID);

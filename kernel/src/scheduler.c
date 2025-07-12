@@ -20,6 +20,9 @@ void *planificar_corto_plazo_FIFO(void* arg){
                 pthread_detach(esperar_devolucion);
                 // free(cpu_encargada);
             }
+            else{
+                signal_sem(&proceso_ready);
+            }
         }
 	}
 
@@ -63,6 +66,7 @@ void* esperar_dispatch(void* arg){
         signal_mutex(&mutex_queue_exit);
 
         sacar_proceso_ejecucion(proceso);
+        cpu_encargada->esta_libre = 1;
 
         log_info(logger_kernel, "## (<%d>) - Solicito syscall: <%s>", proceso->pid, "EXIT");
 
@@ -80,13 +84,14 @@ void* esperar_dispatch(void* arg){
         char* nombre_io = recibir_informacion_del_buffer(paquete, tamanio);
         int io_tiempo = recibir_int_del_buffer(paquete);
 
-        tiempo_en_io proceso_bloqueado;
-        proceso_bloqueado.pcb = proceso;
-        proceso_bloqueado.tiempo = io_tiempo;
+        tiempo_en_io* proceso_bloqueado = malloc(sizeof(t_dispositivo_io));
+        proceso_bloqueado->pcb = proceso;
+        proceso_bloqueado->tiempo = io_tiempo;
 
         sacar_proceso_ejecucion(proceso);
 
         t_dispositivo_io* dispositivo = buscar_io_libre(nombre_io);
+        //log_debug(logger_kernel, "Dispositivo libre encontrado: ", dispositivo->nombre);
         if(dispositivo != NULL){
             enviar_proceso_a_io(proceso, dispositivo, io_tiempo);
         }
@@ -100,7 +105,7 @@ void* esperar_dispatch(void* arg){
         }
 
         wait_mutex(&mutex_queue_block);
-        queue_push(obtener_cola_io(dispositivo->id), &proceso_bloqueado);
+        queue_push(obtener_cola_io(dispositivo->id), proceso_bloqueado);
         signal_mutex(&mutex_queue_block);
 
         cambiarEstado(proceso, BLOCKED);
@@ -299,7 +304,7 @@ void *planificar_largo_plazo_FIFO(void* arg){
         if(!queue_is_empty(queue_susp_ready)){
             t_pcb* proceso = queue_peek(queue_susp_ready);
             signal_mutex(&mutex_queue_susp_ready);
-            if(espacio_en_memoria(proceso)){
+            if(vuelta_swap(proceso)){
 
                 wait_mutex(&mutex_queue_susp_ready);
 				queue_pop(queue_susp_ready);
@@ -419,6 +424,7 @@ bool espacio_en_memoria(t_pcb* proceso){
 
     int resultado;
     recv(conexion, &resultado, sizeof(int), 0);
+    //close(conexion);
     if(resultado == OK){
         int avisoCreado;
         recv(conexion, &avisoCreado, sizeof(int), 0);
@@ -430,11 +436,19 @@ bool espacio_en_memoria(t_pcb* proceso){
     //return 1;
 }
 
-void poner_en_ready(t_pcb* proceso){
+bool vuelta_swap(t_pcb* proceso){
+    int conexion = crear_conexion_memoria();
+    t_paquete* paquete = crear_paquete(VUELTA_SWAP);
+    agregar_a_paquete(paquete, &proceso->pid, sizeof(int));
+    enviar_paquete(paquete, conexion);
+    eliminar_paquete(paquete);
 
-    if(proceso->estado == SUSP_READY){
-        paquete_memoria_pid(proceso, VUELTA_SWAP);
-    }
+    int resultado;
+    recv(conexion, &resultado, sizeof(int), 0);
+    return resultado == OK;
+}
+
+void poner_en_ready(t_pcb* proceso){
     cambiarEstado(proceso, READY);
     wait_mutex(&mutex_queue_ready);
 	list_add(queue_ready, proceso);

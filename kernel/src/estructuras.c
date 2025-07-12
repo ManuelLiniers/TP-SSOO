@@ -115,8 +115,8 @@ void pcb_destroy(void* pcb_void) {
 
 t_dispositivo_io* buscar_io(char* nombre_io){
     for(int i = 0; i<list_size(lista_dispositivos_io); i++){
-        t_dispositivo_io* actual = (t_dispositivo_io*) list_get(lista_dispositivos_io, i);
-        if(actual->nombre == nombre_io){
+        t_dispositivo_io* actual = list_get(lista_dispositivos_io, i);
+        if(strcmp(nombre_io, actual->nombre) == 0){
             return actual;
         }
     }
@@ -124,10 +124,21 @@ t_dispositivo_io* buscar_io(char* nombre_io){
 }
 
 t_dispositivo_io* buscar_io_libre(char* nombre_io){
+    log_debug(logger_kernel, "Dispositivo a buscar: %s", nombre_io);
     for(int i = 0; i<list_size(lista_dispositivos_io); i++){
-        t_dispositivo_io* actual = (t_dispositivo_io*) list_get(lista_dispositivos_io, i);
-        if(actual->nombre == nombre_io && queue_is_empty(obtener_cola_io(actual->id))){
+        t_dispositivo_io* actual =list_get(lista_dispositivos_io, i);
+        if(actual != NULL){
+            log_debug(logger_kernel, "Buscando IO libre, dispositivo actual: %s, ID: %d, Queue size: %d", actual->nombre, actual->id, queue_size(obtener_cola_io(actual->id)));
+        }
+        else{
+            log_debug(logger_kernel, "Buscando IO libre, dispositivo actual: no hay dispositivo");
+        }
+        if(strcmp(nombre_io, actual->nombre) == 0 && queue_is_empty(obtener_cola_io(actual->id))){
+            log_debug(logger_kernel, "entro if en true");
             return actual;
+        }
+        else{
+            log_debug(logger_kernel, "entro if en false");
         }
     }
     return NULL;
@@ -136,6 +147,12 @@ t_dispositivo_io* buscar_io_libre(char* nombre_io){
 t_dispositivo_io* buscar_io_menos_ocupada(char* nombre_io){
     t_dispositivo_io* dispositivo = buscar_io(nombre_io);
     for(int i=0; i<list_size(lista_dispositivos_io); i++){
+        if(dispositivo != NULL){
+            log_debug(logger_kernel, "Buscando IO libre, dispositivo actual: %s", dispositivo->nombre);
+        }
+        else{
+            log_debug(logger_kernel, "Buscando IO menos ocupada, dispositivo actual: no hay dispositivo");
+        }
         t_dispositivo_io* siguiente = (t_dispositivo_io*) list_get(lista_dispositivos_io, i);
         if(siguiente->nombre == nombre_io && queue_size(obtener_cola_io(siguiente->id)) < queue_size(obtener_cola_io(dispositivo->id))){
             dispositivo = siguiente;
@@ -171,7 +188,6 @@ void sacar_proceso_ejecucion(t_pcb* proceso){
         t_unidad_ejecucion* actual = list_get(lista_procesos_ejecutando, i);
         if(actual->proceso->pid == proceso->pid){
             list_remove_element(lista_procesos_ejecutando, actual);
-            actual->cpu->esta_libre = 1; 
         }
     }
 }
@@ -312,6 +328,26 @@ void mostrar_cola(t_queue** cola){
             t_pcb* proceso = queue_pop(*cola);
             queue_push(aux, proceso);
             log_debug(logger_kernel, "PID: (<%d>)", proceso->pid);
+        }
+        *cola=aux;
+        log_debug(logger_kernel, "------");
+    }
+}
+
+void mostrar_cola_io(t_queue** cola){
+    if(queue_is_empty(*cola)){
+        log_debug(logger_kernel, "La cola esta vacia");
+    }
+    else{
+        t_queue* aux = queue_create();
+        for(int i = 0; i<queue_size(*cola); i++){
+            tiempo_en_io* proceso = queue_pop(*cola);
+            if(proceso == NULL){
+                log_debug(logger_kernel, "Proceso en cola io nulo");
+                return;
+            }
+            queue_push(aux, proceso);
+            log_debug(logger_kernel, "PID: (<%d>), ESTADO:%s", proceso->pcb->pid, estado_to_string(proceso->pcb->estado));
         }
         *cola=aux;
         log_debug(logger_kernel, "------");

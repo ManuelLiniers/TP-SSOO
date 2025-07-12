@@ -45,6 +45,7 @@ void verificar_procesos_ready();
 
 bool hay_cpu_libre(t_cpu** cpu_encargada);
 bool espacio_en_memoria(t_pcb* proceso);
+bool vuelta_swap(t_pcb* proceso);
 void poner_en_ready(t_pcb* proceso);
 void poner_en_ejecucion(t_pcb* proceso, t_cpu* cpu_encargada, int socket);
 

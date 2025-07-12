@@ -230,17 +230,18 @@ void atender_io(void* arg){
 
 void identificar_io(t_buffer* unBuffer, int socket_fd){
 	int tamanio_nombre = recibir_int_del_buffer(unBuffer);
-	void* nombre_raw = recibir_informacion_del_buffer(unBuffer, tamanio_nombre);
+	char* nombre_disp = recibir_informacion_del_buffer(unBuffer, tamanio_nombre);
 
 	t_dispositivo_io* dispositivo = malloc(sizeof(t_dispositivo_io));
-	memcpy(dispositivo->nombre, nombre_raw, tamanio_nombre);
+	dispositivo->nombre = nombre_disp;
+	//memcpy(dispositivo->nombre, nombre_raw, tamanio_nombre);
 	dispositivo->id = id_io_incremental;
 	dispositivo->socket = socket_fd;
 
 	list_add(lista_dispositivos_io, dispositivo);
 
 	t_queue* cola_io = queue_create();
-	list_add_in_index(queue_block, id_io_incremental, (void*) cola_io);
+	list_add_in_index(queue_block, dispositivo->id, cola_io);
 	id_io_incremental++;
 
 	pthread_t hilo_escucha_io;
@@ -256,13 +257,16 @@ void escuchar_socket_io(void* arg){
 		int codigo = recibir_operacion(dispositivo->socket);
 		switch (codigo){
 			case FINALIZACION_IO:{
-				tiempo_en_io* proceso = queue_pop(obtener_cola_io(dispositivo->id));
+				t_queue* cola = obtener_cola_io(dispositivo->id);
+				mostrar_cola_io(&cola);
+				tiempo_en_io* proceso = queue_pop(cola);
 
 				if(proceso->pcb->estado == SUSP_BLOCKED){
+					cambiarEstado(proceso->pcb, SUSP_READY);
 					wait_mutex(&mutex_queue_susp_ready);
 					queue_push(queue_susp_ready, proceso);
 					signal_mutex(&mutex_queue_susp_ready);
-					cambiarEstado(proceso->pcb, SUSP_READY);
+					signal_sem(&nuevo_proceso);
 				}
 				else{
 					poner_en_ready(proceso->pcb);

@@ -135,7 +135,7 @@ void atender_dump_memory(t_buffer* unBuffer, int kernel_fd) {
 }
 
 void atender_swap(t_buffer* unBuffer, int kernel_fd){
-	uint32_t pid = recibir_uint32_del_buffer(unBuffer);
+	int pid = recibir_int_del_buffer(unBuffer);
 
     int resultado = enviar_a_swap(pid);  // 0 si OK, -1 si hubo error
 

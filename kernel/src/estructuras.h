@@ -105,7 +105,7 @@ t_pcb* pcb_create();
 void pcb_destroy(void* pcb_void);
 
 typedef struct{
-    char nombre[20];
+    char* nombre;
     int id;
     int socket;
 } t_dispositivo_io;
@@ -114,6 +114,7 @@ t_dispositivo_io* buscar_io(char* nombre_io);
 t_dispositivo_io* buscar_io_libre(char* nombre_io);
 t_dispositivo_io* buscar_io_menos_ocupada(char* nombre_io);
 t_queue* obtener_cola_io(int io_id);
+void mostrar_cola_io(t_queue** cola);
 
 typedef struct{
     t_pcb *pcb;
