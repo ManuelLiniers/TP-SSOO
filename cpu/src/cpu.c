@@ -363,13 +363,31 @@ void ciclo_de_instruccion_execute(t_instruccion_decodificada* instruccion, t_con
     }  
 
     else if (string_equals_ignore_case(opcode, "READ")) {
-        uint32_t direccion_logica = atoi(instruccion->operandos[0]); //el primer parametro de READ es la dir logica, el segundo el tamanio
-        uint32_t tamanio = atoi(instruccion->operandos[1]);
-        uint32_t direccion_fisica = traducir_direccion_logica(direccion_logica, TAMANIO_PAGINA, contexto, conexion_memoria);
-        int pid = contexto->pid;
+    uint32_t direccion_logica = atoi(instruccion->operandos[0]);
+    uint32_t tamanio = atoi(instruccion->operandos[1]);
+    int pid = contexto->pid;
 
-        log_info(logger, "PID: %d - Acción: LEER - Dirección Física: %d", pid, direccion_fisica);
+    uint32_t nro_pagina = direccion_logica / TAMANIO_PAGINA;
+    uint32_t desplazamiento = direccion_logica % TAMANIO_PAGINA;
+    uint32_t direccion_fisica = 0;
 
+    bool esta_en_cache = false;
+    char* contenido_leido = NULL;
+
+    for (int i = 0; i < list_size(cache_paginas); i++) {
+        t_entrada_cache* entrada = list_get(cache_paginas, i);
+        if (entrada->pid == pid && entrada->pagina == nro_pagina) {
+            entrada->bit_uso = true;
+            contenido_leido = strdup(entrada->contenido + desplazamiento); // leo desde el desplazamiento hasta el tam de la pagina
+            usleep(retardo_cache * 1000);    //acceso a cache
+            direccion_fisica = entrada->marco * TAMANIO_PAGINA + desplazamiento;
+            esta_en_cache = true;
+            break;
+        }
+    }
+
+    if (!esta_en_cache) {   //entra al if con un 1 (no estaria en cache)
+        direccion_fisica = traducir_direccion_logica(direccion_logica, TAMANIO_PAGINA, contexto, conexion_memoria);
         t_paquete* paquete = crear_paquete(LEER_MEMORIA);
         agregar_a_paquete(paquete, &pid, sizeof(int));
         agregar_a_paquete(paquete, &direccion_fisica, sizeof(uint32_t));
@@ -377,13 +395,17 @@ void ciclo_de_instruccion_execute(t_instruccion_decodificada* instruccion, t_con
         enviar_paquete(paquete, conexion_memoria);
         eliminar_paquete(paquete);
 
-        // Recibir valor leído
-        uint32_t valor;
-        recv(conexion_memoria, &valor, sizeof(uint32_t), 0);
-
-        log_debug(logger, "Valor leído: %d", valor);
+        contenido_leido = malloc(tamanio);
+        recv(conexion_memoria, contenido_leido, tamanio, 0);
     }
-    else if (string_equals_ignore_case(opcode, "WRITE")) {
+
+    log_info(logger, "PID: %d - Acción: LEER - Dirección Física: %d", pid, direccion_fisica);
+    log_debug(logger, "Valor leído: %.*s", tamanio, contenido_leido);
+
+    free(contenido_leido);
+}
+
+   else if (string_equals_ignore_case(opcode, "WRITE")) {
     uint32_t direccion_logica = atoi(instruccion->operandos[0]);
     char* valor = instruccion->operandos[1];
     int tamanio = strlen(valor) + 1;
@@ -391,47 +413,45 @@ void ciclo_de_instruccion_execute(t_instruccion_decodificada* instruccion, t_con
     int pid = contexto->pid;
     uint32_t nro_pagina = direccion_logica / TAMANIO_PAGINA;
     uint32_t desplazamiento = direccion_logica % TAMANIO_PAGINA;
+    uint32_t direccion_fisica = 0;
 
     bool esta_en_cache = false;
-    uint32_t marco = 0;
 
-    for (int i = 0; i < list_size(cache_paginas); i++) {    //verifico que la pagina esta en cache
+    for (int i = 0; i < list_size(cache_paginas); i++) {
         t_entrada_cache* entrada = list_get(cache_paginas, i);
         if (entrada->pid == pid && entrada->pagina == nro_pagina) {
             free(entrada->contenido);
-            entrada->contenido = strdup(valor);
-            entrada->bit_modificado = true;         //BM en 1 xq quiere escribirse
+            entrada->contenido = strdup(valor);  // reemplazo el contenido de la pagina por lo que traiga el write
+            entrada->bit_modificado = true;
             entrada->bit_uso = true;
-            marco = entrada->marco; 
-            usleep(retardo_cache * 1000);    //retardo xq accede a cache
+            usleep(retardo_cache * 1000);  //acceso a cache
+            direccion_fisica = entrada->marco * TAMANIO_PAGINA + desplazamiento;
             esta_en_cache = true;
             break;
         }
     }
 
-    uint32_t direccion_fisica;
-    if (esta_en_cache) {     //si esta en cache hace el calculo de la dfisica directamente en cache y escribe sin ir a memoria
-        direccion_fisica = marco * TAMANIO_PAGINA + desplazamiento;
-    } else {
+    if (!esta_en_cache) {
         direccion_fisica = traducir_direccion_logica(direccion_logica, TAMANIO_PAGINA, contexto, conexion_memoria);
+
+        t_paquete* paquete = crear_paquete(ESCRIBIR_MEMORIA);
+        agregar_a_paquete(paquete, &pid, sizeof(int));
+        agregar_a_paquete(paquete, &direccion_fisica, sizeof(uint32_t));
+        agregar_a_paquete(paquete, &tamanio, sizeof(int));
+        agregar_a_paquete(paquete, valor, tamanio);
+        enviar_paquete(paquete, conexion_memoria);
+        eliminar_paquete(paquete);
+
+        int respuesta;
+        recv(conexion_memoria, &respuesta, sizeof(int), 0);
+        if (respuesta != OK) {
+            log_error(logger, "No se escribió correctamente");
+        }
     }
 
     log_info(logger, "PID: %d - Acción: ESCRIBIR - Dirección Física: %d - Valor: %s", pid, direccion_fisica, valor);
-
-    t_paquete* paquete = crear_paquete(ESCRIBIR_MEMORIA);
-    agregar_a_paquete(paquete, &pid, sizeof(int));
-    agregar_a_paquete(paquete, &direccion_fisica, sizeof(uint32_t));
-    agregar_a_paquete(paquete, &tamanio, sizeof(int));
-    agregar_a_paquete(paquete, valor, tamanio);
-    enviar_paquete(paquete, conexion_memoria);
-    eliminar_paquete(paquete);
-
-    int respuesta;
-    recv(conexion_memoria, &respuesta, sizeof(int), 0);
-    if (respuesta != OK) {
-        log_error(logger, "No se escribió correctamente");
-    }
 }
+
 
     // Si la instrucción no fue GOTO (que cambia el PC),ninguna o alguna que no haya modificado el pc avanza1 para buscar una instruccion a ejecutar
 
