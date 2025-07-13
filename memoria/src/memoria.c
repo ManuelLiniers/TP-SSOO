@@ -1,4 +1,5 @@
 #include "../include/memoria.h"
+#include <math.h>
 
 int main(int argc, char* argv[]) {
 	char* bits = inicializar_memoria();
@@ -62,8 +63,9 @@ char* inicializar_memoria(){
 
 	// Inicializar lista para administración de marcos libres
 	marcos_totales = TAM_MEMORIA / TAM_PAGINA;
-	char* bits = malloc(marcos_totales);
-	bit_marcos = bitarray_create_with_mode(bits, marcos_totales, LSB_FIRST);
+	int cantidad_bytes = ceil((float)marcos_totales /8);
+	char* bits = calloc(marcos_totales, 1);
+	bit_marcos = bitarray_create_with_mode(bits, cantidad_bytes, LSB_FIRST);
 	pthread_mutex_init(&mutex_bit_marcos, NULL);
 
 

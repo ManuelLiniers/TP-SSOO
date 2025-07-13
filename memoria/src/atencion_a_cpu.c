@@ -142,6 +142,7 @@ void atender_lectura_espacio_usuario(t_buffer* unBuffer, int cpu_fd){
     memcpy(copia_lectura, lectura, tamanio);
 	pthread_mutex_unlock(&mutex_espacio_usuario);
 
+	log_debug(memoria_logger, "Contenido a leer: %.*s", tamanio, (char*)copia_lectura);
     send(cpu_fd, copia_lectura, tamanio, 0);
 
     log_debug(memoria_logger, "Lectura enviada a CPU: dirección %u, tamaño %u", direccion_fisica, tamanio);
@@ -157,8 +158,11 @@ void atender_escritura_espacio_usuario(t_buffer* unBuffer, int cpu_fd){
 	pid = recibir_int_del_buffer(unBuffer);
 	direccion_fisica = recibir_uint32_del_buffer(unBuffer);
 	tamanio = recibir_int_del_buffer(unBuffer);
+	void* temp = recibir_informacion_del_buffer(unBuffer, tamanio);
 	void* valor = malloc(tamanio);
-	valor = recibir_informacion_del_buffer(unBuffer, tamanio);
+	memcpy(valor, temp, tamanio);
+
+	log_debug(memoria_logger, "Contenido a escribir: %.*s", tamanio, (char*)valor);
 
 	int respuesta = OK;
 	if(escribir_espacio(direccion_fisica, tamanio, valor, pid) == -1){
@@ -168,4 +172,5 @@ void atender_escritura_espacio_usuario(t_buffer* unBuffer, int cpu_fd){
 	send(cpu_fd, &respuesta, sizeof(int), 0);
 
 	free(valor);
+	free(temp);
 }

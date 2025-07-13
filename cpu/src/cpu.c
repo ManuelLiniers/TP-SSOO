@@ -378,10 +378,11 @@ void ciclo_de_instruccion_execute(t_instruccion_decodificada* instruccion, t_con
         eliminar_paquete(paquete);
 
         // Recibir valor leído
-        uint32_t valor;
-        recv(conexion_memoria, &valor, sizeof(uint32_t), 0);
+        char* valor = malloc(tamanio);
+        recv(conexion_memoria, valor, tamanio, 0);
 
-        log_debug(logger, "Valor leído: %d", valor);
+        log_debug(logger, "Valor leído: %s", valor);
+        free(valor);
     }
     else if (string_equals_ignore_case(opcode, "WRITE")) {
     uint32_t direccion_logica = atoi(instruccion->operandos[0]);
