@@ -387,7 +387,7 @@ void ciclo_de_instruccion_execute(t_instruccion_decodificada* instruccion, t_con
     else if (string_equals_ignore_case(opcode, "WRITE")) {
     uint32_t direccion_logica = atoi(instruccion->operandos[0]);
     char* valor = instruccion->operandos[1];
-    int tamanio = strlen(valor) + 1;
+    int tamanio = strlen(valor);
 
     int pid = contexto->pid;
     uint32_t nro_pagina = direccion_logica / TAMANIO_PAGINA;
