@@ -18,7 +18,7 @@ void leer_config(t_config* config){
 	TAM_PAGINA = config_get_int_value(config, "TAM_PAGINA");
 	ENTRADAS_POR_TABLA = config_get_int_value(config, "ENTRADAS_POR_TABLA");
 	CANTIDAD_NIVELES = config_get_int_value(config, "CANTIDAD_NIVELES");
-	RETARDO_MEMORIA = config_get_int_value(config, "RETARDO_MEMORIA" * 1000);
+	RETARDO_MEMORIA = config_get_int_value(config, "RETARDO_MEMORIA") * 1000;
 	PATH_SWAPFILE = config_get_string_value(config, "PATH_SWAPFILE");
 	RETARDO_SWAP = config_get_int_value(config, "RETARDO_SWAP") * 1000;
 	LOG_LEVEL = config_get_string_value(config, "LOG_LEVEL");

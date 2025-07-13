@@ -106,6 +106,7 @@ void escribir_pagina_memoria(int pid, uint32_t direccion_fisica, void* valor, in
     t_paquete* paquete = crear_paquete(ESCRIBIR_MEMORIA);
     agregar_a_paquete(paquete, &pid, sizeof(int));
     agregar_a_paquete(paquete, &direccion_fisica, sizeof(uint32_t));
+    agregar_a_paquete(paquete, &TAMANIO_PAGINA, sizeof(int));
     agregar_a_paquete(paquete, valor, TAMANIO_PAGINA);
     enviar_paquete(paquete, conexion_memoria);
     eliminar_paquete(paquete);
