@@ -57,7 +57,7 @@ typedef struct {
     char* instrucciones;      // Lista de instrucciones (strings o structs)
     t_estado estado;            // Estado actual del proceso
     int tamanio_proceso; 
-    int metricas_estado[5];         // Lista de veces que estuvo en cada estado
+    int metricas_estado[7];         // Lista de veces que estuvo en cada estado
     t_list* metricas_tiempo;  // Lista de tiempo que estuvo en cada estado
     int64_t estimacion_anterior;
     t_temporal* rafaga_real;
@@ -72,6 +72,7 @@ void cambiar_estado(t_pcb* proceso, t_estado estado);
 bool no_fue_desalojado(t_pcb* proceso);
 void calcular_estimacion(t_pcb* proceso);
 char* estado_to_string(t_estado estado);
+long long obtener_diferencia_tiempo(char* tiempo_1, char* tiempo_2);
 
 void agregar_a_lista(void* cola_ready, t_pcb* proceso);
 void agregar_a_cola(void* cola_ready, t_pcb* proceso);

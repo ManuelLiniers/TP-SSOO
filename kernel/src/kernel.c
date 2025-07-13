@@ -309,7 +309,6 @@ void crear_proceso(char* instrucciones, int tamanio_proceso){
     pcb_nuevo->tamanio_proceso = tamanio_proceso;
 	pcb_nuevo->estimacion_anterior = estimacion_inicial;
 	pcb_nuevo->estimacion_actual = estimacion_inicial;
-	pcb_nuevo->estado = NEW;
 	pcb_nuevo->metricas_estado[0] = 1;
 	t_metricas_estado_tiempo* metrica = malloc(sizeof(t_metricas_estado_tiempo));
 	metrica->estado = NEW;

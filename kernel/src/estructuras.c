@@ -65,7 +65,7 @@ t_pcb* pcb_create() {
     pid_incremental++;
 
     int metricas_estado[7] = {0, 0, 0, 0, 0, 0, 0};
-    memcpy(pcb->metricas_estado, metricas_estado, sizeof(int[5]));
+    memcpy(pcb->metricas_estado, metricas_estado, sizeof(int[7]));
     pcb->metricas_tiempo = list_create();
 
     return pcb;
@@ -192,12 +192,14 @@ void sacar_proceso_ejecucion(t_pcb* proceso){
         if(actual->proceso->pid == proceso->pid){
             list_remove_element(lista_procesos_ejecutando, actual);
             temporal_destroy(actual->tiempo_ejecutando);
+            liberar_cpu(actual->cpu);
         }
     }
     signal_sem(&cpu_libre);
 }
 
 void cambiar_estado(t_pcb* proceso, t_estado estado){
+    log_info(logger_kernel, "Metricas de tiempo 1: %d", list_size(proceso->metricas_tiempo));
     t_metricas_estado_tiempo* metrica_anterior = obtener_ultima_metrica(proceso);
 
     if(metrica_anterior != NULL){
@@ -228,9 +230,9 @@ void cambiar_estado(t_pcb* proceso, t_estado estado){
         }
     }
 
-    proceso->estado = estado;
+    proceso->estado = estado;    
     proceso->metricas_estado[id_estado(estado)]++;
-
+    
     if(estado != EXIT){
         t_metricas_estado_tiempo* metrica = malloc(sizeof(t_metricas_estado_tiempo));
         metrica->estado = estado;
@@ -238,14 +240,15 @@ void cambiar_estado(t_pcb* proceso, t_estado estado){
         log_info(logger_kernel, "Tiempo de inicio en estado %s: %s", estado_to_string(estado), metrica->tiempo_inicio);
         list_add(proceso->metricas_tiempo, metrica);
     }
+    log_info(logger_kernel, "Cantidad de metricas: %d", list_size(proceso->metricas_tiempo));
 
     if(metrica_anterior == NULL){
         log_info(logger_kernel, "## (<%d>) Pasa al estado <%s>", proceso->pid, estado_to_string(estado));
     }
     else{
         log_info(logger_kernel, "## (<%d>) Pasa del estado <%s> al estado <%s>", proceso->pid, estado_to_string(metrica_anterior->estado), estado_to_string(estado));
-        log_info(logger_kernel, "Tiempo en estado %s: %ld", estado_to_string(metrica_anterior->estado),
-        obtener_diferencia_tiempo(metrica_anterior->tiempo_inicio, metrica_anterior->tiempo_fin));
+        log_info(logger_kernel, "Tiempo en estado %s: %llu", estado_to_string(metrica_anterior->estado),
+        obtener_diferencia_tiempo( metrica_anterior->tiempo_fin, metrica_anterior->tiempo_inicio));
     }
 }
 

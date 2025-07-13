@@ -57,8 +57,11 @@ void* esperar_dispatch(void* arg){
     switch (motivo)
     {
     case FINALIZADO:
+        log_info(logger_kernel, "Metricas del proceso %d: %d", proceso->pid, list_size(proceso->metricas_tiempo));
         cambiar_estado(proceso, EXIT);
 
+        log_info(logger_kernel, "Metricas del proceso (<%d>): %d", proceso->pid, list_size(proceso->metricas_tiempo));
+        
         wait_mutex(&mutex_queue_exit);
         queue_push(queue_exit, proceso);
         signal_mutex(&mutex_queue_exit);
@@ -130,7 +133,7 @@ void* esperar_dispatch(void* arg){
         log_info(logger_kernel, "## (<%d>) - Solicito syscall: <%s>", proceso->pid, "INIT_PROC");
 
         sacar_proceso_ejecucion(proceso);
-        liberar_cpu(cpu_encargada);
+        //liberar_cpu(cpu_encargada); LO PUSE DENTRO DE sacar_proceso_ejecucion
         //list_add(lista_cpus, cpu_encargada);
 
         poner_en_ready(proceso);
@@ -291,15 +294,16 @@ void actualizar_estimaciones(){
 }
 
 void log_metricas_estado(t_pcb* proceso){
-    long tiempo_new = 0;
-    long tiempo_ready = 0;
-    long tiempo_exec = 0;
-    long tiempo_blocked = 0;
-    long tiempo_susp_ready = 0;
-    long tiempo_susp_blocked = 0;
+    long long tiempo_new = 0;
+    long long tiempo_ready = 0;
+    long long tiempo_exec = 0;
+    long long tiempo_blocked = 0;
+    long long tiempo_susp_ready = 0;
+    long long tiempo_susp_blocked = 0;
+    log_info(logger_kernel, "Cantidad de metricas finales de (<%d>): %d", proceso->pid, list_size(proceso->metricas_tiempo));
     for(int i = 0; i<list_size(proceso->metricas_tiempo);i++){
         t_metricas_estado_tiempo* metrica = list_get(proceso->metricas_tiempo, i);
-        long tiempo = calcular_tiempo(metrica);
+        long long tiempo = calcular_tiempo(metrica);
         switch (metrica->estado)
         {
         case NEW:
@@ -328,14 +332,14 @@ void log_metricas_estado(t_pcb* proceso){
 
     }
 
-    log_info(logger_kernel, "## %d - Metricas de estado: NEW %d %ld, READY %d %ld, EXEC %d %ld, BLOCKED %d %ld, SUSP_READY %d %ld, SUSP_BLOCKED %d %ld", 
+    log_info(logger_kernel, "## %d - Metricas de estado: NEW %d %llu, READY %d %llu, EXEC %d %llu, BLOCKED %d %llu, SUSP_READY %d %llu, SUSP_BLOCKED %d %llu, EXIT 1", 
     proceso->pid, proceso->metricas_estado[0], tiempo_new, proceso->metricas_estado[1], tiempo_ready, proceso->metricas_estado[2], tiempo_exec, 
     proceso->metricas_estado[3], tiempo_blocked, proceso->metricas_estado[4], tiempo_susp_ready, proceso->metricas_estado[5], tiempo_susp_blocked);
 
 }
 
 
-long calcular_tiempo(t_metricas_estado_tiempo* metrica){
+long long calcular_tiempo(t_metricas_estado_tiempo* metrica){
     char* tiempo_inicio = metrica->tiempo_inicio;
     char* tiempo_fin = metrica->tiempo_fin;
     
@@ -344,17 +348,17 @@ long calcular_tiempo(t_metricas_estado_tiempo* metrica){
 
 
 
-long obtener_diferencia_tiempo(char* tiempo_1, char* tiempo_2){
+long long obtener_diferencia_tiempo(char* tiempo_1, char* tiempo_2){
     int h1, m1, s1, ms1;
     int h2, m2, s2, ms2;
 
     sscanf(tiempo_1, "%d:%d:%d:%d", &h1, &m1, &s1, &ms1);
     sscanf(tiempo_2, "%d:%d:%d:%d", &h2, &m2, &s2, &ms2);
 
-    long total_ms1 = ((h1 * 3600) + (m1 * 60) + s1) * 1000 + ms1;
-    long total_ms2 = ((h2 * 3600) + (m2 * 60) + s2) * 1000 + ms2;
+    long long total_ms1 = ((h1 * 3600) + (m1 * 60) + s1) * 1000 + ms1;
+    long long total_ms2 = ((h2 * 3600) + (m2 * 60) + s2) * 1000 + ms2;
 
-    long diff_ms = total_ms1 - total_ms2;
+    long long diff_ms = total_ms1 - total_ms2;
 
     return diff_ms;
 }
