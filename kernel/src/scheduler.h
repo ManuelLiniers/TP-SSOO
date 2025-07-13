@@ -32,7 +32,7 @@ void* esperar_dispatch(void* arg);
 void esperar_dispatch_SJF_desalojo(void* arg);
 void actualizar_estimaciones();
 void log_metricas_estado(t_pcb* proceso);
-long calcular_tiempo(t_metricas_estado_tiempo* metrica);
+long long calcular_tiempo(t_metricas_estado_tiempo* metrica);
 void* planificar_corto_plazo_FIFO(void* arg);
 bool paquete_memoria_pid(t_pcb* proceso, op_code codigo);
 
@@ -48,6 +48,7 @@ bool espacio_en_memoria(t_pcb* proceso);
 bool vuelta_swap(t_pcb* proceso);
 void poner_en_ready(t_pcb* proceso);
 void poner_en_ejecucion(t_pcb* proceso, t_cpu* cpu_encargada, int socket);
+bool esta_ejecutando(t_pcb* procesoAComprobar);
 
 
 

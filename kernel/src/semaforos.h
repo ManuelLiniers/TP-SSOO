@@ -13,10 +13,12 @@ extern pthread_mutex_t mutex_queue_susp_ready;
 extern pthread_mutex_t mutex_procesos_ejecutando;
 
 extern sem_t bloqueante_sem;
+extern sem_t cpu_libre;
 
 extern sem_t nuevo_proceso;
 extern sem_t proceso_ready;
 extern sem_t espacio_memoria;
+extern sem_t dispositivo_libre;
 
 void iniciar_semaforos();
 void signal_sem(sem_t *sem);

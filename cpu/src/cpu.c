@@ -395,8 +395,17 @@ void ciclo_de_instruccion_execute(t_instruccion_decodificada* instruccion, t_con
         enviar_paquete(paquete, conexion_memoria);
         eliminar_paquete(paquete);
 
+<<<<<<< HEAD
         contenido_leido = malloc(tamanio);
         recv(conexion_memoria, contenido_leido, tamanio, 0);
+=======
+        // Recibir valor leído
+        char* valor = malloc(tamanio);
+        recv(conexion_memoria, valor, tamanio, 0);
+
+        log_debug(logger, "Valor leído: %s", valor);
+        free(valor);
+>>>>>>> 9fb463b371bab05e16c30732e384b5f7954d5315
     }
 
     log_info(logger, "PID: %d - Acción: LEER - Dirección Física: %d", pid, direccion_fisica);
@@ -408,7 +417,7 @@ void ciclo_de_instruccion_execute(t_instruccion_decodificada* instruccion, t_con
    else if (string_equals_ignore_case(opcode, "WRITE")) {
     uint32_t direccion_logica = atoi(instruccion->operandos[0]);
     char* valor = instruccion->operandos[1];
-    int tamanio = strlen(valor) + 1;
+    int tamanio = strlen(valor);
 
     int pid = contexto->pid;
     uint32_t nro_pagina = direccion_logica / TAMANIO_PAGINA;

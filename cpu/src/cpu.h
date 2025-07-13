@@ -28,10 +28,6 @@ extern pthread_mutex_t mutex_interrupt;
 typedef struct {
     int pid;
     int program_counter;
-    uint32_t AX;
-    uint32_t BX;
-    uint32_t CX;
-    uint32_t DX;
 } t_contexto;
 
 

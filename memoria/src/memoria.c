@@ -1,4 +1,5 @@
 #include "../include/memoria.h"
+#include <math.h>
 
 int main(int argc, char* argv[]) {
 	char* bits = inicializar_memoria();
@@ -17,9 +18,9 @@ void leer_config(t_config* config){
 	TAM_PAGINA = config_get_int_value(config, "TAM_PAGINA");
 	ENTRADAS_POR_TABLA = config_get_int_value(config, "ENTRADAS_POR_TABLA");
 	CANTIDAD_NIVELES = config_get_int_value(config, "CANTIDAD_NIVELES");
-	RETARDO_MEMORIA = config_get_int_value(config, "RETARDO_MEMORIA");
+	RETARDO_MEMORIA = config_get_int_value(config, "RETARDO_MEMORIA" * 1000);
 	PATH_SWAPFILE = config_get_string_value(config, "PATH_SWAPFILE");
-	RETARDO_SWAP = config_get_int_value(config, "RETARDO_SWAP");
+	RETARDO_SWAP = config_get_int_value(config, "RETARDO_SWAP") * 1000;
 	LOG_LEVEL = config_get_string_value(config, "LOG_LEVEL");
 	DUMP_PATH = config_get_string_value(config, "DUMP_PATH");
 	PATH_INSTRUCCIONES = config_get_string_value(config, "PATH_INSTRUCCIONES");
@@ -40,20 +41,18 @@ void leer_log(t_log* logger){
 }
 
 
-char* inicializar_memoria(){
-	
-	memoria_logger = log_create("Memoria.log", "[Memoria]", 1, LOG_LEVEL_DEBUG);
-	
+char* inicializar_memoria(){	
     memoria_config = config_create("/home/utnso/tp-2025-1c-queCompileALaPrimera/memoria/Memoria.config");
-
+	
 	if (memoria_config == NULL) {
 		log_error(memoria_logger, "No se pudo crear el config de la memoria");
 		exit(1);
 	}
-
+	
 	leer_config(memoria_config);
 	//  leer_log(memoria_logger);  		(Para pruebas)
-
+	
+	memoria_logger = log_create("Memoria.log", "[Memoria]", 1, log_level_from_string(LOG_LEVEL));
 
 	espacio_usuario = calloc(1, TAM_MEMORIA);
 	if(espacio_usuario == NULL){
@@ -64,8 +63,9 @@ char* inicializar_memoria(){
 
 	// Inicializar lista para administración de marcos libres
 	marcos_totales = TAM_MEMORIA / TAM_PAGINA;
-	char* bits = malloc(marcos_totales);
-	bit_marcos = bitarray_create_with_mode(bits, marcos_totales, LSB_FIRST);
+	int cantidad_bytes = ceil((float)marcos_totales /8);
+	char* bits = calloc(marcos_totales, 1);
+	bit_marcos = bitarray_create_with_mode(bits, cantidad_bytes, LSB_FIRST);
 	pthread_mutex_init(&mutex_bit_marcos, NULL);
 
 
