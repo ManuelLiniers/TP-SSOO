@@ -199,12 +199,12 @@ void sacar_proceso_ejecucion(t_pcb* proceso){
 }
 
 void cambiar_estado(t_pcb* proceso, t_estado estado){
-    log_info(logger_kernel, "Metricas de tiempo 1: %d", list_size(proceso->metricas_tiempo));
+    //log_debug(logger_kernel, "Metricas de tiempo 1: %d", list_size(proceso->metricas_tiempo));
     t_metricas_estado_tiempo* metrica_anterior = obtener_ultima_metrica(proceso);
 
     if(metrica_anterior != NULL){
         metrica_anterior->tiempo_fin = temporal_get_string_time("%H:%M:%S:%MS");
-        log_info(logger_kernel, "Tiempo de fin en estado %s: %s", estado_to_string(metrica_anterior->estado), metrica_anterior->tiempo_fin); 
+        //log_debug(logger_kernel, "Tiempo de fin en estado %s: %s", estado_to_string(metrica_anterior->estado), metrica_anterior->tiempo_fin); 
         switch (metrica_anterior->estado)
         {
         case EXEC:
@@ -237,10 +237,10 @@ void cambiar_estado(t_pcb* proceso, t_estado estado){
         t_metricas_estado_tiempo* metrica = malloc(sizeof(t_metricas_estado_tiempo));
         metrica->estado = estado;
         metrica->tiempo_inicio = temporal_get_string_time("%H:%M:%S:%MS");
-        log_info(logger_kernel, "Tiempo de inicio en estado %s: %s", estado_to_string(estado), metrica->tiempo_inicio);
+        //log_debug(logger_kernel, "Tiempo de inicio en estado %s: %s", estado_to_string(estado), metrica->tiempo_inicio);
         list_add(proceso->metricas_tiempo, metrica);
     }
-    log_info(logger_kernel, "Cantidad de metricas: %d", list_size(proceso->metricas_tiempo));
+    //log_debug(logger_kernel, "Cantidad de metricas: %d", list_size(proceso->metricas_tiempo));
 
     if(metrica_anterior == NULL){
         log_info(logger_kernel, "## (<%d>) Pasa al estado <%s>", proceso->pid, estado_to_string(estado));

@@ -252,6 +252,7 @@ void* identificar_io(t_buffer* unBuffer, int socket_fd){
 	t_queue* cola_io = queue_create();
 	list_add_in_index(queue_block, dispositivo->id, cola_io);
 	id_io_incremental++;
+	signal_sem(&dispositivo_libre);
 
 	pthread_t hilo_escucha_io;
 	pthread_create(&hilo_escucha_io, NULL, (void*) escuchar_socket_io, dispositivo);
@@ -284,7 +285,6 @@ void* escuchar_socket_io(void* arg){
 				else{
 					poner_en_ready(proceso->pcb);
 				}
-
 				log_info(logger_kernel, "## %d finalizó IO", proceso->pcb->pid);
 
 				comprobar_cola_bloqueados(dispositivo);

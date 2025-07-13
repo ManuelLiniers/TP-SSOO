@@ -48,6 +48,7 @@ bool espacio_en_memoria(t_pcb* proceso);
 bool vuelta_swap(t_pcb* proceso);
 void poner_en_ready(t_pcb* proceso);
 void poner_en_ejecucion(t_pcb* proceso, t_cpu* cpu_encargada, int socket);
+bool esta_ejecutando(t_pcb* procesoAComprobar);
 
 
 
