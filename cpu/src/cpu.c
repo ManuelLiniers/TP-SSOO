@@ -374,6 +374,7 @@ void ciclo_de_instruccion_execute(t_instruccion_decodificada* instruccion, t_con
     uint32_t desplazamiento = direccion_logica % TAMANIO_PAGINA;
     uint32_t direccion_fisica = 0;
 
+    char* lectura = malloc(TAMANIO_PAGINA); 
     char* contenido_leido = NULL;
 
 
@@ -383,7 +384,8 @@ void ciclo_de_instruccion_execute(t_instruccion_decodificada* instruccion, t_con
         contenido_leido = buscar_contenido_cache(pid, floor(direccion_logica/TAMANIO_PAGINA), false); // leo desde el desplazamiento hasta el tam de la pagina
     }
     if(contenido_leido != NULL){
-        log_info(logger, "PID: %d - Acción: LEER - Valor: %s", pid, contenido_leido);
+        memcpy(lectura, contenido_leido + desplazamiento, tamanio);
+        log_info(logger, "PID: %d - Acción: LEER - Valor: %s", pid, lectura);
         contexto->program_counter++;
         return;
     }
@@ -391,8 +393,10 @@ void ciclo_de_instruccion_execute(t_instruccion_decodificada* instruccion, t_con
     
     // Luego busco en TLB
     uint32_t marco = -1;
+    bool en_TLB = false;
     if (buscar_en_tlb(contexto->pid, nro_pagina, &marco, logger)) {
         direccion_fisica = marco * TAMANIO_PAGINA + desplazamiento;
+        en_TLB = true;
     }
     if(marco == -1){
         log_debug(logger, "PID: %d - OBTENER MARCO - Página: %d", contexto->pid, nro_pagina);
@@ -425,16 +429,16 @@ void ciclo_de_instruccion_execute(t_instruccion_decodificada* instruccion, t_con
 
     if (entradas_cache > 0) {
         agregar_a_cache(contexto->pid, nro_pagina, contenido_real, marco, logger, conexion_memoria, false); 
-        free(contenido_real);
     }
-    if (entradas_tlb > 0) {
+    if (entradas_tlb > 0 && !en_TLB) {
         agregar_a_tlb(contexto->pid, nro_pagina, marco, logger);
     }
 
-    log_info(logger, "PID: %d - Acción: LEER - Dirección Física: %d - Valor: %s", pid, direccion_fisica, contenido_leido);
-    log_debug(logger, "Valor leído: %.*s", tamanio, contenido_leido);
+    memcpy(lectura, contenido_real + desplazamiento, tamanio);
+    log_info(logger, "PID: %d - Acción: LEER - Dirección Física: %d - Valor: %s", pid, direccion_fisica, lectura);
+    log_debug(logger, "Valor leído: %.*s", tamanio, contenido_real);
 
-    free(contenido_leido);
+    free(lectura);
 }
 
    else if (string_equals_ignore_case(opcode, "WRITE")) {
@@ -453,7 +457,7 @@ void ciclo_de_instruccion_execute(t_instruccion_decodificada* instruccion, t_con
         contenido_cache = buscar_contenido_cache(contexto->pid, floor(direccion_logica/TAMANIO_PAGINA), true); // leo desde el desplazamiento hasta el tam de la pagina
     }
     if(contenido_cache != NULL){
-        log_info(logger, "PID: %d - Acción: ESCRIBIR - Valor: %s", contexto->pid, contenido_cache);
+        log_info(logger, "PID: %d - Acción: ESCRIBIR - Valor: %s", contexto->pid, valor);
         memcpy(contenido_cache + desplazamiento, valor, tamanio);
         contexto->program_counter++;
         return;
@@ -462,8 +466,10 @@ void ciclo_de_instruccion_execute(t_instruccion_decodificada* instruccion, t_con
     
     // Luego busco en TLB
     uint32_t marco = -1;
+    bool en_TLB = false;
     if (buscar_en_tlb(contexto->pid, nro_pagina, &marco, logger)) {
         direccion_fisica = marco * TAMANIO_PAGINA + desplazamiento;
+        en_TLB = true;
     }
     if(marco == -1){
         log_debug(logger, "PID: %d - OBTENER MARCO - Página: %d", contexto->pid, nro_pagina);
@@ -497,16 +503,16 @@ void ciclo_de_instruccion_execute(t_instruccion_decodificada* instruccion, t_con
 
         agregar_a_cache(contexto->pid, nro_pagina, contenido_real, marco, logger, conexion_memoria, true); 
 
-        if (entradas_tlb > 0) {
+        if (entradas_tlb > 0 && !en_TLB) {
             agregar_a_tlb(contexto->pid, nro_pagina, marco, logger);
         }
-        log_info(logger, "PID: %d - Acción: ESCRIBIR - Valor: %s", contexto->pid, contenido_real);
+        log_info(logger, "PID: %d - Acción: ESCRIBIR - Valor: %s", contexto->pid, valor);
 
         contexto->program_counter++;
         return;
     }
 
-    if (entradas_tlb > 0) {
+    if (entradas_tlb > 0 && !en_TLB) {
         agregar_a_tlb(contexto->pid, nro_pagina, marco, logger);
     }
 

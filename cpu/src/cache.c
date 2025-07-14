@@ -52,21 +52,33 @@ void reemplazar_con_clock_m(t_entrada_cache* nueva, t_log* logger, int conexion_
     while (1) {
         t_entrada_cache* actual = list_get(cache_paginas, puntero_clock);
 
-        if (!actual->bit_uso && !actual->bit_modificado) {
+        if(vueltas < entradas_cache || (vueltas >= 2 * entradas_cache && vueltas < 3 * entradas_cache)){
+            if (!actual->bit_uso && !actual->bit_modificado) {
+                list_replace_and_destroy_element(cache_paginas, puntero_clock, nueva, free);
+                log_info(logger, "PID: %d - Cache Add - Pagina: %d", nueva->pid, nueva->pagina);
+                puntero_clock = (puntero_clock + 1) % entradas_cache;   //p ej si las entradas son 4 (indice 0 a 3) y el ptr esta en 3 hace (3+1)%4 = 0 y reincia
+                return;
+            }
+        }
+
+        if((vueltas >= entradas_cache && vueltas < 2 * entradas_cache) || (vueltas >= 3 * entradas_cache && vueltas < 4 * entradas_cache)){
+            if (!actual->bit_uso && actual->bit_modificado) {
+                list_replace_and_destroy_element(cache_paginas, puntero_clock, nueva, free);
+                log_info(logger, "PID: %d - Cache Add - Pagina: %d", nueva->pid, nueva->pagina);
+                puntero_clock = (puntero_clock + 1) % entradas_cache;   //p ej si las entradas son 4 (indice 0 a 3) y el ptr esta en 3 hace (3+1)%4 = 0 y reincia
+                return;
+            }
+            actual->bit_uso = false;
+        }
+        if (vueltas >= 4 * entradas_cache) { 
             list_replace_and_destroy_element(cache_paginas, puntero_clock, nueva, free);
             log_info(logger, "PID: %d - Cache Add - Pagina: %d", nueva->pid, nueva->pagina);
-            puntero_clock = (puntero_clock + 1) % entradas_cache;   //p ej si las entradas son 4 (indice 0 a 3) y el ptr esta en 3 hace (3+1)%4 = 0 y reincia
+            puntero_clock = (puntero_clock + 1) % entradas_cache;
             return;
         }
 
-        actual->bit_uso = false;
         puntero_clock = (puntero_clock + 1) % entradas_cache;
         vueltas++;
-
-        if (vueltas >= entradas_cache) {  //termina la primera vuelta (BU = 0) entonces para la segunda aplica lo mismo que hace clock normal
-            reemplazar_con_clock(nueva, logger, conexion_memoria, pid);
-            return;
-        }
     }
 }
 
@@ -83,12 +95,42 @@ void agregar_a_cache(int pid, uint32_t pagina, char* contenido, uint32_t marco, 
         list_add(cache_paginas, nueva);
         log_info(logger, "PID: %d - Cache Add - Pagina: %d", pid, pagina);
     } else {
-        if (string_equals_ignore_case(algoritmo_cache, "CLOCK")) {
-            reemplazar_con_clock(nueva, logger, conexion_memoria, pid);
-        } else if (string_equals_ignore_case(algoritmo_cache, "CLOCK-M")) {
+        if (string_equals_ignore_case(algoritmo_cache, "CLOCK-M")) {
             reemplazar_con_clock_m(nueva, logger, conexion_memoria, pid);
         }
+        else if (string_equals_ignore_case(algoritmo_cache, "CLOCK")) {
+            reemplazar_con_clock(nueva, logger, conexion_memoria, pid);
+        }
     }
+    mostrar_cache(logger);
+}
+
+void mostrar_cache(t_log* logger) {
+    log_info(logger, "==============================");
+    log_info(logger, "Contenido actual de la Caché:");
+    log_info(logger, "==============================");
+
+    if (list_is_empty(cache_paginas)) {
+        log_info(logger, "[CACHÉ VACÍA]");
+        return;
+    }
+
+    for (int i = 0; i < list_size(cache_paginas); i++) {
+        t_entrada_cache* entrada = list_get(cache_paginas, i);
+        log_info(
+            logger,
+            "[Entrada %d] PID: %d | Página: %u | Marco: %u | Contenido: %s | Uso: %s | Modificado: %s",
+            i,
+            entrada->pid,
+            entrada->pagina,
+            entrada->marco,
+            entrada->contenido,
+            entrada->bit_uso ? "Sí" : "No",
+            entrada->bit_modificado ? "Sí" : "No"
+        );
+    }
+
+    log_info(logger, "==============================\n");
 }
 
 void limpiar_cache_por_pid(int pid, int conexion_memoria, t_log* logger) {
