@@ -186,6 +186,16 @@ t_pcb* buscar_proceso_pid(uint32_t pid){
     return NULL;
 }
 
+t_unidad_ejecucion* buscar_por_cpu(t_cpu* cpu_encargada){
+    for(int i=0; i<list_size(lista_procesos_ejecutando); i++){
+        t_unidad_ejecucion* actual = list_get(lista_procesos_ejecutando, i);
+        if(actual->cpu->cpu_id == cpu_encargada->cpu_id){
+            return actual;
+        }
+    }
+    return NULL;
+}
+
 void sacar_proceso_ejecucion(t_pcb* proceso){
     for(int i = 0; i<list_size(lista_procesos_ejecutando); i++){
         t_unidad_ejecucion* actual = list_get(lista_procesos_ejecutando, i);

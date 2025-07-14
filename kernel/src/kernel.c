@@ -136,8 +136,169 @@ void* atender_dispatch(void* arg){
 }
 
 void* identificar_cpu_distpatch(t_buffer* buffer, int socket){
-	identificar_cpu(buffer, socket, modificar_dispatch);
+	t_cpu* cpu = identificar_cpu(buffer, socket, modificar_dispatch);
+
+	pthread_t esperar_devolucion;
+    pthread_create(&esperar_devolucion, NULL, esperar_dispatch, (void*) cpu);
+    pthread_detach(esperar_devolucion);
 	return NULL;
+}
+
+void* esperar_dispatch(void* arg){
+    t_cpu* cpu_encargada = (t_cpu*) arg;
+
+    while(1){
+        if(CONTEXTO_PROCESO != recibir_operacion(cpu_encargada->socket_dispatch)){
+            log_error(logger_kernel, "Se esperaba recibir CONTEXTO_PROCESO");
+            return NULL;
+        }
+        t_buffer* paquete = recibir_paquete(cpu_encargada->socket_dispatch);
+
+        uint32_t pid = recibir_uint32_del_buffer(paquete);
+        t_pcb* proceso = buscar_proceso_pid(pid);
+        uint32_t pc = recibir_uint32_del_buffer(paquete);
+        int motivo = recibir_int_del_buffer(paquete);
+
+        //log_debug(logger_kernel, "Motivo: %d", motivo);
+
+        proceso->program_counter = pc + 1;
+        
+        switch (motivo)
+        {
+            case INTERRUPCION:
+				t_unidad_ejecucion* proceso_ejecutando;
+				t_unidad_ejecucion* proceso_a_ejecutar;
+				for(int i = 0; i<list_size(lista_procesos_ejecutando); i++){
+					t_unidad_ejecucion* unidad = (t_unidad_ejecucion*) list_get(lista_procesos_ejecutando, i);
+					if(unidad->cpu->cpu_id == cpu_encargada->cpu_id){
+						if(unidad->interrumpido){
+							proceso_ejecutando = unidad;
+						}
+						else{
+							proceso_a_ejecutar = unidad;
+						}
+					}
+				}
+				cambiar_estado(proceso_ejecutando->proceso, READY);
+				log_info(logger_kernel, "## (<%d>) - Desalojado por algoritmo SJF/SRT", proceso_ejecutando->proceso->pid); 
+				list_add(queue_ready, proceso_ejecutando->proceso);
+				temporal_destroy(proceso_ejecutando->tiempo_ejecutando);
+				wait_mutex(&mutex_procesos_ejecutando);
+				list_remove_element(lista_procesos_ejecutando, proceso_ejecutando);
+        		signal_mutex(&mutex_procesos_ejecutando);
+				
+				free(proceso_ejecutando);
+				
+				proceso_a_ejecutar->tiempo_ejecutando = temporal_create();
+                poner_en_ejecucion(proceso_a_ejecutar->proceso, cpu_encargada);
+				cambiar_estado(proceso_a_ejecutar->proceso, EXEC);
+                break;
+            case FINALIZADO:
+                //log_debug(logger_kernel, "Metricas del proceso %d: %d", proceso->pid, list_size(proceso->metricas_tiempo));
+                cambiar_estado(proceso, EXIT);
+
+                //log_debug(logger_kernel, "Metricas del proceso (<%d>): %d", proceso->pid, list_size(proceso->metricas_tiempo));
+
+                sacar_proceso_ejecucion(proceso);
+
+                log_info(logger_kernel, "## (<%d>) - Solicito syscall: <%s>", proceso->pid, "EXIT");
+
+                log_info(logger_kernel, "## %d - Finaliza el proceso", proceso->pid);
+                
+                log_metricas_estado(proceso);
+
+                if(paquete_memoria_pid(proceso, FINALIZAR_PROCESO)){
+                    free(proceso);
+                    signal_sem(&espacio_memoria);
+                    log_debug(logger_kernel, "HAY ESPACIO FINALIZACION EN MEMORIA");
+                }
+                
+                break;
+            case CAUSA_IO:
+                int tamanio = recibir_int_del_buffer(paquete);
+                char* nombre_io = recibir_informacion_del_buffer(paquete, tamanio);
+                int io_tiempo = recibir_int_del_buffer(paquete);
+
+                tiempo_en_io* proceso_bloqueado = malloc(sizeof(t_dispositivo_io));
+                proceso_bloqueado->pcb = proceso;
+                proceso_bloqueado->tiempo = io_tiempo;
+
+                sacar_proceso_ejecucion(proceso);
+
+                /*
+                log_info(logger_kernel, "## (<%d>) - Busca peticion IO: <%s>", proceso->pid, nombre_io);
+                t_dispositivo_io* aux = buscar_io(nombre_io);
+                while(aux == NULL){
+                    log_info(logger_kernel, "## %d - Esperando IO: %s", proceso->pid, nombre_io);
+                    wait_sem(&dispositivo_libre);
+                    aux = buscar_io(nombre_io);
+                }
+                */
+
+                t_dispositivo_io* dispositivo = buscar_io_libre(nombre_io);
+                if(dispositivo != NULL){
+                    enviar_proceso_a_io(proceso, dispositivo, io_tiempo);
+                }
+                else{
+                    dispositivo = buscar_io_menos_ocupada(nombre_io);
+                }
+
+                if(dispositivo == NULL){
+                    log_error(logger_kernel, "No se encontro la IO: %s", nombre_io);
+                    break;
+                }
+
+                wait_mutex(&mutex_queue_block);
+                queue_push(obtener_cola_io(dispositivo->id), proceso_bloqueado);
+                signal_mutex(&mutex_queue_block);
+
+                //log_debug(logger_kernel, "Proceso <%d> en dispositivo %s: ",proceso->pid ,dispositivo->nombre);
+
+                cambiar_estado(proceso, BLOCKED);
+
+                pthread_t comprobacion_suspendido;
+                pthread_create(&comprobacion_suspendido, NULL, (void*) comprobar_suspendido, proceso);
+                pthread_detach(comprobacion_suspendido);
+                break;
+
+            case INIT_PROC:
+                int tamanio_proceso = recibir_int_del_buffer(paquete);
+                int longitud = recibir_int_del_buffer(paquete);
+                char* archivo = recibir_informacion_del_buffer(paquete, longitud);
+
+                log_info(logger_kernel, "## (<%d>) - Solicito syscall: <%s>", proceso->pid, "INIT_PROC");
+
+                poner_en_ejecucion(proceso, cpu_encargada);
+
+                crear_proceso(archivo, tamanio_proceso);
+                break;
+            case MEMORY_DUMP:
+                bool resultado_dump = paquete_memoria_pid(proceso, DUMP_MEMORY); 
+
+                sacar_proceso_ejecucion(proceso);
+                if(resultado_dump){
+                    poner_en_ready(proceso);
+                } else {
+                    cambiar_estado(proceso, EXIT);
+
+                    wait_mutex(&mutex_queue_exit);
+                    queue_push(queue_exit, proceso);
+                    signal_mutex(&mutex_queue_exit);
+
+                    log_info(logger_kernel, "## %d - Finaliza el proceso", proceso->pid);
+
+                    log_metricas_estado(proceso);
+                    paquete_memoria_pid(proceso, FINALIZAR_PROCESO);
+                    signal_sem(&espacio_memoria);
+                }
+                break;
+            default:
+                log_error(logger_kernel, "Motivo de desalojo desconocido");
+                break;
+            }
+        free(paquete);
+        return NULL;
+    }
 }
 
 
@@ -155,7 +316,7 @@ t_cpu* cpu_ya_existe(t_list* lista, t_cpu* buscada){
 	return NULL;
 }
 
-void identificar_cpu(t_buffer* buffer, int socket_fd, void (*funcion)(t_cpu*, int)){
+t_cpu* identificar_cpu(t_buffer* buffer, int socket_fd, void (*funcion)(t_cpu*, int)){
 	int id = recibir_int_del_buffer(buffer);
 	//void* nombre_raw = recibir_informacion_del_buffer(buffer, tamanio_nombre);
 	//memcpy(cpu_nueva->cpu_id, cpu_id, tamanio_nombre);
@@ -169,12 +330,16 @@ void identificar_cpu(t_buffer* buffer, int socket_fd, void (*funcion)(t_cpu*, in
 		signal_sem(&cpu_libre);
 		//log_debug(logger_kernel, "Tamanio del nombre: %d", tamanio_nombre);
 		log_debug(logger_kernel, "Se identifico la CPU: %d", cpu_nueva->cpu_id);
+		mostrar_cpus();
+		return cpu_nueva;
 	}
 	else{ 
 		funcion(encontrada, socket_fd);
 		free(cpu_nueva);
+		mostrar_cpus();
+		return encontrada;
 	}
-	mostrar_cpus();
+
 }
 
 void modificar_dispatch(t_cpu* una_cpu, int socket_fd){

@@ -66,8 +66,15 @@ typedef struct {
 } t_pcb;
 
 void crear_proceso(char* instrucciones, int tamanio_proceso);
+typedef struct {
+    t_pcb* proceso;
+    t_cpu* cpu;
+    t_temporal* tiempo_ejecutando;
+    bool interrumpido;
+} t_unidad_ejecucion;
 
 t_pcb* buscar_proceso_pid(uint32_t pid);
+t_unidad_ejecucion* buscar_por_cpu(t_cpu* cpu_encargada);
 void cambiar_estado(t_pcb* proceso, t_estado estado);
 bool no_fue_desalojado(t_pcb* proceso);
 void calcular_estimacion(t_pcb* proceso);
@@ -77,11 +84,6 @@ long long obtener_diferencia_tiempo(char* tiempo_1, char* tiempo_2);
 void agregar_a_lista(void* cola_ready, t_pcb* proceso);
 void agregar_a_cola(void* cola_ready, t_pcb* proceso);
 
-typedef struct {
-    t_pcb* proceso;
-    t_cpu* cpu;
-    t_temporal* tiempo_ejecutando;
-} t_unidad_ejecucion;
 
 extern t_list* lista_procesos_ejecutando;
 void sacar_proceso_ejecucion(t_pcb* proceso);

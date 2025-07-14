@@ -23,6 +23,7 @@ extern char* algoritmo_largo_plazo;
 void* planificar_largo_plazo_FIFO(void* arg);
 void* planificar_corto_plazo_SJF(void* arg);
 void* planificar_corto_plazo_SJF_desalojo(void* arg);
+bool shortest_job_first_desalojo(void* a, void* b);
 void* planificar_largo_plazo_PMCP(void* arg);
 void *comprobar_procesos_nuevos(void* arg);
 bool proceso_es_mas_chico(void* a, void* b);
@@ -47,7 +48,7 @@ bool hay_cpu_libre(t_cpu** cpu_encargada);
 bool espacio_en_memoria(t_pcb* proceso);
 bool vuelta_swap(t_pcb* proceso);
 void poner_en_ready(t_pcb* proceso);
-void poner_en_ejecucion(t_pcb* proceso, t_cpu* cpu_encargada, int socket);
+void poner_en_ejecucion(t_pcb* proceso, t_cpu* cpu_encargada);
 bool esta_ejecutando(t_pcb* procesoAComprobar);
 
 void *comprobar_suspendido_ready(void* args);
