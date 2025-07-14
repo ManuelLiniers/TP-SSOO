@@ -278,7 +278,7 @@ void* escuchar_socket_io(void* arg){
 				if(proceso->pcb->estado == SUSP_BLOCKED){
 					cambiar_estado(proceso->pcb, SUSP_READY);
 					wait_mutex(&mutex_queue_susp_ready);
-					queue_push(queue_susp_ready, proceso);
+					queue_push(queue_susp_ready, proceso->pcb);
 					signal_mutex(&mutex_queue_susp_ready);
 					signal_sem(&nuevo_proceso);
 				}

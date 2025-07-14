@@ -10,7 +10,7 @@
       "type": "cppdbg",
       "request": "launch",
       "program": "${workspaceFolder}/bin/${workspaceFolderBasename}",
-      "args": ["MEMORIA_BASE","256"],
+      "args": ["PLANI_LYM_PLAZO","0"],
       "stopAtEntry": false,
       "cwd": "${workspaceFolder}",
       "environment": [],

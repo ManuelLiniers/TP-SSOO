@@ -225,7 +225,6 @@ void* esperar_dispatch(void* arg){
         bool resultado_dump = paquete_memoria_pid(proceso, DUMP_MEMORY); 
 
         sacar_proceso_ejecucion(proceso);
-        liberar_cpu(cpu_encargada);
         if(resultado_dump){
             poner_en_ready(proceso);
         } else {
@@ -349,8 +348,9 @@ void *planificar_largo_plazo_FIFO(void* arg){
         wait_sem(&nuevo_proceso);
         wait_mutex(&mutex_queue_susp_ready);
         if(!queue_is_empty(queue_susp_ready)){
-            tiempo_en_io* proceso_a_desuspender = queue_peek(queue_susp_ready);
-            t_pcb* proceso = proceso_a_desuspender->pcb;
+            //tiempo_en_io* proceso_a_desuspender = queue_peek(queue_susp_ready);
+            //t_pcb* proceso = proceso_a_desuspender->pcb;
+            t_pcb* proceso = queue_peek(queue_susp_ready);
             signal_mutex(&mutex_queue_susp_ready);
             if(vuelta_swap(proceso)){
 
@@ -372,25 +372,25 @@ void *planificar_largo_plazo_FIFO(void* arg){
             signal_mutex(&mutex_queue_susp_ready);
             wait_mutex(&mutex_queue_new);
             if(!list_is_empty(queue_new)){
-			t_pcb* proceso = list_get(queue_new, 0);
-            signal_mutex(&mutex_queue_new);
-			if(espacio_en_memoria(proceso)){
-
-                wait_mutex(&mutex_queue_new);
-				list_remove_element(queue_new, proceso);
+                t_pcb* proceso = list_get(queue_new, 0);
                 signal_mutex(&mutex_queue_new);
+                if(espacio_en_memoria(proceso)){
 
-                // PONER EN READY
-                poner_en_ready(proceso);
-                log_debug(logger_kernel, "Cola de ready:");
-                mostrar_lista(queue_ready);
-			}
-            else{
-                signal_sem(&nuevo_proceso); // el proceso nuevo sigue en NEW, hago signal de vuelta
-                wait_sem(&espacio_memoria); // espero que algun proceso finalice 
-            }
-            signal_mutex(&mutex_queue_new);
-		}
+                    wait_mutex(&mutex_queue_new);
+                    list_remove_element(queue_new, proceso);
+                    signal_mutex(&mutex_queue_new);
+
+                    // PONER EN READY
+                    poner_en_ready(proceso);
+                    log_debug(logger_kernel, "Cola de ready:");
+                    mostrar_lista(queue_ready);
+                }
+                else{
+                    signal_sem(&nuevo_proceso); // el proceso nuevo sigue en NEW, hago signal de vuelta
+                    wait_sem(&espacio_memoria); // espero que algun proceso finalice 
+                }
+                signal_mutex(&mutex_queue_new);
+		    }
         }
 	}
 
