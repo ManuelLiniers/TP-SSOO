@@ -30,6 +30,9 @@ int main(int argc, char* argv[]) {
 TAMANIO_PAGINA = config_get_int_value(cpu_config, "TAMANIO_PAGINA");
 retardo_cache = config_get_int_value(cpu_config, "RETARDO_CACHE");
 
+log_info(logger, "CPU - TAM_PAGINA = %d", TAMANIO_PAGINA);
+
+
 //ENTRADAS_CACHE = config_get_int_value(cpu_config, "ENTRADAS_CACHE");
     
     pthread_mutex_init(&mutex_interrupt, NULL);  
@@ -445,7 +448,7 @@ void ciclo_de_instruccion_execute(t_instruccion_decodificada* instruccion, t_con
         int respuesta;
         recv(conexion_memoria, &respuesta, sizeof(int), 0);
         if (respuesta != OK) {
-            log_error(logger, "No se escribió correctamente");
+            log_error(logger, "No se escribió bien");
         }
     }
 
