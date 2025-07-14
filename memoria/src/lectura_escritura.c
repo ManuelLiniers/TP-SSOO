@@ -18,15 +18,15 @@ void* obtener_lectura(uint32_t direccion_fisica, uint32_t tamanio, int pid) {
 }
 
 int escribir_espacio(uint32_t direccion_fisica, int tamanio, void* valor, int pid) {
-    if (direccion_fisica + tamanio > TAM_MEMORIA) 
+    if (direccion_fisica + tamanio > TAM_MEMORIA) {
     log_error(memoria_logger, "ERROR: Escritura fuera de rango. Dir: %d + Tam: %d > %d", direccion_fisica, tamanio, TAM_MEMORIA);
-    return -1;
+    return -1;}
 
-    if (direccion_fisica / TAM_PAGINA != (direccion_fisica + tamanio - 1) / TAM_PAGINA) 
+    if (direccion_fisica / TAM_PAGINA != (direccion_fisica + tamanio - 1) / TAM_PAGINA) {
     log_error(memoria_logger, "ERROR: Escritura cruza páginas. Dir: %d, Tam: %d, Página inicio: %d, fin: %d", direccion_fisica, tamanio,
               direccion_fisica / TAM_PAGINA,
               (direccion_fisica + tamanio - 1) / TAM_PAGINA);
-    return -1;
+    return -1;}
 
     log_info(memoria_logger, "## PID: %d - Escritura - Dir. Física: %d - Tamaño: %d",
              pid, direccion_fisica, tamanio);

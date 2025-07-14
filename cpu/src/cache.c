@@ -69,11 +69,12 @@ void reemplazar_con_clock_m(t_entrada_cache* nueva, t_log* logger, int conexion_
     }
 }
 
-void agregar_a_cache(int pid, uint32_t pagina, char* contenido, t_log* logger, int conexion_memoria) {
+void agregar_a_cache(int pid, uint32_t pagina, char* contenido, uint32_t marco, t_log* logger, int conexion_memoria) {
     t_entrada_cache* nueva = malloc(sizeof(t_entrada_cache));
     nueva->pid = pid;
     nueva->pagina = pagina;
     nueva->contenido = strdup(contenido);
+    nueva->marco = marco;
     nueva->bit_uso = true;
     nueva->bit_modificado = false;
 
@@ -95,6 +96,8 @@ void limpiar_cache_por_pid(int pid, int conexion_memoria, t_log* logger) {
         if (entrada->pid == pid) {
             if (entrada->bit_modificado) {
                 uint32_t direccion_fisica = entrada->marco * TAMANIO_PAGINA;
+                log_debug(logger, "Escribiendo página modificada. PID: %d, Pag: %d, Marco: %d, Dir física: %d",
+                entrada->pid, entrada->pagina, entrada->marco, direccion_fisica);
                 escribir_pagina_memoria(pid, direccion_fisica, entrada->contenido, conexion_memoria, logger, entrada->pagina, entrada->marco);
             }
             list_remove_and_destroy_element(cache_paginas, i, free);

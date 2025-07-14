@@ -436,6 +436,10 @@ void ciclo_de_instruccion_execute(t_instruccion_decodificada* instruccion, t_con
 
     if (!esta_en_cache) {
         direccion_fisica = traducir_direccion_logica(direccion_logica, TAMANIO_PAGINA, contexto, conexion_memoria);
+        if ((direccion_fisica / TAMANIO_PAGINA) != ((direccion_fisica + tamanio - 1) / TAMANIO_PAGINA)) {
+        log_error(logger, "ERROR: intento de escribir que cruza página");
+        }
+
 
         t_paquete* paquete = crear_paquete(ESCRIBIR_MEMORIA);
         agregar_a_paquete(paquete, &pid, sizeof(int));
@@ -576,7 +580,7 @@ uint32_t traducir_direccion_logica(uint32_t direccion_logica, int tamanio_pagina
 
 
     if (entradas_cache > 0) {
-        agregar_a_cache(contexto->pid, nro_pagina, contenido_real, logger, conexion_memoria); 
+        agregar_a_cache(contexto->pid, nro_pagina, contenido_real, marco, logger, conexion_memoria); 
         free(contenido_real);
     }
     if (entradas_tlb > 0) {
