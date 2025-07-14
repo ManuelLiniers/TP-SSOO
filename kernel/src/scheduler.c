@@ -397,9 +397,11 @@ void *planificar_largo_plazo_FIFO(void* arg){
                 else{
                     log_debug(logger_kernel, "No hay espacio en memoria para el proceso <%d>", proceso->pid);
                     signal_sem(&nuevo_proceso); // el proceso nuevo sigue en NEW, hago signal de vuelta
-                    pthread_t hilo_espera_suspendido;
-                    pthread_create(&hilo_espera_suspendido, NULL, (void*) comprobar_suspendido_ready, NULL);
-                    pthread_detach(hilo_espera_suspendido);
+                    if(espacio_en_memoria.__align <= 0){
+                        pthread_t hilo_espera_suspendido;
+                        pthread_create(&hilo_espera_suspendido, NULL, (void*) comprobar_suspendido_ready, NULL);
+                        pthread_detach(hilo_espera_suspendido);
+                    }
                     wait_sem(&espacio_memoria); // espero que algun proceso finalice 
                     log_debug(logger_kernel, "Consumo semaforo espacio_memoria, semaforo: %ld", espacio_memoria.__align);
                 }
@@ -434,19 +436,21 @@ void *planificar_largo_plazo_PMCP(void* arg){
         }
         else{
             wait_mutex(&mutex_queue_new);
-            list_sort(queue_new, proceso_es_mas_chico);
-            t_pcb *proceso = list_get(queue_new, 0);
-            signal_mutex(&mutex_queue_new);
-            if(espacio_en_memoria(proceso)){
-                wait_mutex(&mutex_queue_new);
-                list_remove_element(queue_new, proceso);
+            if(!list_is_empty(queue_new)){
+                list_sort(queue_new, proceso_es_mas_chico);
+                t_pcb *proceso = list_get(queue_new, 0);
                 signal_mutex(&mutex_queue_new);
+                if(espacio_en_memoria(proceso)){
+                    wait_mutex(&mutex_queue_new);
+                    list_remove_element(queue_new, proceso);
+                    signal_mutex(&mutex_queue_new);
 
-                // PONER EN READY
-                log_debug(logger_kernel, "Cola de ready:");
-                mostrar_lista(queue_ready);
-                poner_en_ready(proceso);
-        }
+                    // PONER EN READY
+                    log_debug(logger_kernel, "Cola de ready:");
+                    mostrar_lista(queue_ready);
+                    poner_en_ready(proceso);
+                }
+            }
         }
     }
 }
@@ -462,19 +466,22 @@ void *comprobar_suspendido_ready(void* args){
 void *comprobar_procesos_nuevos(void* arg){
     while(1){
         wait_sem(&nuevo_proceso);
-
         wait_mutex(&mutex_queue_new);
-        list_sort(queue_new, proceso_es_mas_chico);
-        t_pcb* proceso = list_get(queue_new, 0);
-        signal_mutex(&mutex_queue_new);
-
-        if(queue_is_empty(queue_susp_ready) && espacio_en_memoria(proceso)){
-
-            wait_mutex(&mutex_queue_new);
-            list_remove_element(queue_new, proceso);
+        if(!list_is_empty(queue_new)){
+            list_sort(queue_new, proceso_es_mas_chico);
+            t_pcb* proceso = list_get(queue_new, 0);
             signal_mutex(&mutex_queue_new);
+            if(queue_is_empty(queue_susp_ready) && espacio_en_memoria(proceso)){
 
-            poner_en_ready(proceso);
+                wait_mutex(&mutex_queue_new);
+                list_remove_element(queue_new, proceso);
+                signal_mutex(&mutex_queue_new);
+
+                poner_en_ready(proceso);
+            }
+        }
+        else{
+            signal_mutex(&mutex_queue_new);
         }
     }
 }
