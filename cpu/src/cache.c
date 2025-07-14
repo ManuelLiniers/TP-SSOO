@@ -13,19 +13,20 @@ void inicializar_cache(t_log* logger, t_config* cpu_config) {
     puntero_clock = 0;
 }
 
-bool buscar_en_cache(int pid, uint32_t pagina, char** contenido_resultado, uint32_t* marco_resultado, t_log* logger) {
+void* buscar_contenido_cache(int pid, uint32_t pagina, bool modificado){
     for (int i = 0; i < list_size(cache_paginas); i++) {
         t_entrada_cache* entrada = list_get(cache_paginas, i);
         if (entrada->pid == pid && entrada->pagina == pagina) {
             entrada->bit_uso = true;
-            *contenido_resultado = strdup(entrada->contenido);
-            *marco_resultado = entrada->marco;
+            if(modificado){
+                entrada->bit_modificado = true;
+            }
             log_info(logger, "PID: %d - Cache Hit - Pagina: %d", pid, pagina);
-            return true;
+            return entrada->contenido;
         }
     }
     log_info(logger, "PID: %d - Cache Miss - Pagina: %d", pid, pagina);
-    return false;
+    return NULL;
 }
 
 void reemplazar_con_clock(t_entrada_cache* nueva, t_log* logger, int conexion_memoria, int pid) {
@@ -69,14 +70,14 @@ void reemplazar_con_clock_m(t_entrada_cache* nueva, t_log* logger, int conexion_
     }
 }
 
-void agregar_a_cache(int pid, uint32_t pagina, char* contenido, uint32_t marco, t_log* logger, int conexion_memoria) {
+void agregar_a_cache(int pid, uint32_t pagina, char* contenido, uint32_t marco, t_log* logger, int conexion_memoria, bool modificado) {
     t_entrada_cache* nueva = malloc(sizeof(t_entrada_cache));
     nueva->pid = pid;
     nueva->pagina = pagina;
-    nueva->contenido = strdup(contenido);
+    nueva->contenido = contenido;
     nueva->marco = marco;
     nueva->bit_uso = true;
-    nueva->bit_modificado = false;
+    nueva->bit_modificado = modificado;
 
     if (list_size(cache_paginas) < entradas_cache) {
         list_add(cache_paginas, nueva);

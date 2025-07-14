@@ -374,32 +374,61 @@ void ciclo_de_instruccion_execute(t_instruccion_decodificada* instruccion, t_con
     uint32_t desplazamiento = direccion_logica % TAMANIO_PAGINA;
     uint32_t direccion_fisica = 0;
 
-    bool esta_en_cache = false;
     char* contenido_leido = NULL;
 
-    for (int i = 0; i < list_size(cache_paginas); i++) {
-        t_entrada_cache* entrada = list_get(cache_paginas, i);
-        if (entrada->pid == pid && entrada->pagina == nro_pagina) {
-            entrada->bit_uso = true;
-            contenido_leido = strdup(entrada->contenido + desplazamiento); // leo desde el desplazamiento hasta el tam de la pagina
-            usleep(retardo_cache * 1000);    //acceso a cache
-            direccion_fisica = entrada->marco * TAMANIO_PAGINA + desplazamiento;
-            esta_en_cache = true;
-            break;
-        }
-    }
 
-    if (!esta_en_cache) {   //entra al if con un 1 (no estaria en cache)
-        direccion_fisica = traducir_direccion_logica(direccion_logica, TAMANIO_PAGINA, contexto, conexion_memoria);
-        t_paquete* paquete = crear_paquete(LEER_MEMORIA);
-        agregar_a_paquete(paquete, &pid, sizeof(int));
-        agregar_a_paquete(paquete, &direccion_fisica, sizeof(uint32_t));
-        agregar_a_paquete(paquete, &tamanio, sizeof(uint32_t));
+    // Primero busco en cache
+    if(entradas_cache > 0){
+        usleep(retardo_cache * 1000);    //acceso a cache
+        contenido_leido = buscar_contenido_cache(pid, floor(direccion_logica/TAMANIO_PAGINA), false); // leo desde el desplazamiento hasta el tam de la pagina
+    }
+    if(contenido_leido != NULL){
+        log_info(logger, "PID: %d - Acción: LEER - Valor: %s", pid, contenido_leido);
+        contexto->program_counter++;
+        return;
+    }
+    
+    
+    // Luego busco en TLB
+    uint32_t marco = -1;
+    if (buscar_en_tlb(contexto->pid, nro_pagina, &marco, logger)) {
+        direccion_fisica = marco * TAMANIO_PAGINA + desplazamiento;
+    }
+    if(marco == -1){
+        log_debug(logger, "PID: %d - OBTENER MARCO - Página: %d", contexto->pid, nro_pagina);
+
+        //SI LA PAGINA NO ESTÁ NI EN LAS ENTRADAS DE CACHE NI EN LAS DE TLB ENTONCES BUSCA DIRECTO EN MEMORIA (HUBO DOBLE MISS)
+
+        t_paquete* paquete = crear_paquete(PEDIR_MARCO); //segun el issue 4702: "Pueden enviar un solo mensaje desde CPU con PID y nro de página, y eso representa los N accesos a memoria
+        agregar_a_paquete(paquete, &(contexto->pid), sizeof(uint32_t));  
+        agregar_a_paquete(paquete, &nro_pagina, sizeof(uint32_t));
         enviar_paquete(paquete, conexion_memoria);
         eliminar_paquete(paquete);
 
-        contenido_leido = malloc(tamanio);
-        recv(conexion_memoria, contenido_leido, tamanio, 0);
+        recv(conexion_memoria, &marco, sizeof(uint32_t), 0);  //recibo marco de la memoria
+        log_info(logger, "PID: %d - OBTENER MARCO - Página: %d - Marco recibido: %d", contexto->pid, nro_pagina, marco);
+        direccion_fisica = marco * TAMANIO_PAGINA + desplazamiento;
+    }
+
+    t_paquete* paquete_contenido = crear_paquete(LEER_MEMORIA);   //pido contenido a memoria 
+    agregar_a_paquete(paquete_contenido, &(contexto->pid), sizeof(uint32_t));
+    uint32_t dir_fisica = marco * TAMANIO_PAGINA;
+    agregar_a_paquete(paquete_contenido, &dir_fisica, sizeof(uint32_t)); // le paso el marco asociado a la pagina que tiene el contenido q pido
+    agregar_a_paquete(paquete_contenido, &TAMANIO_PAGINA, sizeof(int));
+    enviar_paquete(paquete_contenido, conexion_memoria);
+    eliminar_paquete(paquete_contenido);
+
+    //uint32_t tamanio_contenido;  //creo variable del tamaño del contenido
+    //recv(conexion_memoria, &tamanio_contenido, sizeof(uint32_t), 0);
+    char* contenido_real = malloc(TAMANIO_PAGINA);
+    recv(conexion_memoria, contenido_real, TAMANIO_PAGINA, 0);
+
+    if (entradas_cache > 0) {
+        agregar_a_cache(contexto->pid, nro_pagina, contenido_real, marco, logger, conexion_memoria, false); 
+        free(contenido_real);
+    }
+    if (entradas_tlb > 0) {
+        agregar_a_tlb(contexto->pid, nro_pagina, marco, logger);
     }
 
     log_info(logger, "PID: %d - Acción: LEER - Dirección Física: %d - Valor: %s", pid, direccion_fisica, contenido_leido);
@@ -413,51 +442,91 @@ void ciclo_de_instruccion_execute(t_instruccion_decodificada* instruccion, t_con
     char* valor = instruccion->operandos[1];
     int tamanio = strlen(valor);
 
-    int pid = contexto->pid;
     uint32_t nro_pagina = direccion_logica / TAMANIO_PAGINA;
     uint32_t desplazamiento = direccion_logica % TAMANIO_PAGINA;
     uint32_t direccion_fisica = 0;
 
-    bool esta_en_cache = false;
-
-    for (int i = 0; i < list_size(cache_paginas); i++) {
-        t_entrada_cache* entrada = list_get(cache_paginas, i);
-        if (entrada->pid == pid && entrada->pagina == nro_pagina) {
-            free(entrada->contenido);
-            entrada->contenido = strdup(valor);  // reemplazo el contenido de la pagina por lo que traiga el write
-            entrada->bit_modificado = true;
-            entrada->bit_uso = true;
-            usleep(retardo_cache * 1000);  //acceso a cache
-            direccion_fisica = entrada->marco * TAMANIO_PAGINA + desplazamiento;
-            esta_en_cache = true;
-            break;
-        }
+    char* contenido_cache = NULL;
+    // Primero busco en cache
+    if(entradas_cache > 0){
+        usleep(retardo_cache * 1000);    //acceso a cache
+        contenido_cache = buscar_contenido_cache(contexto->pid, floor(direccion_logica/TAMANIO_PAGINA), true); // leo desde el desplazamiento hasta el tam de la pagina
     }
+    if(contenido_cache != NULL){
+        log_info(logger, "PID: %d - Acción: ESCRIBIR - Valor: %s", contexto->pid, contenido_cache);
+        memcpy(contenido_cache + desplazamiento, valor, tamanio);
+        contexto->program_counter++;
+        return;
+    }
+    
+    
+    // Luego busco en TLB
+    uint32_t marco = -1;
+    if (buscar_en_tlb(contexto->pid, nro_pagina, &marco, logger)) {
+        direccion_fisica = marco * TAMANIO_PAGINA + desplazamiento;
+    }
+    if(marco == -1){
+        log_debug(logger, "PID: %d - OBTENER MARCO - Página: %d", contexto->pid, nro_pagina);
 
-    if (!esta_en_cache) {
-        direccion_fisica = traducir_direccion_logica(direccion_logica, TAMANIO_PAGINA, contexto, conexion_memoria);
-        if ((direccion_fisica / TAMANIO_PAGINA) != ((direccion_fisica + tamanio) / TAMANIO_PAGINA)) {
-        log_error(logger, "ERROR: intento de escribir que cruza página");
-        }
+        //SI LA PAGINA NO ESTÁ NI EN LAS ENTRADAS DE CACHE NI EN LAS DE TLB ENTONCES BUSCA DIRECTO EN MEMORIA (HUBO DOBLE MISS)
 
-
-        t_paquete* paquete = crear_paquete(ESCRIBIR_MEMORIA);
-        agregar_a_paquete(paquete, &pid, sizeof(int));
-        agregar_a_paquete(paquete, &direccion_fisica, sizeof(uint32_t));
-        agregar_a_paquete(paquete, &tamanio, sizeof(int));
-        agregar_a_paquete(paquete, valor, tamanio);
+        t_paquete* paquete = crear_paquete(PEDIR_MARCO); //segun el issue 4702: "Pueden enviar un solo mensaje desde CPU con PID y nro de página, y eso representa los N accesos a memoria
+        agregar_a_paquete(paquete, &(contexto->pid), sizeof(uint32_t));  
+        agregar_a_paquete(paquete, &nro_pagina, sizeof(uint32_t));
         enviar_paquete(paquete, conexion_memoria);
         eliminar_paquete(paquete);
 
-        int respuesta;
-        recv(conexion_memoria, &respuesta, sizeof(int), 0);
-        if (respuesta != OK) {
-            log_error(logger, "No se escribió bien");
-        }
+        recv(conexion_memoria, &marco, sizeof(uint32_t), 0);  //recibo marco de la memoria
+        log_info(logger, "PID: %d - OBTENER MARCO - Página: %d - Marco recibido: %d", contexto->pid, nro_pagina, marco);
+        direccion_fisica = marco * TAMANIO_PAGINA + desplazamiento;
     }
 
-    log_info(logger, "PID: %d - Acción: ESCRIBIR - Dirección Física: %d - Valor: %s", pid, direccion_fisica, valor);
-}
+    if (entradas_cache > 0) {
+        t_paquete* paquete_contenido = crear_paquete(LEER_MEMORIA);   //pido contenido a memoria 
+        agregar_a_paquete(paquete_contenido, &(contexto->pid), sizeof(uint32_t));
+        uint32_t dir_fisica = marco * TAMANIO_PAGINA;
+        agregar_a_paquete(paquete_contenido, &dir_fisica, sizeof(uint32_t)); // le paso el marco asociado a la pagina que tiene el contenido q pido
+        agregar_a_paquete(paquete_contenido, &TAMANIO_PAGINA, sizeof(int));
+        enviar_paquete(paquete_contenido, conexion_memoria);
+        eliminar_paquete(paquete_contenido);
+
+        char* contenido_real = malloc(TAMANIO_PAGINA);
+        recv(conexion_memoria, contenido_real, TAMANIO_PAGINA, 0);
+
+        memcpy(contenido_real + desplazamiento, valor, tamanio);
+
+        agregar_a_cache(contexto->pid, nro_pagina, contenido_real, marco, logger, conexion_memoria, true); 
+
+        if (entradas_tlb > 0) {
+            agregar_a_tlb(contexto->pid, nro_pagina, marco, logger);
+        }
+        log_info(logger, "PID: %d - Acción: ESCRIBIR - Valor: %s", contexto->pid, contenido_real);
+
+        contexto->program_counter++;
+        return;
+    }
+
+    if (entradas_tlb > 0) {
+        agregar_a_tlb(contexto->pid, nro_pagina, marco, logger);
+    }
+
+    t_paquete* paquete = crear_paquete(ESCRIBIR_MEMORIA);
+    agregar_a_paquete(paquete, &contexto->pid, sizeof(int));
+    agregar_a_paquete(paquete, &direccion_fisica, sizeof(uint32_t));
+    agregar_a_paquete(paquete, &tamanio, sizeof(int));
+    agregar_a_paquete(paquete, valor, tamanio);
+    enviar_paquete(paquete, conexion_memoria);
+    eliminar_paquete(paquete);
+
+    int respuesta;
+    recv(conexion_memoria, &respuesta, sizeof(int), 0);
+    if (respuesta != OK) {
+        log_error(logger, "No se escribió bien");
+    }
+
+    log_info(logger, "PID: %d - Acción: ESCRIBIR - Dirección Física: %d - Valor: %s", contexto->pid, direccion_fisica, valor);
+    log_debug(logger, "Valor leído: %.*s", tamanio, valor);
+    }
 
 
     // Si la instrucción no fue GOTO (que cambia el PC),ninguna o alguna que no haya modificado el pc avanza1 para buscar una instruccion a ejecutar
@@ -529,66 +598,6 @@ void enviar_contexto_a_kernel_dump(t_contexto* contexto, motivo_desalojo motivo,
 }
 
 
-
-//PONER EN MMU.C
-uint32_t traducir_direccion_logica(uint32_t direccion_logica, int tamanio_pagina, t_contexto* contexto, int conexion_memoria) {
-
-    uint32_t nro_pagina = floor(direccion_logica / tamanio_pagina);
-    uint32_t desplazamiento = direccion_logica % tamanio_pagina;
-
-    uint32_t marco = 0;   //EN BUSCAR_EN_TLB PASAMOS MARCO COMO REFERENCIA XQ LA FUNCION DEVUELVE UN INT Y PARA QUE TOME EL VALOR DEL MARCO ENCONTRADO
-    //XQ LO NECESITO PARA CALCULAR LA D.FISICA sin tener que ir a Memoria otra vez
-
-    char* contenido_cache = NULL;
-    if (entradas_cache > 0 && buscar_en_cache(contexto->pid, nro_pagina, &contenido_cache, &marco, logger)) {
-        // Solo necesito el marco si quiero calcular la dirección física
-        usleep(retardo_cache * 1000);  //tiempo de acceso a caché (delay) multiplico por 1000 xq esta en ms
-        free(contenido_cache);
-        return marco * tamanio_pagina + desplazamiento;
-    }
-
-
-    if (buscar_en_tlb(contexto->pid, nro_pagina, &marco, logger)) {
-        return marco * tamanio_pagina + desplazamiento;
-    }
-
-    log_debug(logger, "PID: %d - OBTENER MARCO - Página: %d", contexto->pid, nro_pagina);
-
-    //SI LA PAGINA NO ESTÁ NI EN LAS ENTRADAS DE CACHE NI EN LAS DE TLB ENTONCES BUSCA DIRECTO EN MEMORIA (HUBO DOBLE MISS)
-
-    t_paquete* paquete = crear_paquete(PEDIR_MARCO); //segun el issue 4702: "Pueden enviar un solo mensaje desde CPU con PID y nro de página, y eso representa los N accesos a memoria
-    agregar_a_paquete(paquete, &(contexto->pid), sizeof(uint32_t));  
-    agregar_a_paquete(paquete, &nro_pagina, sizeof(uint32_t));
-    enviar_paquete(paquete, conexion_memoria);
-    eliminar_paquete(paquete);
-
-    recv(conexion_memoria, &marco, sizeof(uint32_t), 0);  //recibo marco de la memoria
-    log_info(logger, "PID: %d - OBTENER MARCO - Página: %d - Marco recibido: %d", contexto->pid, nro_pagina, marco);
-
-    t_paquete* paquete_contenido = crear_paquete(LEER_MEMORIA);   //pido contenido a memoria 
-    agregar_a_paquete(paquete_contenido, &(contexto->pid), sizeof(uint32_t));
-    uint32_t dir_fisica = marco * tamanio_pagina;
-    agregar_a_paquete(paquete_contenido, &dir_fisica, sizeof(uint32_t)); // le paso el marco asociado a la pagina que tiene el contenido q pido
-    agregar_a_paquete(paquete_contenido, &tamanio_pagina, sizeof(int));
-    enviar_paquete(paquete_contenido, conexion_memoria);
-    eliminar_paquete(paquete_contenido);
-
-    //uint32_t tamanio_contenido;  //creo variable del tamaño del contenido
-    //recv(conexion_memoria, &tamanio_contenido, sizeof(uint32_t), 0);
-    char* contenido_real = malloc(tamanio_pagina);
-    recv(conexion_memoria, contenido_real, tamanio_pagina, 0);
-
-
-    if (entradas_cache > 0) {
-        agregar_a_cache(contexto->pid, nro_pagina, contenido_real, marco, logger, conexion_memoria); 
-        free(contenido_real);
-    }
-    if (entradas_tlb > 0) {
-        agregar_a_tlb(contexto->pid, nro_pagina, marco, logger);
-    }
-
-    return marco * tamanio_pagina + desplazamiento;
-}
 //CPU no traduce la página en todos los niveles (siendo paginacion multinibvel),
 // sino que le delega esa lógica a Memoria. Y Memoria, a partir del PID y la página, accede a las tablas de páginas y responde con el marco correspondiente.
 //La idea es reflejar los N accesos en los retardos, y entender la ventaja de usar TLB y caché
