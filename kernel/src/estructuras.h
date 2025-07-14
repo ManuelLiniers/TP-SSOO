@@ -59,9 +59,9 @@ typedef struct {
     int tamanio_proceso; 
     int metricas_estado[7];         // Lista de veces que estuvo en cada estado
     t_list* metricas_tiempo;  // Lista de tiempo que estuvo en cada estado
-    int64_t estimacion_anterior;
+    long estimacion_anterior;
     t_temporal* rafaga_real;
-    int64_t estimacion_actual;
+    long estimacion_actual;
     // Más campos opcionales: tamaño de memoria, registros, métricas, etc.
 } t_pcb;
 

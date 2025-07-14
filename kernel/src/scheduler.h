@@ -50,7 +50,7 @@ void poner_en_ready(t_pcb* proceso);
 void poner_en_ejecucion(t_pcb* proceso, t_cpu* cpu_encargada, int socket);
 bool esta_ejecutando(t_pcb* procesoAComprobar);
 
-
+void *comprobar_suspendido_ready(void* args);
 
 
 #endif // SCHEDULER_H_

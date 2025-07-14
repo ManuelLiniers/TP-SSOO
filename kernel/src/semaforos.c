@@ -12,6 +12,7 @@ pthread_mutex_t mutex_procesos_ejecutando;
 sem_t nuevo_proceso;
 sem_t espacio_memoria;
 sem_t proceso_ready;
+sem_t nuevo_proceso_suspendido_ready;
 
 sem_t cpu_libre;
 sem_t bloqueante_sem;
@@ -49,6 +50,7 @@ void iniciar_semaforos(){
     sem_init(&bloqueante_sem, 0, 0);
     sem_init(&cpu_libre, 0, 0);
     sem_init(&dispositivo_libre, 0, 0);
+    sem_init(&nuevo_proceso_suspendido_ready, 0, 0);
 };
 
 void destruir_semaforos() {

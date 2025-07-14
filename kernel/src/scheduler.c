@@ -4,7 +4,7 @@ char* algoritmo_corto_plazo;
 char* algoritmo_largo_plazo;
 
 void *planificar_corto_plazo_FIFO(void* arg){
-    log_debug(logger_kernel, "Entre a Corto Plazo FIFO");
+    //log_debug(logger_kernel, "Entre a Corto Plazo FIFO");
 	while(1){
         wait_sem(&proceso_ready);
         wait_sem(&cpu_libre);
@@ -33,6 +33,7 @@ void* planificar_corto_plazo_SJF(void* arg){
         wait_mutex(&mutex_queue_ready);
         if(!list_is_empty(queue_ready)){
             list_sort(queue_ready, shortest_job_first);
+            mostrar_lista(queue_ready);
             t_cpu* cpu_encargada = malloc(sizeof(t_cpu));
             if(hay_cpu_libre(&cpu_encargada)){
                 t_pcb* proceso = list_remove(queue_ready, 0);
@@ -55,9 +56,11 @@ void* planificar_corto_plazo_SJF_desalojo(void* arg){
         wait_mutex(&mutex_procesos_ejecutando);
         actualizar_estimaciones();
         signal_mutex(&mutex_procesos_ejecutando);
+        wait_sem(&cpu_libre);
         wait_mutex(&mutex_queue_ready);
         if(!list_is_empty(queue_ready)){
             list_sort(queue_ready, shortest_job_first);
+            mostrar_lista(queue_ready);
             t_cpu* cpu_encargada = malloc(sizeof(t_cpu));
             if(hay_cpu_libre(&cpu_encargada)){
                 t_pcb* proceso = list_remove(queue_ready, 0);
@@ -137,21 +140,17 @@ void* esperar_dispatch(void* arg){
     uint32_t pc = recibir_uint32_del_buffer(paquete);
     int motivo = recibir_int_del_buffer(paquete);
 
-    log_debug(logger_kernel, "Motivo: %d", motivo);
+    //log_debug(logger_kernel, "Motivo: %d", motivo);
 
     proceso->program_counter = pc + 1;
     
     switch (motivo)
     {
     case FINALIZADO:
-        log_debug(logger_kernel, "Metricas del proceso %d: %d", proceso->pid, list_size(proceso->metricas_tiempo));
+        //log_debug(logger_kernel, "Metricas del proceso %d: %d", proceso->pid, list_size(proceso->metricas_tiempo));
         cambiar_estado(proceso, EXIT);
 
-        log_debug(logger_kernel, "Metricas del proceso (<%d>): %d", proceso->pid, list_size(proceso->metricas_tiempo));
-        
-        wait_mutex(&mutex_queue_exit);
-        queue_push(queue_exit, proceso);
-        signal_mutex(&mutex_queue_exit);
+        //log_debug(logger_kernel, "Metricas del proceso (<%d>): %d", proceso->pid, list_size(proceso->metricas_tiempo));
 
         sacar_proceso_ejecucion(proceso);
 
@@ -160,8 +159,13 @@ void* esperar_dispatch(void* arg){
         log_info(logger_kernel, "## %d - Finaliza el proceso", proceso->pid);
         
         log_metricas_estado(proceso);
-        paquete_memoria_pid(proceso, FINALIZAR_PROCESO);
-        signal_sem(&espacio_memoria);
+
+        if(paquete_memoria_pid(proceso, FINALIZAR_PROCESO)){
+            free(proceso);
+            signal_sem(&espacio_memoria);
+            log_debug(logger_kernel, "HAY ESPACIO FINALIZACION EN MEMORIA");
+        }
+        
         break;
     case CAUSA_IO:
         int tamanio = recibir_int_del_buffer(paquete);
@@ -201,7 +205,7 @@ void* esperar_dispatch(void* arg){
         queue_push(obtener_cola_io(dispositivo->id), proceso_bloqueado);
         signal_mutex(&mutex_queue_block);
 
-        log_debug(logger_kernel, "Proceso <%d> en dispositivo %s: ",proceso->pid ,dispositivo->nombre);
+        //log_debug(logger_kernel, "Proceso <%d> en dispositivo %s: ",proceso->pid ,dispositivo->nombre);
 
         cambiar_estado(proceso, BLOCKED);
 
@@ -279,7 +283,7 @@ void log_metricas_estado(t_pcb* proceso){
     long long tiempo_blocked = 0;
     long long tiempo_susp_ready = 0;
     long long tiempo_susp_blocked = 0;
-    log_debug(logger_kernel, "Cantidad de metricas finales de (<%d>): %d", proceso->pid, list_size(proceso->metricas_tiempo));
+    //log_debug(logger_kernel, "Cantidad de metricas finales de (<%d>): %d", proceso->pid, list_size(proceso->metricas_tiempo));
     for(int i = 0; i<list_size(proceso->metricas_tiempo);i++){
         t_metricas_estado_tiempo* metrica = list_get(proceso->metricas_tiempo, i);
         long long tiempo = calcular_tiempo(metrica);
@@ -346,8 +350,10 @@ long long obtener_diferencia_tiempo(char* tiempo_1, char* tiempo_2){
 void *planificar_largo_plazo_FIFO(void* arg){
 	while(1){
         wait_sem(&nuevo_proceso);
+        log_debug(logger_kernel, "Consumo semaforo nuevo_proceso, semaforo: %ld", nuevo_proceso.__align);
         wait_mutex(&mutex_queue_susp_ready);
         if(!queue_is_empty(queue_susp_ready)){
+            log_debug(logger_kernel, "entro a revisar suspendido_ready");
             //tiempo_en_io* proceso_a_desuspender = queue_peek(queue_susp_ready);
             //t_pcb* proceso = proceso_a_desuspender->pcb;
             t_pcb* proceso = queue_peek(queue_susp_ready);
@@ -364,11 +370,14 @@ void *planificar_largo_plazo_FIFO(void* arg){
                 mostrar_lista(queue_ready);
 			}
             else{
+                log_debug(logger_kernel, "No hay espacio en memoria para la vuelta de swap del proceso <%d>", proceso->pid);
                 signal_sem(&nuevo_proceso); // el proceso nuevo sigue en NEW, hago signal de vuelta
                 wait_sem(&espacio_memoria); // espero que algun proceso finalice 
+                log_debug(logger_kernel, "Consumo semaforo espacio_memoria, semaforo: %ld", espacio_memoria.__align);
             }
         }
         else{
+            log_debug(logger_kernel, "entro a revisar new");
             signal_mutex(&mutex_queue_susp_ready);
             wait_mutex(&mutex_queue_new);
             if(!list_is_empty(queue_new)){
@@ -386,15 +395,20 @@ void *planificar_largo_plazo_FIFO(void* arg){
                     mostrar_lista(queue_ready);
                 }
                 else{
+                    log_debug(logger_kernel, "No hay espacio en memoria para el proceso <%d>", proceso->pid);
                     signal_sem(&nuevo_proceso); // el proceso nuevo sigue en NEW, hago signal de vuelta
+                    pthread_t hilo_espera_suspendido;
+                    pthread_create(&hilo_espera_suspendido, NULL, (void*) comprobar_suspendido_ready, NULL);
+                    pthread_detach(hilo_espera_suspendido);
                     wait_sem(&espacio_memoria); // espero que algun proceso finalice 
+                    log_debug(logger_kernel, "Consumo semaforo espacio_memoria, semaforo: %ld", espacio_memoria.__align);
                 }
                 signal_mutex(&mutex_queue_new);
 		    }
         }
 	}
-
 }
+
 
 void *planificar_largo_plazo_PMCP(void* arg){
     pthread_t hilo_comprobar_espacio;
@@ -435,6 +449,14 @@ void *planificar_largo_plazo_PMCP(void* arg){
         }
         }
     }
+}
+
+void *comprobar_suspendido_ready(void* args){
+    wait_sem(&nuevo_proceso_suspendido_ready);
+    if(espacio_memoria.__align < 0){
+        signal_sem(&espacio_memoria);
+    }
+    return NULL;
 }
 
 void *comprobar_procesos_nuevos(void* arg){
@@ -493,6 +515,12 @@ bool vuelta_swap(t_pcb* proceso){
 
     int resultado;
     recv(conexion, &resultado, sizeof(int), 0);
+    if(resultado == OK){
+        log_debug(logger_kernel, "Vuelta swap exitoso para PID: %d", proceso->pid);
+    }
+    else{
+        log_debug(logger_kernel, "Vuelta swap erroneo para PID: %d", proceso->pid);
+    }
     return resultado == OK;
 }
 
@@ -598,7 +626,9 @@ void comprobar_suspendido(t_pcb* proceso){
     if(proceso->estado == BLOCKED){
         cambiar_estado(proceso, SUSP_BLOCKED);
         paquete_memoria_pid(proceso, SWAP);
+        log_debug(logger_kernel, "Proceso en suspendido, swap exitoso para PID: %d", proceso->pid);
         signal_sem(&espacio_memoria);
+        log_debug(logger_kernel, "HAY ESPACIO EN MEMORIA");
     }
 }
 

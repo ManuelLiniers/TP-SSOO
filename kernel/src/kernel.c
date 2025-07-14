@@ -58,18 +58,21 @@ void inicializar_planificacion(){
 		log_debug(logger_kernel, "Planificacion corto plazo con FIFO");
 		pthread_create(&planificador_corto_plazo, NULL, (void*) planificar_corto_plazo_FIFO, NULL);
 		pthread_detach(planificador_corto_plazo);
+		tieneEstimacion = false;
 	}
 	if(strcmp(algoritmo_corto_plazo,"SJF") == 0){
 
 		log_debug(logger_kernel, "Planificacion corto plazo con SJF sin desalojo");
 		pthread_create(&planificador_corto_plazo, NULL, (void*) planificar_corto_plazo_SJF, NULL);
 		pthread_detach(planificador_corto_plazo);
+		tieneEstimacion = true;
 	}
 	if(strcmp(algoritmo_corto_plazo,"SJFDESALOJO") == 0){
 
 		log_debug(logger_kernel, "Planificacion corto plazo con SJF sin desalojo");
 		pthread_create(&planificador_corto_plazo, NULL, (void*) planificar_corto_plazo_SJF_desalojo, NULL);
 		pthread_detach(planificador_corto_plazo);
+		tieneEstimacion = true;
 	}
 
 	if(strcmp(algoritmo_largo_plazo,"FIFO") == 0){
@@ -85,7 +88,7 @@ void inicializar_planificacion(){
 		pthread_detach(planificador_largo_plazo);
 	}
 
-	log_debug(logger_kernel, "Planificacion inicializada");
+	//log_debug(logger_kernel, "Planificacion inicializada");
 }
 
 void inicializar_servidores(){
@@ -104,23 +107,23 @@ void inicializar_servidores(){
 	pthread_create(&cpu_interrupt, NULL, (void*) iniciar_cpu_interrupt, NULL);
 	pthread_detach(cpu_interrupt);
 
-	log_debug(logger_kernel, "servidores iniciados");
+	//log_debug(logger_kernel, "servidores iniciados");
 }
 
 void* iniciar_cpu_dispatch(void* arg){
-	log_debug(logger_kernel, "entro al hilo dispatch");
+	//log_debug(logger_kernel, "entro al hilo dispatch");
 	int server_fd_kernel_dispatch = iniciar_servidor(logger_kernel, NULL, puerto_dispatch);
 
 	while (server_fd_kernel_dispatch != -1)
 	{
-		log_debug(logger_kernel, "escuchando dispatch");
+		//log_debug(logger_kernel, "escuchando dispatch");
 		int cliente_fd = esperar_cliente(logger_kernel, "Kernel", server_fd_kernel_dispatch);
 		if(cliente_fd != -1){
 			pthread_t hilo_cliente;
 			int *args = malloc(sizeof(int));
 			*args = cliente_fd;
 			pthread_create(&hilo_cliente, NULL, (void*) atender_dispatch, args);
-			log_debug(logger_kernel, "[THREAD] Creo hilo para atender dispatch");
+			//log_debug(logger_kernel, "[THREAD] Creo hilo para atender dispatch");
 			pthread_detach(hilo_cliente);
 		}
 	}
@@ -179,12 +182,12 @@ void modificar_dispatch(t_cpu* una_cpu, int socket_fd){
 }
 
 void* iniciar_cpu_interrupt(void* arg){
-	log_debug(logger_kernel, "entre al hilo interrupt");
+	//log_debug(logger_kernel, "entre al hilo interrupt");
 	int server_fd_kernel_interrupt = iniciar_servidor(logger_kernel, NULL, puerto_interrupt);
 
 	while (server_fd_kernel_interrupt != -1)
 	{
-		log_debug(logger_kernel, "escuchando interrupt");
+		//log_debug(logger_kernel, "escuchando interrupt");
 		int cliente_fd = esperar_cliente(logger_kernel, "Kernel", server_fd_kernel_interrupt);
 		if(cliente_fd != -1){
 			pthread_t hilo_cliente;
@@ -213,11 +216,11 @@ void modificar_interrupt(t_cpu* una_cpu, int socket_fd){
 }
 
 void* iniciar_servidor_io(void* arg){
-	log_debug(logger_kernel, "entro al hilo IO");
+	//log_debug(logger_kernel, "entro al hilo IO");
 	int server_fd_kernel_io = iniciar_servidor(logger_kernel, NULL, puerto_io);
 
 	while(server_fd_kernel_io != -1){
-		log_debug(logger_kernel, "escuchando io");
+		//log_debug(logger_kernel, "escuchando io");
 		int cliente_fd = esperar_cliente(logger_kernel, "Kernel", server_fd_kernel_io);
 		if(cliente_fd != -1){
 			pthread_t hilo_cliente;
@@ -281,6 +284,9 @@ void* escuchar_socket_io(void* arg){
 					queue_push(queue_susp_ready, proceso->pcb);
 					signal_mutex(&mutex_queue_susp_ready);
 					signal_sem(&nuevo_proceso);
+					if(nuevo_proceso_suspendido_ready.__align < 0){
+						signal_sem(&nuevo_proceso_suspendido_ready);
+					}
 				}
 				else{
 					poner_en_ready(proceso->pcb);

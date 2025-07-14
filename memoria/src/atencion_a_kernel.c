@@ -117,7 +117,13 @@ void fin_proceso(t_buffer* unBuffer, int kernel_fd){
 
 	list_remove_element(procesos_memoria, proceso);
 
-	finalizar_proceso(proceso);
+	int resultado = finalizar_proceso(proceso);
+	
+	int codigo_respuesta = OK;
+	if(resultado != 0){
+		codigo_respuesta = -1;
+	}
+    send(kernel_fd, &codigo_respuesta, sizeof(int), 0);
 }
 
 void atender_dump_memory(t_buffer* unBuffer, int kernel_fd) {

@@ -139,12 +139,12 @@ t_dispositivo_io* buscar_io_libre(char* nombre_io){
 t_dispositivo_io* buscar_io_menos_ocupada(char* nombre_io){
     t_dispositivo_io* dispositivo = buscar_io(nombre_io);
     for(int i=0; i<list_size(lista_dispositivos_io); i++){
-        if(dispositivo != NULL){
+        /* if(dispositivo != NULL){
             log_debug(logger_kernel, "Buscando IO libre, dispositivo actual: %s", dispositivo->nombre);
         }
         else{
             log_debug(logger_kernel, "Buscando IO menos ocupada, dispositivo actual: no hay dispositivo");
-        }
+        } */
         t_dispositivo_io* siguiente = (t_dispositivo_io*) list_get(lista_dispositivos_io, i);
         wait_mutex(&mutex_queue_block);
         if(siguiente->nombre == nombre_io && queue_size(obtener_cola_io(siguiente->id)) < queue_size(obtener_cola_io(dispositivo->id))){
@@ -211,6 +211,9 @@ void cambiar_estado(t_pcb* proceso, t_estado estado){
             if(estado == BLOCKED){
                 temporal_stop(proceso->rafaga_real);
                 calcular_estimacion(proceso);
+                if(tieneEstimacion){
+                    log_info(logger_kernel, "## (<%d>) Estimacion actual: %ld", proceso->pid, proceso->estimacion_actual);
+                }
                 temporal_destroy(proceso->rafaga_real);
             }
             if(estado == READY){
@@ -374,6 +377,9 @@ void mostrar_lista(t_list* lista){
         for(int i = 0; i<list_size(lista); i++){
             t_pcb* proceso = list_get(lista, i);
             log_debug(logger_kernel, "PID: (<%d>)", proceso->pid);
+            if(tieneEstimacion){
+                log_info(logger_kernel, "## (<%d>) Estimacion actual: %ld", proceso->pid, proceso->estimacion_actual);
+            }
         }
         log_debug(logger_kernel, "------");
     }

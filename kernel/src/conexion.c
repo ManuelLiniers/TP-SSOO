@@ -10,6 +10,7 @@ char* puerto_io;
 int conexion_memoria;
 t_config *config_kernel;
 t_log* logger_kernel;
+bool tieneEstimacion;
 
 
 int crear_conexion_memoria(){

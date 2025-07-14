@@ -1,4 +1,5 @@
 #include "../include/proceso.h"
+#include "math.h"
 
 //Falta una funcion y un log que indique la destruccion de un proceso
 
@@ -12,7 +13,7 @@ t_proceso* crear_proceso(int pid, int size, char* path_instruc){
 	proceso_nuevo->instrucciones = leer_archivo_y_cargar_instrucciones(path_instruc);
 
     if(size != 0){
-        int paginas = size/TAM_PAGINA + 1;
+        int paginas = ceil(size/TAM_PAGINA);
 	    proceso_nuevo->paginas = paginas;
         int contador = 0;
         proceso_nuevo->tabla_paginas_raiz = crear_tabla_multinivel(1, &paginas, &contador);
@@ -94,8 +95,10 @@ void exponer_metricas(t_metricas_proceso* metricas, uint32_t pid){
           metricas->lecturas_memoria, metricas->escrituras_memoria);
 }
 
-void finalizar_proceso(t_proceso* proceso){
-
+int finalizar_proceso(t_proceso* proceso){
+    if(proceso == NULL){
+        return -1;
+    }
     if(proceso->paginas != 0){
         liberar_tablas(proceso->tabla_paginas_raiz);
     }
@@ -104,4 +107,6 @@ void finalizar_proceso(t_proceso* proceso){
     free(proceso->metricas);
 
     free(proceso);
+
+    return 0;
 }
