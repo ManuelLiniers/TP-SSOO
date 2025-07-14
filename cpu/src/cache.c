@@ -33,7 +33,7 @@ void reemplazar_con_clock(t_entrada_cache* nueva, t_log* logger, int conexion_me
         t_entrada_cache* actual = list_get(cache_paginas, puntero_clock);
         if (!actual->bit_uso) {
             if (actual->bit_modificado) {
-                escribir_pagina_memoria(pid, actual->marco, actual->contenido, conexion_memoria, logger, actual->pagina, actual->marco);
+                escribir_pagina_memoria(pid, actual->marco * TAMANIO_PAGINA, actual->contenido, conexion_memoria, logger, actual->pagina, actual->marco);
                 log_debug(logger, "PID: %d - Memory Update - Página: %d", actual->pid, actual->pagina);
             }
             list_replace_and_destroy_element(cache_paginas, puntero_clock, nueva, free);
@@ -106,6 +106,9 @@ void limpiar_cache_por_pid(int pid, int conexion_memoria, t_log* logger) {
 }
 
 void escribir_pagina_memoria(int pid, uint32_t direccion_fisica, void* valor, int conexion_memoria, t_log* logger, uint32_t pagina, uint32_t marco) {
+    if (direccion_fisica % TAMANIO_PAGINA != 0) {
+        log_error(logger, "ERROR: intento de escribir desde cache un valor que cruza página");
+    }
     t_paquete* paquete = crear_paquete(ESCRIBIR_MEMORIA);
     agregar_a_paquete(paquete, &pid, sizeof(int));
     agregar_a_paquete(paquete, &direccion_fisica, sizeof(uint32_t));

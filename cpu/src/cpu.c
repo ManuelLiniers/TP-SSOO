@@ -402,7 +402,7 @@ void ciclo_de_instruccion_execute(t_instruccion_decodificada* instruccion, t_con
         recv(conexion_memoria, contenido_leido, tamanio, 0);
     }
 
-    log_info(logger, "PID: %d - Acción: LEER - Dirección Física: %d", pid, direccion_fisica);
+    log_info(logger, "PID: %d - Acción: LEER - Dirección Física: %d - Valor: %s", pid, direccion_fisica, contenido_leido);
     log_debug(logger, "Valor leído: %.*s", tamanio, contenido_leido);
 
     free(contenido_leido);
@@ -436,7 +436,7 @@ void ciclo_de_instruccion_execute(t_instruccion_decodificada* instruccion, t_con
 
     if (!esta_en_cache) {
         direccion_fisica = traducir_direccion_logica(direccion_logica, TAMANIO_PAGINA, contexto, conexion_memoria);
-        if ((direccion_fisica / TAMANIO_PAGINA) != ((direccion_fisica + tamanio - 1) / TAMANIO_PAGINA)) {
+        if ((direccion_fisica / TAMANIO_PAGINA) != ((direccion_fisica + tamanio) / TAMANIO_PAGINA)) {
         log_error(logger, "ERROR: intento de escribir que cruza página");
         }
 
