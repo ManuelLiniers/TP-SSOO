@@ -35,6 +35,10 @@ void* escuchar_socket_io(void* arg);
 
 void* esperar_dispatch(void* arg);
 
+void crear_proceso(char* instrucciones, int tamanio_proceso);
+void finalizar_proceso(t_pcb* proceso);
+void finalizar_proceso_io(void* arg);
+
 // SEMAFOROS
 
 

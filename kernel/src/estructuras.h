@@ -65,7 +65,6 @@ typedef struct {
     // Más campos opcionales: tamaño de memoria, registros, métricas, etc.
 } t_pcb;
 
-void crear_proceso(char* instrucciones, int tamanio_proceso);
 typedef struct {
     t_pcb* proceso;
     t_cpu* cpu;

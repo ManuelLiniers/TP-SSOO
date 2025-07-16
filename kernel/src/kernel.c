@@ -136,11 +136,7 @@ void* atender_dispatch(void* arg){
 }
 
 void* identificar_cpu_distpatch(t_buffer* buffer, int socket){
-	t_cpu* cpu = identificar_cpu(buffer, socket, modificar_dispatch);
-
-	pthread_t esperar_devolucion;
-    pthread_create(&esperar_devolucion, NULL, esperar_dispatch, (void*) cpu);
-    pthread_detach(esperar_devolucion);
+	identificar_cpu(buffer, socket, modificar_dispatch);
 	return NULL;
 }
 
@@ -195,23 +191,14 @@ void* esperar_dispatch(void* arg){
                 break;
             case FINALIZADO:
                 //log_debug(logger_kernel, "Metricas del proceso %d: %d", proceso->pid, list_size(proceso->metricas_tiempo));
-                cambiar_estado(proceso, EXIT);
 
                 //log_debug(logger_kernel, "Metricas del proceso (<%d>): %d", proceso->pid, list_size(proceso->metricas_tiempo));
 
+				log_info(logger_kernel, "## (<%d>) - Solicito syscall: <%s>", proceso->pid, "EXIT");
+
                 sacar_proceso_ejecucion(proceso);
-
-                log_info(logger_kernel, "## (<%d>) - Solicito syscall: <%s>", proceso->pid, "EXIT");
-
-                log_info(logger_kernel, "## %d - Finaliza el proceso", proceso->pid);
                 
-                log_metricas_estado(proceso);
-
-                if(paquete_memoria_pid(proceso, FINALIZAR_PROCESO)){
-                    free(proceso);
-                    signal_sem(&espacio_memoria);
-                    log_debug(logger_kernel, "HAY ESPACIO FINALIZACION EN MEMORIA");
-                }
+				finalizar_proceso(proceso);
                 
                 break;
             case CAUSA_IO:
@@ -244,7 +231,8 @@ void* esperar_dispatch(void* arg){
                 }
 
                 if(dispositivo == NULL){
-                    log_error(logger_kernel, "No se encontro la IO: %s", nombre_io);
+                    log_info(logger_kernel, "No se encontro la IO: %s", nombre_io);
+					finalizar_proceso(proceso);
                     break;
                 }
 
@@ -297,7 +285,6 @@ void* esperar_dispatch(void* arg){
                 break;
             }
         free(paquete);
-        return NULL;
     }
 }
 
@@ -337,6 +324,10 @@ t_cpu* identificar_cpu(t_buffer* buffer, int socket_fd, void (*funcion)(t_cpu*, 
 		funcion(encontrada, socket_fd);
 		free(cpu_nueva);
 		mostrar_cpus();
+
+		pthread_t esperar_devolucion;
+    	pthread_create(&esperar_devolucion, NULL, esperar_dispatch, (void*) encontrada);
+    	pthread_detach(esperar_devolucion);
 		return encontrada;
 	}
 
@@ -462,6 +453,9 @@ void* escuchar_socket_io(void* arg){
 				break;
 			case -1:
 				log_debug(logger_kernel, "[Dispositivo %s IO Desconectado]", dispositivo->nombre);
+				wait_mutex(&mutex_queue_block);
+				queue_clean_and_destroy_elements(obtener_cola_io(dispositivo->id), finalizar_proceso_io);
+				signal_mutex(&mutex_queue_block);
 				list_remove_element(lista_dispositivos_io, dispositivo);
 				pthread_exit(NULL);
 				break;
@@ -493,3 +487,24 @@ void crear_proceso(char* instrucciones, int tamanio_proceso){
 	signal_sem(&nuevo_proceso);
 }
 
+void finalizar_proceso(t_pcb* proceso){
+
+	if(paquete_memoria_pid(proceso, FINALIZAR_PROCESO)){
+		cambiar_estado(proceso, EXIT);
+
+		log_info(logger_kernel, "## %d - Finaliza el proceso", proceso->pid);
+		
+		log_metricas_estado(proceso);
+		free(proceso);
+		signal_sem(&espacio_memoria);
+		log_debug(logger_kernel, "HAY ESPACIO FINALIZACION EN MEMORIA");
+	}
+	else{
+		log_error(logger_kernel, "Error en memoria al finalizar proceso PID: <%d>", proceso->pid);
+	}
+}
+
+void finalizar_proceso_io(void* arg){
+	t_unidad_ejecucion* proceso_io = (t_unidad_ejecucion*) arg;
+	finalizar_proceso(proceso_io->proceso);
+}
