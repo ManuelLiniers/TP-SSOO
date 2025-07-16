@@ -63,6 +63,7 @@ void reemplazar_con_clock_m(t_entrada_cache* nueva, t_log* logger, int conexion_
 
         if((vueltas >= entradas_cache && vueltas < 2 * entradas_cache) || (vueltas >= 3 * entradas_cache && vueltas < 4 * entradas_cache)){
             if (!actual->bit_uso && actual->bit_modificado) {
+                escribir_pagina_memoria(pid, actual->marco * TAMANIO_PAGINA, actual->contenido, conexion_memoria, logger, actual->pagina, actual->marco);
                 list_replace_and_destroy_element(cache_paginas, puntero_clock, nueva, free);
                 log_info(logger, "PID: %d - Cache Add - Pagina: %d", nueva->pid, nueva->pagina);
                 puntero_clock = (puntero_clock + 1) % entradas_cache;   //p ej si las entradas son 4 (indice 0 a 3) y el ptr esta en 3 hace (3+1)%4 = 0 y reincia

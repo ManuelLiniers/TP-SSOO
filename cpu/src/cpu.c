@@ -301,7 +301,8 @@ void ciclo_de_instruccion_execute(t_instruccion_decodificada* instruccion, t_con
     log_info(logger, "## PID: %d - Ejecutando: %s", contexto->pid, opcode);
 
     if (string_equals_ignore_case(opcode, "NOOP")) {
-        usleep(1000 * 1000); // (1 seg)
+        log_info(logger, "PID: %d - Ejecutando: NOOP", contexto->pid);
+
     }
     else if (string_equals_ignore_case(opcode, "GOTO")) {
         if (instruccion->cantidad_operandos >= 1) {
