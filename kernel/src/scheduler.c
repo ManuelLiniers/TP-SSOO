@@ -56,7 +56,7 @@ void* planificar_corto_plazo_SJF_desalojo(void* arg){
         wait_mutex(&mutex_procesos_ejecutando);
         actualizar_estimaciones();
         signal_mutex(&mutex_procesos_ejecutando);
-        //wait_mutex(&mutex_cpu);
+        wait_mutex(&mutex_cpu);
         wait_sem(&cpu_libre);
         wait_mutex(&mutex_queue_ready);
         if(!list_is_empty(queue_ready)){
@@ -93,7 +93,7 @@ void* planificar_corto_plazo_SJF_desalojo(void* arg){
             signal_mutex(&mutex_queue_ready);
             signal_sem(&cpu_libre);
         }
-        //signal_mutex(&mutex_cpu);
+        signal_mutex(&mutex_cpu);
     }
 }
 
@@ -336,8 +336,9 @@ void *planificar_largo_plazo_FIFO(void* arg){
                     wait_sem(&espacio_memoria); // espero que algun proceso finalice 
                     log_debug(logger_kernel, "Consumo semaforo espacio_memoria, semaforo: %ld", espacio_memoria.__align);
                 }
-		    }
-            signal_mutex(&mutex_queue_new);
+		    } else {
+                signal_mutex(&mutex_queue_new);
+            }
         }
 	}
 }
@@ -349,22 +350,27 @@ void *planificar_largo_plazo_PMCP(void* arg){
     pthread_detach(hilo_comprobar_espacio);
 
     while(1){
+        wait_sem(&planificador_largo_plazo);
+        log_debug(logger_kernel, "Consumo semaforo planificador_largo_plazo: %ld", planificador_largo_plazo.__align);
+        log_debug(logger_kernel, "Antes de espacio memoria");
         wait_sem(&espacio_memoria);
+        log_debug(logger_kernel, "Despues de espacio memoria");
         wait_mutex(&mutex_queue_susp_ready);
         if(!queue_is_empty(queue_susp_ready)){
-            wait_mutex(&mutex_queue_susp_ready);
             t_pcb* proceso = queue_peek(queue_susp_ready);
             signal_mutex(&mutex_queue_susp_ready);
-            if(espacio_en_memoria(proceso)){
+            if(vuelta_swap(proceso)){
 
                 wait_mutex(&mutex_queue_susp_ready);
 				queue_pop(queue_susp_ready);
                 signal_mutex(&mutex_queue_susp_ready);
                 // PONER EN READY
                 poner_en_ready(proceso, false);
-                log_debug(logger_kernel, "Cola de ready:");
-                mostrar_lista(queue_ready);
-			}
+                // log_debug(logger_kernel, "Cola de ready:");
+                // mostrar_lista(queue_ready);
+			} else {
+                signal_sem(&espacio_memoria);
+            }
         }
         else{
             signal_mutex(&mutex_queue_susp_ready);
@@ -379,10 +385,17 @@ void *planificar_largo_plazo_PMCP(void* arg){
                     signal_mutex(&mutex_queue_new);
 
                     // PONER EN READY
-                    log_debug(logger_kernel, "Cola de ready:");
-                    mostrar_lista(queue_ready);
+                    // log_debug(logger_kernel, "Cola de ready:");
+                    // mostrar_lista(queue_ready);
                     poner_en_ready(proceso, false);
                 }
+                else{
+                    signal_sem(&espacio_memoria);
+                }
+            }
+            else{
+                signal_sem(&espacio_memoria);
+                signal_mutex(&mutex_queue_new);
             }
         }
     }
@@ -406,6 +419,7 @@ void *comprobar_suspendido_ready(void* args){
 void *comprobar_procesos_nuevos(void* arg){
     while(1){
         wait_sem(&nuevo_proceso);
+        log_debug(logger_kernel, "Entro a comprobar procesos nuevos");
         wait_mutex(&mutex_queue_new);
         if(!list_is_empty(queue_new)){
             list_sort(queue_new, proceso_es_mas_chico);
@@ -473,13 +487,11 @@ bool vuelta_swap(t_pcb* proceso){
 }
 
 void poner_en_ready(t_pcb* proceso, bool interrumpido){
-    wait_mutex(&mutex_cpu);
     cambiar_estado(proceso, READY);
     wait_mutex(&mutex_queue_ready);
 	list_add(queue_ready, proceso);
     mostrar_lista(queue_ready);
     signal_mutex(&mutex_queue_ready);
-    signal_mutex(&mutex_cpu);
     
     t_cpu* cpu;
     if(strcmp(algoritmo_corto_plazo, "SRT") == 0){
@@ -553,6 +565,9 @@ void comprobar_suspendido(t_pcb* proceso){
         paquete_memoria_pid(proceso, SWAP);
         log_debug(logger_kernel, "Proceso en suspendido, swap exitoso para PID: %d", proceso->pid);
         signal_sem(&espacio_memoria);
+        signal_sem(&planificador_largo_plazo);
+        log_debug(logger_kernel, "Signal del planificador_largo_plazo (%ld) por proceso suspendido pid <%d>", 
+            planificador_largo_plazo.__align, proceso->pid);
         log_debug(logger_kernel, "HAY ESPACIO EN MEMORIA");
     }
 }

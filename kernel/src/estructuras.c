@@ -218,17 +218,17 @@ t_unidad_ejecucion* buscar_por_cpu(t_cpu* cpu_encargada){
 
 void sacar_proceso_ejecucion(t_pcb* proceso){
     wait_mutex(&mutex_procesos_ejecutando);
+    wait_mutex(&mutex_cpu);
     for(int i = 0; i<list_size(lista_procesos_ejecutando); i++){
         t_unidad_ejecucion* actual = list_get(lista_procesos_ejecutando, i);
         if(actual->proceso->pid == proceso->pid){
             list_remove_element(lista_procesos_ejecutando, actual);
-            temporal_destroy(actual->tiempo_ejecutando);
             liberar_cpu(actual->cpu);
+            log_debug(logger_kernel, "Libero cpu <%d> de proceso pid <%d>", actual->cpu->cpu_id, proceso->pid);
         }
     }
     signal_mutex(&mutex_procesos_ejecutando);
     log_debug(logger_kernel, "----------Espero mutex cpu ");
-    wait_mutex(&mutex_cpu);
     signal_sem(&cpu_libre);
     //log_debug(logger_kernel, "Semaforo cpu_libre: %ld", cpu_libre.__align);
     signal_mutex(&mutex_cpu);
@@ -249,9 +249,6 @@ void cambiar_estado(t_pcb* proceso, t_estado estado){
             if(estado == BLOCKED){
                 temporal_stop(proceso->rafaga_real);
                 calcular_estimacion(proceso);
-                /* if(tieneEstimacion){
-                    log_debug(logger_kernel, "## (<%d>) Estimacion actual: %ld", proceso->pid, proceso->estimacion_actual);
-                } */
                 temporal_destroy(proceso->rafaga_real);
             }
             if(estado == READY){
