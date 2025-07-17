@@ -250,6 +250,12 @@ void* recibir_informacion_del_buffer(t_buffer* unBuffer, size_t tamanio){
 
 	unBuffer->size -= (tamanio + sizeof(int));
 	void* nuevo_stream = malloc(unBuffer->size);
+	if(unBuffer->stream == NULL){
+		printf("ERROR: buffer vacio\n");
+	}
+	if(nuevo_stream == NULL){
+		printf("ERROR: no se pudo reservar memoria para el nuevo stream \n");
+	}
 	memcpy(nuevo_stream, unBuffer->stream + sizeof(int) + tamanio, unBuffer->size);
 	free(unBuffer->stream);
 	unBuffer->stream = nuevo_stream;

@@ -143,8 +143,9 @@ void* esperar_dispatch(void* arg){
 	bool ignorar_interrupcion = false;
 
     while(1){
-        if(CONTEXTO_PROCESO != recibir_operacion(cpu_encargada->socket_dispatch)){
-            log_error(logger_kernel, "Se esperaba recibir CONTEXTO_PROCESO");
+		int op_code = recibir_operacion(cpu_encargada->socket_dispatch);
+        if(CONTEXTO_PROCESO != op_code){
+            log_error(logger_kernel, "Se esperaba recibir CONTEXTO_PROCESO, se recibio: %d", op_code);
             return NULL;
         }
         t_buffer* paquete = recibir_paquete(cpu_encargada->socket_dispatch);
@@ -391,7 +392,7 @@ t_cpu* identificar_cpu(t_buffer* buffer, int socket_fd, void (*funcion)(t_cpu*, 
 
 		pthread_t esperar_devolucion;
     	pthread_create(&esperar_devolucion, NULL, esperar_dispatch, (void*) encontrada);
-    	pthread_detach(esperar_devolucion);
+		pthread_detach(esperar_devolucion);
 		return encontrada;
 	}
 

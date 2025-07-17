@@ -12,23 +12,29 @@ int id;
 
 t_log* logger = NULL;
 t_config* cpu_config = NULL;
+t_config* pruebas_config = NULL;
 pthread_mutex_t mutex_interrupt;
 
 int main(int argc, char* argv[]) {
-    saludar("cpu");
-
+    //saludar("cpu");
 
     logger = crear_log();
-    cpu_config = crear_config(logger);
-    
+
     id = atoi(argv[1]);
     log_debug(logger, "Id CPU: %d", id);
+    cpu_config = crear_config(logger, "cpu.config");
+    char* ruta_config = malloc(sizeof(argv[1])+sizeof("cpu")+sizeof("_estabilidad.config"));
+    strcpy(ruta_config, "cpu");
+    strcat(ruta_config, argv[1]);
+    strcat(ruta_config, "_estabilidad.config");
+    pruebas_config = crear_config(logger, ruta_config);
+    free(ruta_config);
 
-    inicializar_tlb(logger, cpu_config);
-    inicializar_cache(logger, cpu_config);
+    inicializar_tlb(logger, pruebas_config);
+    inicializar_cache(logger, pruebas_config);
 
 TAMANIO_PAGINA = config_get_int_value(cpu_config, "TAMANIO_PAGINA");
-retardo_cache = config_get_int_value(cpu_config, "RETARDO_CACHE");
+retardo_cache = config_get_int_value(pruebas_config, "RETARDO_CACHE");
 
 log_info(logger, "CPU - TAM_PAGINA = %d", TAMANIO_PAGINA);
 
@@ -148,13 +154,17 @@ t_log* crear_log(){
     return logger;
 }
 
-t_config* crear_config(t_log* logger){
-
-    t_config* cpu_config = config_create("/home/utnso/tp-2025-1c-queCompileALaPrimera/cpu/cpu.config");
+t_config* crear_config(t_log* logger, char* archivo){
+    char* resultado = malloc(sizeof("/home/utnso/tp-2025-1c-queCompileALaPrimera/cpu/")+sizeof(archivo));
+    strcpy(resultado, "/home/utnso/tp-2025-1c-queCompileALaPrimera/cpu/");
+    strcpy(resultado, archivo);
+    //resultado = strcat("/home/utnso/tp-2025-1c-queCompileALaPrimera/cpu/",archivo);
+    t_config* cpu_config = config_create(resultado);
     if(cpu_config == NULL){
         log_error(logger, "error con el config del cpu");
         abort();
     }
+    free(resultado);
     return cpu_config;
 }
 
