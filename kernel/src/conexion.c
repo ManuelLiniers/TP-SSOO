@@ -10,7 +10,8 @@ char* puerto_io;
 int conexion_memoria;
 t_config *config_kernel;
 t_log* logger_kernel;
-bool tieneEstimacion;
+char* algoritmo_corto_plazo;
+char* algoritmo_largo_plazo;
 
 
 int crear_conexion_memoria(){

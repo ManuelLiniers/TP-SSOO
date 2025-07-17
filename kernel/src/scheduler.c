@@ -1,8 +1,5 @@
 #include "scheduler.h"
 
-char* algoritmo_corto_plazo;
-char* algoritmo_largo_plazo;
-
 void *planificar_corto_plazo_FIFO(void* arg){
     //log_debug(logger_kernel, "Entre a Corto Plazo FIFO");
 	while(1){
@@ -43,11 +40,9 @@ void* planificar_corto_plazo_SJF(void* arg){
                 poner_en_ejecucion(proceso, cpu_encargada);
                 //free(cpu_encargada);
             }
-            signal_mutex(&mutex_queue_ready);
         }
-        else{
-            signal_mutex(&mutex_queue_ready);
-        }
+        signal_mutex(&mutex_queue_ready);
+        
     }
 
 }
@@ -66,6 +61,7 @@ void* planificar_corto_plazo_SJF_desalojo(void* arg){
         wait_mutex(&mutex_queue_ready);
         if(!list_is_empty(queue_ready)){
             list_sort(queue_ready, shortest_job_first);
+            signal_mutex(&mutex_queue_ready);
             //mostrar_lista(queue_ready);
             t_cpu* cpu_encargada = malloc(sizeof(t_cpu)); // Posible memory leak
             wait_sem(&desalojando);
@@ -83,15 +79,12 @@ void* planificar_corto_plazo_SJF_desalojo(void* arg){
 				}
 				signal_mutex(&mutex_procesos_ejecutando);
                 if(seguir){
-                t_pcb* proceso = list_remove(queue_ready, 0);
-                log_debug(logger_kernel, "Proceso removido por hilo principal pid <%d>", proceso->pid);
-                signal_mutex(&mutex_queue_ready);
-                poner_en_ejecucion(proceso, cpu_encargada);
-                } else {
+                    wait_mutex(&mutex_queue_ready);
+                    t_pcb* proceso = list_remove(queue_ready, 0);
+                    log_debug(logger_kernel, "Proceso removido por hilo principal pid <%d>", proceso->pid);
                     signal_mutex(&mutex_queue_ready);
-                }
-            } else {
-                signal_mutex(&mutex_queue_ready);
+                    poner_en_ejecucion(proceso, cpu_encargada);
+                } 
             }
             signal_sem(&desalojando);
             signal_mutex(&mutex_lista_cpus);
@@ -305,7 +298,7 @@ void *planificar_largo_plazo_FIFO(void* arg){
                 // PONER EN READY
                 poner_en_ready(proceso, false);
                 log_debug(logger_kernel, "Cola de ready:");
-                mostrar_lista(queue_ready);
+                //mostrar_lista(queue_ready);
 			}
             else{
                 log_debug(logger_kernel, "No hay espacio en memoria para la vuelta de swap del proceso <%d>", proceso->pid);
@@ -330,7 +323,7 @@ void *planificar_largo_plazo_FIFO(void* arg){
                     // PONER EN READY
                     poner_en_ready(proceso, false);
                     log_debug(logger_kernel, "Cola de ready:");
-                    mostrar_lista(queue_ready);
+                    //mostrar_lista(queue_ready);
                 }
                 else{
                     log_debug(logger_kernel, "No hay espacio en memoria para el proceso <%d>", proceso->pid);
@@ -484,20 +477,8 @@ void poner_en_ready(t_pcb* proceso, bool interrumpido){
     cambiar_estado(proceso, READY);
     wait_mutex(&mutex_queue_ready);
 	list_add(queue_ready, proceso);
+    mostrar_lista(queue_ready);
     signal_mutex(&mutex_queue_ready);
-    // signal_sem(&proceso_ready);
-    // signal_sem(&proceso_ready);
-    /* if(strcmp(algoritmo_corto_plazo, "SRT") == 0){
-        log_debug(logger_kernel, "Semaforo cpu libre al poner en ready: %ld", cpu_libre.__align);
-        if(cpu_libre.__align <= 0){
-            log_debug(logger_kernel, "Signal del check desalojo, por proceso (<%d>)", proceso->pid);
-            signal_sem(&check_desalojo);
-        }
-        else{
-            log_debug(logger_kernel, "Signal del planificacion principal por proceso (<%d>)", proceso->pid);
-            signal_sem(&planificacion_principal);
-        }
-    } */
     signal_mutex(&mutex_cpu);
     
     t_cpu* cpu;
@@ -514,11 +495,9 @@ void poner_en_ready(t_pcb* proceso, bool interrumpido){
                 signal_sem(&check_desalojo);
             }
         }
+    } else {
+        signal_sem(&proceso_ready);
     }
-    /* 
-    if(strcmp(algoritmo_corto_plazo, "SRT") == 0){
-        signal_sem(&check_desalojo);
-    } */
 }
 
 void poner_en_ejecucion(t_pcb* proceso, t_cpu* cpu_encargada){

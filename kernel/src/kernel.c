@@ -58,21 +58,18 @@ void inicializar_planificacion(){
 		log_debug(logger_kernel, "Planificacion corto plazo con FIFO");
 		pthread_create(&planificador_corto_plazo, NULL, (void*) planificar_corto_plazo_FIFO, NULL);
 		pthread_detach(planificador_corto_plazo);
-		tieneEstimacion = false;
 	}
 	if(strcmp(algoritmo_corto_plazo,"SJF") == 0){
 
 		log_debug(logger_kernel, "Planificacion corto plazo con SJF");
 		pthread_create(&planificador_corto_plazo, NULL, (void*) planificar_corto_plazo_SJF, NULL);
 		pthread_detach(planificador_corto_plazo);
-		tieneEstimacion = true;
 	}
 	if(strcmp(algoritmo_corto_plazo,"SRT") == 0){
 
 		log_debug(logger_kernel, "Planificacion corto plazo con SRT");
 		pthread_create(&planificador_corto_plazo, NULL, (void*) planificar_corto_plazo_SJF_desalojo, NULL);
 		pthread_detach(planificador_corto_plazo);
-		tieneEstimacion = true;
 	}
 
 	if(strcmp(algoritmo_largo_plazo,"FIFO") == 0){
@@ -272,16 +269,6 @@ void* esperar_dispatch(void* arg){
 
                 sacar_proceso_ejecucion(proceso);
 
-                /*
-                log_info(logger_kernel, "## (<%d>) - Busca peticion IO: <%s>", proceso->pid, nombre_io);
-                t_dispositivo_io* aux = buscar_io(nombre_io);
-                while(aux == NULL){
-                    log_info(logger_kernel, "## %d - Esperando IO: %s", proceso->pid, nombre_io);
-                    wait_sem(&dispositivo_libre);
-                    aux = buscar_io(nombre_io);
-                }
-                */
-
                 t_dispositivo_io* dispositivo = buscar_io_libre(nombre_io);
                 if(dispositivo != NULL){
                     enviar_proceso_a_io(proceso, dispositivo, io_tiempo);
@@ -323,6 +310,7 @@ void* esperar_dispatch(void* arg){
                 break;
             case MEMORY_DUMP:
 				send(cpu_encargada->socket_dispatch, &respuesta, sizeof(int), 0);
+				cambiar_estado(proceso, BLOCKED);
                 bool resultado_dump = paquete_memoria_pid(proceso, DUMP_MEMORY); 
 
 				wait_mutex(&mutex_procesos_ejecutando);

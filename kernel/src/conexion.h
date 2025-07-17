@@ -13,7 +13,8 @@ extern char* puerto_io;
 extern int conexion_memoria;
 extern t_config *config_kernel;
 extern t_log* logger_kernel;
-extern bool tieneEstimacion;
+extern char* algoritmo_corto_plazo;
+extern char* algoritmo_largo_plazo;
 
 int crear_conexion_memoria();
 

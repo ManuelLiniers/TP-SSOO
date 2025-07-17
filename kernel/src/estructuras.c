@@ -415,7 +415,7 @@ void mostrar_lista(t_list* lista){
         for(int i = 0; i<list_size(lista); i++){
             t_pcb* proceso = list_get(lista, i);
             log_debug(logger_kernel, "PID: (<%d>)", proceso->pid);
-            if(tieneEstimacion){
+            if(strcmp(algoritmo_corto_plazo, "SRT") == 0){
                 log_debug(logger_kernel, "## (<%d>) Estimacion actual: %ld", proceso->pid, proceso->estimacion_actual);
             }
         }
