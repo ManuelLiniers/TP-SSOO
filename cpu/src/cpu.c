@@ -217,11 +217,7 @@ void atender_proceso_del_kernel(t_contexto* contexto, t_log* logger) {
 
         if (contexto->program_counter == -1){
             break;
-        //} else {
-          //  contexto->program_counter++;   //ya lo hace al final del execute, sino se estaria haciendo dos veces
-        } else {
-        contexto->program_counter++;
-        }
+        } 
             
 
         destruir_instruccion_decodificada(instruccion);
@@ -314,7 +310,8 @@ void ciclo_de_instruccion_execute(t_instruccion_decodificada* instruccion, t_con
 
     if (string_equals_ignore_case(opcode, "NOOP")) {
         log_info(logger, "PID: %d - Ejecutando: NOOP", contexto->pid);
-
+        contexto->program_counter++;
+        return;
     }
     else if (string_equals_ignore_case(opcode, "GOTO")) {
         if (instruccion->cantidad_operandos >= 1) {
@@ -447,6 +444,8 @@ void ciclo_de_instruccion_execute(t_instruccion_decodificada* instruccion, t_con
         agregar_a_tlb(contexto->pid, nro_pagina, marco, logger);
     }
 
+    contexto->program_counter++;
+
     memcpy(lectura, contenido_real + desplazamiento, tamanio);
     log_info(logger, "PID: %d - Acción: LEER - Dirección Física: %d - Valor: %s", pid, direccion_fisica, lectura);
     log_debug(logger, "Valor leído: %.*s", tamanio, contenido_real);
@@ -542,6 +541,7 @@ void ciclo_de_instruccion_execute(t_instruccion_decodificada* instruccion, t_con
     if (respuesta != OK) {
         log_error(logger, "No se escribió bien");
     }
+    contexto->program_counter++;
 
     log_info(logger, "PID: %d - Acción: ESCRIBIR - Dirección Física: %d - Valor: %s", contexto->pid, direccion_fisica, valor);
     log_debug(logger, "Valor leído: %.*s", tamanio, valor);

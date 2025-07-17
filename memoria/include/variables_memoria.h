@@ -74,5 +74,6 @@ extern int marcos_totales;
 extern pthread_mutex_t m_tablas;
 extern pthread_mutex_t mutex_bit_marcos;
 extern pthread_mutex_t mutex_espacio_usuario;
+extern pthread_mutex_t mutex_procesos;
 
 #endif

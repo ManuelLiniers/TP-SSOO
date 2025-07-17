@@ -13,7 +13,10 @@ t_proceso* crear_proceso(int pid, int size, char* path_instruc){
 	proceso_nuevo->instrucciones = leer_archivo_y_cargar_instrucciones(path_instruc);
 
     if(size != 0){
-        int paginas = ceil(size/TAM_PAGINA);
+        int paginas = size/TAM_PAGINA;
+        if(size%TAM_PAGINA > 0){
+            paginas++;
+        }
 	    proceso_nuevo->paginas = paginas;
         int contador = 0;
         proceso_nuevo->tabla_paginas_raiz = crear_tabla_multinivel(1, &paginas, &contador);
@@ -61,14 +64,17 @@ t_list* leer_archivo_y_cargar_instrucciones(char* nombre_proceso) {
 }
 
 t_proceso* obtener_proceso_por_id(int pid, t_list* lista_procesos){
+    
     bool buscar_el_pid(t_proceso* proceso){
 		return proceso->pid == pid;
 	};
+    pthread_mutex_lock(&mutex_procesos);
 	t_proceso* un_proceso = list_find(lista_procesos, (void*)buscar_el_pid);
 	if(un_proceso == NULL){
 		log_error(memoria_logger, "PID<%d> No encontrado en la lista de procesos", pid);
 		exit(EXIT_FAILURE);
 	}
+    pthread_mutex_unlock(&mutex_procesos);
 	return un_proceso;
 }
 

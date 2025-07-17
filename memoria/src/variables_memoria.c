@@ -30,3 +30,4 @@ int marcos_totales;
 pthread_mutex_t m_tablas;
 pthread_mutex_t mutex_bit_marcos;
 pthread_mutex_t mutex_espacio_usuario;
+pthread_mutex_t mutex_procesos;
