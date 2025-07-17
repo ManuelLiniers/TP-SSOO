@@ -24,6 +24,9 @@ extern char* log_level;
 
 // Estados posibles de un proceso
 typedef enum { NEW, READY, EXEC, BLOCKED, SUSP_READY, SUSP_BLOCKED, EXIT } t_estado;
+typedef enum { EJECUTANDO, INTERRUMPIDO, AEJECUTAR} t_estado_ejecucion;
+
+char* estado_ejecucion_to_string(t_estado_ejecucion estado);
 
 int id_estado(t_estado estado);
 
@@ -69,7 +72,7 @@ typedef struct {
     t_pcb* proceso;
     t_cpu* cpu;
     t_temporal* tiempo_ejecutando;
-    bool interrumpido;
+    t_estado_ejecucion interrumpido;
 } t_unidad_ejecucion;
 
 t_pcb* buscar_proceso_pid(uint32_t pid);

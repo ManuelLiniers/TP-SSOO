@@ -39,7 +39,7 @@ void inicializar_kernel(char* instrucciones, char* tamanio_proceso){
 	puerto_dispatch = config_get_string_value(config_kernel, "PUERTO_ESCUCHA_DISPATCH");
 	puerto_interrupt = config_get_string_value(config_kernel, "PUERTO_ESCUCHA_INTERRUPT");
 	puerto_io = config_get_string_value(config_kernel, "PUERTO_ESCUCHA_IO");
-	algoritmo_corto_plazo = config_get_string_value(config_kernel, "ALGORITMO_PLANIFICACION"); // FIFO, SJF, SJFDESALOJO
+	algoritmo_corto_plazo = config_get_string_value(config_kernel, "ALGORITMO_PLANIFICACION"); // FIFO, SJF, SRT
 	algoritmo_largo_plazo = config_get_string_value(config_kernel, "ALGORITMO_INGRESO_A_READY"); // FIFO, PMCP
 	estimacion_inicial = config_get_int_value(config_kernel, "ESTIMACION_INICIAL");
 	estimador_alfa = config_get_double_value(config_kernel, "ALFA");
@@ -62,14 +62,14 @@ void inicializar_planificacion(){
 	}
 	if(strcmp(algoritmo_corto_plazo,"SJF") == 0){
 
-		log_debug(logger_kernel, "Planificacion corto plazo con SJF sin desalojo");
+		log_debug(logger_kernel, "Planificacion corto plazo con SJF");
 		pthread_create(&planificador_corto_plazo, NULL, (void*) planificar_corto_plazo_SJF, NULL);
 		pthread_detach(planificador_corto_plazo);
 		tieneEstimacion = true;
 	}
-	if(strcmp(algoritmo_corto_plazo,"SJFDESALOJO") == 0){
+	if(strcmp(algoritmo_corto_plazo,"SRT") == 0){
 
-		log_debug(logger_kernel, "Planificacion corto plazo con SJF sin desalojo");
+		log_debug(logger_kernel, "Planificacion corto plazo con SRT");
 		pthread_create(&planificador_corto_plazo, NULL, (void*) planificar_corto_plazo_SJF_desalojo, NULL);
 		pthread_detach(planificador_corto_plazo);
 		tieneEstimacion = true;
@@ -142,6 +142,7 @@ void* identificar_cpu_distpatch(t_buffer* buffer, int socket){
 
 void* esperar_dispatch(void* arg){
     t_cpu* cpu_encargada = (t_cpu*) arg;
+	//int respuesta = OK;
 
     while(1){
         if(CONTEXTO_PROCESO != recibir_operacion(cpu_encargada->socket_dispatch)){
@@ -154,42 +155,62 @@ void* esperar_dispatch(void* arg){
         t_pcb* proceso = buscar_proceso_pid(pid);
         uint32_t pc = recibir_uint32_del_buffer(paquete);
         int motivo = recibir_int_del_buffer(paquete);
+		if(proceso != NULL){
+        	proceso->program_counter = pc;
+		}
 
         //log_debug(logger_kernel, "Motivo: %d", motivo);
-
-        proceso->program_counter = pc + 1;
         
         switch (motivo)
         {
             case INTERRUPCION:
-				t_unidad_ejecucion* proceso_ejecutando;
-				t_unidad_ejecucion* proceso_a_ejecutar;
+				//send(cpu_encargada->socket_dispatch, &respuesta, sizeof(int), 0);
+				t_unidad_ejecucion* proceso_ejecutando = NULL;
+				t_unidad_ejecucion* proceso_a_ejecutar = NULL;
+				wait_mutex(&mutex_procesos_ejecutando);
 				for(int i = 0; i<list_size(lista_procesos_ejecutando); i++){
 					t_unidad_ejecucion* unidad = (t_unidad_ejecucion*) list_get(lista_procesos_ejecutando, i);
 					if(unidad->cpu->cpu_id == cpu_encargada->cpu_id){
-						if(unidad->interrumpido){
-							proceso_ejecutando = unidad;
+						if(unidad->interrumpido == INTERRUMPIDO){
+							if(proceso == NULL){
+								proceso_ejecutando = NULL;
+							}
+							else{
+								proceso_ejecutando = unidad;
+							}
 						}
 						else{
-							proceso_a_ejecutar = unidad;
+							if(unidad->interrumpido == AEJECUTAR){
+								proceso_a_ejecutar = unidad;
+							}
 						}
 					}
 				}
-				cambiar_estado(proceso_ejecutando->proceso, READY);
-				log_info(logger_kernel, "## (<%d>) - Desalojado por algoritmo SJF/SRT", proceso_ejecutando->proceso->pid); 
-				list_add(queue_ready, proceso_ejecutando->proceso);
-				temporal_destroy(proceso_ejecutando->tiempo_ejecutando);
-				wait_mutex(&mutex_procesos_ejecutando);
-				list_remove_element(lista_procesos_ejecutando, proceso_ejecutando);
-        		signal_mutex(&mutex_procesos_ejecutando);
+				if(proceso_ejecutando != NULL){
+					poner_en_ready(proceso_ejecutando->proceso);
+					log_info(logger_kernel, "## (<%d>) - Desalojado por algoritmo SJF/SRT", proceso_ejecutando->proceso->pid); 
+					log_debug(logger_kernel, " -----------------------------");
+					temporal_destroy(proceso_ejecutando->tiempo_ejecutando);
+					list_remove_element(lista_procesos_ejecutando, proceso_ejecutando);
 				
-				free(proceso_ejecutando);
+					free(proceso_ejecutando);
+				}
+				if(proceso_a_ejecutar == NULL){
+					log_error(logger_kernel, "ERROR: la unidad de ejecucion es NULL");
+				}
+				if(proceso_a_ejecutar->proceso == NULL){
+				 log_error(logger_kernel, "ERROR: el proceso a ejecutar es NULL");
+				}
 				
-				proceso_a_ejecutar->tiempo_ejecutando = temporal_create();
+				cpu_encargada->esta_libre = 0;
                 poner_en_ejecucion(proceso_a_ejecutar->proceso, cpu_encargada);
+				proceso_a_ejecutar->tiempo_ejecutando = temporal_create();
 				cambiar_estado(proceso_a_ejecutar->proceso, EXEC);
+				signal_mutex(&mutex_procesos_ejecutando);
+				//log_debug(logger_kernel, "Proceso removido por hilo principal pid <%d>", proceso->pid);
                 break;
             case FINALIZADO:
+				//send(cpu_encargada->socket_dispatch, &respuesta, sizeof(int), 0);
                 //log_debug(logger_kernel, "Metricas del proceso %d: %d", proceso->pid, list_size(proceso->metricas_tiempo));
 
                 //log_debug(logger_kernel, "Metricas del proceso (<%d>): %d", proceso->pid, list_size(proceso->metricas_tiempo));
@@ -202,6 +223,7 @@ void* esperar_dispatch(void* arg){
                 
                 break;
             case CAUSA_IO:
+				//send(cpu_encargada->socket_dispatch, &respuesta, sizeof(int), 0);
                 int tamanio = recibir_int_del_buffer(paquete);
                 char* nombre_io = recibir_informacion_del_buffer(paquete, tamanio);
                 int io_tiempo = recibir_int_del_buffer(paquete);
@@ -250,17 +272,19 @@ void* esperar_dispatch(void* arg){
                 break;
 
             case INIT_PROC:
+				//send(cpu_encargada->socket_dispatch, &respuesta, sizeof(int), 0);
                 int tamanio_proceso = recibir_int_del_buffer(paquete);
                 int longitud = recibir_int_del_buffer(paquete);
                 char* archivo = recibir_informacion_del_buffer(paquete, longitud);
 
                 log_info(logger_kernel, "## (<%d>) - Solicito syscall: <%s>", proceso->pid, "INIT_PROC");
-
-                poner_en_ejecucion(proceso, cpu_encargada);
+                
+				poner_en_ejecucion(proceso, cpu_encargada);
 
                 crear_proceso(archivo, tamanio_proceso);
                 break;
             case MEMORY_DUMP:
+				//send(cpu_encargada->socket_dispatch, &respuesta, sizeof(int), 0);
                 bool resultado_dump = paquete_memoria_pid(proceso, DUMP_MEMORY); 
 
                 sacar_proceso_ejecucion(proceso);
@@ -314,7 +338,10 @@ t_cpu* identificar_cpu(t_buffer* buffer, int socket_fd, void (*funcion)(t_cpu*, 
 		cpu_nueva->esta_libre = 1;
 		funcion(cpu_nueva, socket_fd);
 		list_add(lista_cpus, cpu_nueva);
+		wait_mutex(&mutex_cpu);
 		signal_sem(&cpu_libre);
+		log_debug(logger_kernel, "Semaforo cpu_libre: %ld", cpu_libre.__align);
+		signal_mutex(&mutex_cpu);
 		//log_debug(logger_kernel, "Tamanio del nombre: %d", tamanio_nombre);
 		log_debug(logger_kernel, "Se identifico la CPU: %d", cpu_nueva->cpu_id);
 		mostrar_cpus();
@@ -507,4 +534,5 @@ void finalizar_proceso(t_pcb* proceso){
 void finalizar_proceso_io(void* arg){
 	t_unidad_ejecucion* proceso_io = (t_unidad_ejecucion*) arg;
 	finalizar_proceso(proceso_io->proceso);
+	free(proceso_io);
 }

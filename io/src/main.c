@@ -67,7 +67,6 @@ t_config* iniciar_config(void) {
 	return nuevo_config;
 }
 
-// 🟦 Recibe y procesa peticiones de IO desde el Kernel
 void procesar_io(int socket_kernel, t_log* logger) {
     while (1) {
         int codigo_operacion = recibir_operacion(socket_kernel);
@@ -104,13 +103,13 @@ void procesar_io(int socket_kernel, t_log* logger) {
             send(socket_kernel, &respuesta, sizeof(int), 0);
 
             free(peticion);
+            eliminar_buffer(paquete);
         } else {
             log_warning(logger, "Código de operación no esperado: %d", codigo_operacion);
         }
     }
 }
 
-// 🟦 Deserializa el stream recibido en un struct
 t_peticion_io* deserializar_peticion_io(void* stream) {
     t_peticion_io* peticion = malloc(sizeof(t_peticion_io));
     memcpy(&peticion->pid, stream, sizeof(int));

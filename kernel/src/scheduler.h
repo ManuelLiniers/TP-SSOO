@@ -23,6 +23,7 @@ extern char* algoritmo_largo_plazo;
 void* planificar_largo_plazo_FIFO(void* arg);
 void* planificar_corto_plazo_SJF(void* arg);
 void* planificar_corto_plazo_SJF_desalojo(void* arg);
+void *comprobar_desalojo(void *arg);
 bool shortest_job_first_desalojo(void* a, void* b);
 void* planificar_largo_plazo_PMCP(void* arg);
 void *comprobar_procesos_nuevos(void* arg);

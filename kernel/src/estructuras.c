@@ -71,6 +71,23 @@ t_pcb* pcb_create() {
     return pcb;
 }
 
+char* estado_ejecucion_to_string(t_estado_ejecucion estado){
+    switch (estado)
+    {
+    case EJECUTANDO:
+        return "EJECUTANDO";
+        break;
+    case INTERRUMPIDO:
+        return "INTERRUMPIDO";
+        break;
+    case AEJECUTAR:
+        return "AEJECUTAR";
+        break;
+    default:
+        return NULL;
+        break;
+    }
+}
 
 int id_estado(t_estado estado){
     switch (estado)
@@ -177,12 +194,15 @@ void liberar_cpu(t_cpu* cpu_encargada){
 }
 
 t_pcb* buscar_proceso_pid(uint32_t pid){
+    wait_mutex(&mutex_procesos_ejecutando);
     for(int i=0; i<list_size(lista_procesos_ejecutando); i++){
         t_unidad_ejecucion* actual = list_get(lista_procesos_ejecutando, i);
         if(actual->proceso->pid == (uint32_t)pid){
+            signal_mutex(&mutex_procesos_ejecutando);
             return actual->proceso;
         }
     }
+    signal_mutex(&mutex_procesos_ejecutando);
     return NULL;
 }
 
@@ -197,6 +217,7 @@ t_unidad_ejecucion* buscar_por_cpu(t_cpu* cpu_encargada){
 }
 
 void sacar_proceso_ejecucion(t_pcb* proceso){
+    wait_mutex(&mutex_procesos_ejecutando);
     for(int i = 0; i<list_size(lista_procesos_ejecutando); i++){
         t_unidad_ejecucion* actual = list_get(lista_procesos_ejecutando, i);
         if(actual->proceso->pid == proceso->pid){
@@ -205,7 +226,14 @@ void sacar_proceso_ejecucion(t_pcb* proceso){
             liberar_cpu(actual->cpu);
         }
     }
+    signal_mutex(&mutex_procesos_ejecutando);
+    log_debug(logger_kernel, "----------Espero mutex cpu ");
+    wait_mutex(&mutex_cpu);
     signal_sem(&cpu_libre);
+    //log_debug(logger_kernel, "Semaforo cpu_libre: %ld", cpu_libre.__align);
+    signal_mutex(&mutex_cpu);
+    log_debug(logger_kernel, "-------- libero mutex cpu");
+    signal_sem(&planificacion_principal);
 }
 
 void cambiar_estado(t_pcb* proceso, t_estado estado){
@@ -221,9 +249,9 @@ void cambiar_estado(t_pcb* proceso, t_estado estado){
             if(estado == BLOCKED){
                 temporal_stop(proceso->rafaga_real);
                 calcular_estimacion(proceso);
-                if(tieneEstimacion){
-                    log_info(logger_kernel, "## (<%d>) Estimacion actual: %ld", proceso->pid, proceso->estimacion_actual);
-                }
+                /* if(tieneEstimacion){
+                    log_debug(logger_kernel, "## (<%d>) Estimacion actual: %ld", proceso->pid, proceso->estimacion_actual);
+                } */
                 temporal_destroy(proceso->rafaga_real);
             }
             if(estado == READY){
@@ -388,7 +416,7 @@ void mostrar_lista(t_list* lista){
             t_pcb* proceso = list_get(lista, i);
             log_debug(logger_kernel, "PID: (<%d>)", proceso->pid);
             if(tieneEstimacion){
-                log_info(logger_kernel, "## (<%d>) Estimacion actual: %ld", proceso->pid, proceso->estimacion_actual);
+                log_debug(logger_kernel, "## (<%d>) Estimacion actual: %ld", proceso->pid, proceso->estimacion_actual);
             }
         }
         log_debug(logger_kernel, "------");

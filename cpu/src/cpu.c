@@ -209,6 +209,8 @@ void atender_proceso_del_kernel(t_contexto* contexto, t_log* logger) {
             break;
         //} else {
           //  contexto->program_counter++;   //ya lo hace al final del execute, sino se estaria haciendo dos veces
+        } else {
+        contexto->program_counter++;
         }
             
 
@@ -525,11 +527,11 @@ void ciclo_de_instruccion_execute(t_instruccion_decodificada* instruccion, t_con
     enviar_paquete(paquete, conexion_memoria);
     eliminar_paquete(paquete);
 
-    int respuesta;
-    recv(conexion_memoria, &respuesta, sizeof(int), 0);
-    if (respuesta != OK) {
-        log_error(logger, "No se escribió bien");
-    }
+    // int respuesta;
+    // recv(conexion_memoria, &respuesta, sizeof(int), 0);
+    // if (respuesta != OK) {
+    //     log_error(logger, "No se escribió bien");
+    // }
 
     log_info(logger, "PID: %d - Acción: ESCRIBIR - Dirección Física: %d - Valor: %s", contexto->pid, direccion_fisica, valor);
     log_debug(logger, "Valor leído: %.*s", tamanio, valor);
@@ -538,15 +540,15 @@ void ciclo_de_instruccion_execute(t_instruccion_decodificada* instruccion, t_con
 
     // Si la instrucción no fue GOTO (que cambia el PC),ninguna o alguna que no haya modificado el pc avanza1 para buscar una instruccion a ejecutar
 
-    if(contexto -> program_counter != -1){
-        contexto->program_counter++;
-    }
+
 }
 
 void enviar_contexto_a_kernel(t_contexto* contexto, motivo_desalojo motivo, int fd, t_log* logger) {
     char* motivo_str[] = {
     "EXIT", "CAUSA_IO", "WAIT", "SIGNAL", "PAGE_FAULT", "INTERRUPCION", "DESALOJO_POR_QUANTUM"}; //mismo orden que el enum de motivodesalojo
     log_debug(logger, "## PID: %d - Desalojado - Motivo: %s", contexto->pid, motivo_str[motivo]);
+
+    contexto->program_counter++;
 
     t_paquete* paquete = crear_paquete(CONTEXTO_PROCESO); // contxtoproceso es opcode
 
@@ -555,10 +557,18 @@ void enviar_contexto_a_kernel(t_contexto* contexto, motivo_desalojo motivo, int 
     agregar_a_paquete(paquete, &motivo, sizeof(motivo_desalojo));  
     enviar_paquete(paquete, fd);
     eliminar_paquete(paquete);
+
+    // int resultado;
+    // recv(fd, &resultado, sizeof(int), 0);
+    // if(resultado != OK){
+    //     log_error(logger, "Contexto Mal recibido por Kernel");
+    // }
 }
 
 void enviar_contexto_a_kernel_init_proc(t_contexto* contexto, motivo_desalojo motivo, int fd, t_log* logger, char* archivo, int tamanio) {
     t_paquete* paquete = crear_paquete(CONTEXTO_PROCESO);
+
+    contexto->program_counter++;
 
     agregar_a_paquete(paquete, &(contexto->pid), sizeof(uint32_t));
     agregar_a_paquete(paquete, &(contexto->program_counter), sizeof(uint32_t));
@@ -572,10 +582,17 @@ void enviar_contexto_a_kernel_init_proc(t_contexto* contexto, motivo_desalojo mo
     eliminar_paquete(paquete);
 
     log_debug(logger, "Se envio el contexto actualizado con motivo INIT_PROC al Kernel.");
+    // int resultado;
+    // recv(fd, &resultado, sizeof(int), 0);
+    // if(resultado != OK){
+    //     log_error(logger, "Contexto Mal recibido por Kernel");
+    // }
 }
 
 void enviar_contexto_a_kernel_io(t_contexto* contexto, motivo_desalojo motivo, int fd, t_log* logger, char* nombre_io, int tiempo_io) {
     t_paquete* paquete = crear_paquete(CONTEXTO_PROCESO);
+
+    contexto->program_counter++;
 
     agregar_a_paquete(paquete, &(contexto->pid), sizeof(uint32_t));
     agregar_a_paquete(paquete, &(contexto->program_counter), sizeof(uint32_t));
@@ -589,10 +606,17 @@ void enviar_contexto_a_kernel_io(t_contexto* contexto, motivo_desalojo motivo, i
     eliminar_paquete(paquete);
 
     log_debug(logger, "Se envio el contexto actualizado con motivo IO al Kernel.");
+    // int resultado;
+    // recv(fd, &resultado, sizeof(int), 0);
+    // if(resultado != OK){
+    //     log_error(logger, "Contexto Mal recibido por Kernel");
+    // }
 }
 
 void enviar_contexto_a_kernel_dump(t_contexto* contexto, motivo_desalojo motivo, int fd, t_log* logger) {
     t_paquete* paquete = crear_paquete(CONTEXTO_PROCESO);
+
+    contexto->program_counter++;
 
     agregar_a_paquete(paquete, &(contexto->pid), sizeof(uint32_t));
     agregar_a_paquete(paquete, &(contexto->program_counter), sizeof(uint32_t));
@@ -602,6 +626,11 @@ void enviar_contexto_a_kernel_dump(t_contexto* contexto, motivo_desalojo motivo,
     eliminar_paquete(paquete);
 
     log_debug(logger, "Se envio el contexto actualizado con motivo DUMP al Kernel.");
+    // int resultado;
+    // recv(fd, &resultado, sizeof(int), 0);
+    // if(resultado != OK){
+    //     log_error(logger, "Contexto Mal recibido por Kernel");
+    // }
 }
 
 

@@ -11,12 +11,17 @@ extern pthread_mutex_t mutex_queue_block;
 extern pthread_mutex_t mutex_queue_exit;
 extern pthread_mutex_t mutex_queue_susp_ready;
 extern pthread_mutex_t mutex_procesos_ejecutando;
+extern pthread_mutex_t mutex_cpu;
+extern pthread_mutex_t mutex_lista_cpus;
 
 extern sem_t bloqueante_sem;
 extern sem_t cpu_libre;
+extern sem_t ver_desalojo;
 
 extern sem_t nuevo_proceso;
 extern sem_t proceso_ready;
+extern sem_t check_desalojo;
+extern sem_t planificacion_principal;
 extern sem_t espacio_memoria;
 extern sem_t dispositivo_libre;
 extern sem_t nuevo_proceso_suspendido_ready;
