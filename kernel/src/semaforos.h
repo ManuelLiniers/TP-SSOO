@@ -21,6 +21,7 @@ extern sem_t ver_desalojo;
 extern sem_t nuevo_proceso;
 extern sem_t proceso_ready;
 extern sem_t check_desalojo;
+extern sem_t desalojando;
 extern sem_t planificacion_principal;
 extern sem_t espacio_memoria;
 extern sem_t dispositivo_libre;

@@ -527,11 +527,11 @@ void ciclo_de_instruccion_execute(t_instruccion_decodificada* instruccion, t_con
     enviar_paquete(paquete, conexion_memoria);
     eliminar_paquete(paquete);
 
-    // int respuesta;
-    // recv(conexion_memoria, &respuesta, sizeof(int), 0);
-    // if (respuesta != OK) {
-    //     log_error(logger, "No se escribió bien");
-    // }
+    int respuesta;
+    recv(conexion_memoria, &respuesta, sizeof(int), 0);
+    if (respuesta != OK) {
+        log_error(logger, "No se escribió bien");
+    }
 
     log_info(logger, "PID: %d - Acción: ESCRIBIR - Dirección Física: %d - Valor: %s", contexto->pid, direccion_fisica, valor);
     log_debug(logger, "Valor leído: %.*s", tamanio, valor);
@@ -558,11 +558,11 @@ void enviar_contexto_a_kernel(t_contexto* contexto, motivo_desalojo motivo, int 
     enviar_paquete(paquete, fd);
     eliminar_paquete(paquete);
 
-    // int resultado;
-    // recv(fd, &resultado, sizeof(int), 0);
-    // if(resultado != OK){
-    //     log_error(logger, "Contexto Mal recibido por Kernel");
-    // }
+    int resultado;
+    recv(fd, &resultado, sizeof(int), 0);
+    if(resultado != OK){
+        log_error(logger, "Contexto Mal recibido por Kernel");
+    }
 }
 
 void enviar_contexto_a_kernel_init_proc(t_contexto* contexto, motivo_desalojo motivo, int fd, t_log* logger, char* archivo, int tamanio) {
@@ -582,11 +582,11 @@ void enviar_contexto_a_kernel_init_proc(t_contexto* contexto, motivo_desalojo mo
     eliminar_paquete(paquete);
 
     log_debug(logger, "Se envio el contexto actualizado con motivo INIT_PROC al Kernel.");
-    // int resultado;
-    // recv(fd, &resultado, sizeof(int), 0);
-    // if(resultado != OK){
-    //     log_error(logger, "Contexto Mal recibido por Kernel");
-    // }
+    int resultado;
+    recv(fd, &resultado, sizeof(int), 0);
+    if(resultado != OK){
+        log_error(logger, "Contexto Mal recibido por Kernel");
+    }
 }
 
 void enviar_contexto_a_kernel_io(t_contexto* contexto, motivo_desalojo motivo, int fd, t_log* logger, char* nombre_io, int tiempo_io) {
@@ -606,11 +606,11 @@ void enviar_contexto_a_kernel_io(t_contexto* contexto, motivo_desalojo motivo, i
     eliminar_paquete(paquete);
 
     log_debug(logger, "Se envio el contexto actualizado con motivo IO al Kernel.");
-    // int resultado;
-    // recv(fd, &resultado, sizeof(int), 0);
-    // if(resultado != OK){
-    //     log_error(logger, "Contexto Mal recibido por Kernel");
-    // }
+    int resultado;
+    recv(fd, &resultado, sizeof(int), 0);
+    if(resultado != OK){
+        log_error(logger, "Contexto Mal recibido por Kernel");
+    }
 }
 
 void enviar_contexto_a_kernel_dump(t_contexto* contexto, motivo_desalojo motivo, int fd, t_log* logger) {
@@ -626,11 +626,11 @@ void enviar_contexto_a_kernel_dump(t_contexto* contexto, motivo_desalojo motivo,
     eliminar_paquete(paquete);
 
     log_debug(logger, "Se envio el contexto actualizado con motivo DUMP al Kernel.");
-    // int resultado;
-    // recv(fd, &resultado, sizeof(int), 0);
-    // if(resultado != OK){
-    //     log_error(logger, "Contexto Mal recibido por Kernel");
-    // }
+    int resultado;
+    recv(fd, &resultado, sizeof(int), 0);
+    if(resultado != OK){
+        log_error(logger, "Contexto Mal recibido por Kernel");
+    }
 }
 
 

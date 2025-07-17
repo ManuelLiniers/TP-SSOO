@@ -15,6 +15,7 @@ sem_t nuevo_proceso;
 sem_t espacio_memoria;
 sem_t proceso_ready;
 sem_t check_desalojo;
+sem_t desalojando;
 sem_t nuevo_proceso_suspendido_ready;
 
 sem_t cpu_libre;
@@ -59,6 +60,7 @@ void iniciar_semaforos(){
     sem_init(&dispositivo_libre, 0, 0);
     sem_init(&nuevo_proceso_suspendido_ready, 0, 0);
     sem_init(&check_desalojo, 0, 0);
+    sem_init(&desalojando, 0, 1);
     sem_init(&planificacion_principal, 0, 0);
     sem_init(&ver_desalojo, 0, 0);
 };

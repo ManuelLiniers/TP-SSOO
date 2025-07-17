@@ -68,16 +68,32 @@ void* planificar_corto_plazo_SJF_desalojo(void* arg){
             list_sort(queue_ready, shortest_job_first);
             //mostrar_lista(queue_ready);
             t_cpu* cpu_encargada = malloc(sizeof(t_cpu)); // Posible memory leak
+            wait_sem(&desalojando);
             wait_mutex(&mutex_lista_cpus);
+            bool seguir = true;
             if(hay_cpu_libre(&cpu_encargada)){
+                wait_mutex(&mutex_procesos_ejecutando);
+				for(int i = 0; i<list_size(lista_procesos_ejecutando); i++){
+					t_unidad_ejecucion* unidad = (t_unidad_ejecucion*) list_get(lista_procesos_ejecutando, i);
+					if(unidad->cpu->cpu_id == cpu_encargada->cpu_id){
+						if(unidad->interrumpido == AEJECUTAR){
+							seguir = false;
+						}
+					}
+				}
+				signal_mutex(&mutex_procesos_ejecutando);
+                if(seguir){
                 t_pcb* proceso = list_remove(queue_ready, 0);
                 log_debug(logger_kernel, "Proceso removido por hilo principal pid <%d>", proceso->pid);
                 signal_mutex(&mutex_queue_ready);
                 poner_en_ejecucion(proceso, cpu_encargada);
-                //free(cpu_encargada);
+                } else {
+                    signal_mutex(&mutex_queue_ready);
+                }
             } else {
                 signal_mutex(&mutex_queue_ready);
             }
+            signal_sem(&desalojando);
             signal_mutex(&mutex_lista_cpus);
         }
         else{
@@ -93,6 +109,7 @@ void *comprobar_desalojo(void *arg){
     while(1){
         desalojo_encontrado = false;
         wait_sem(&check_desalojo);
+        wait_sem(&desalojando);
         log_debug(logger_kernel, "Entro a revisar posible desalojo");
         /*  
             Hay que ir iterando la lista de procesos en ready para ver si hay procesos en ejecucion
@@ -133,9 +150,12 @@ void *comprobar_desalojo(void *arg){
                     signal_sem(&planificacion_principal);
                 }
                 log_debug(logger_kernel, "No hubo desalojo y signal del proceso ready");
+                signal_sem(&desalojando);
             }
+        } else {
+            signal_sem(&desalojando);
+            signal_mutex(&mutex_queue_ready);
         }
-        signal_mutex(&mutex_queue_ready);
     }
         //signal_mutex(&mutex_cpu);
         
@@ -283,7 +303,7 @@ void *planificar_largo_plazo_FIFO(void* arg){
                 signal_mutex(&mutex_queue_susp_ready);
 
                 // PONER EN READY
-                poner_en_ready(proceso);
+                poner_en_ready(proceso, false);
                 log_debug(logger_kernel, "Cola de ready:");
                 mostrar_lista(queue_ready);
 			}
@@ -308,7 +328,7 @@ void *planificar_largo_plazo_FIFO(void* arg){
                     signal_mutex(&mutex_queue_new);
 
                     // PONER EN READY
-                    poner_en_ready(proceso);
+                    poner_en_ready(proceso, false);
                     log_debug(logger_kernel, "Cola de ready:");
                     mostrar_lista(queue_ready);
                 }
@@ -348,7 +368,7 @@ void *planificar_largo_plazo_PMCP(void* arg){
 				queue_pop(queue_susp_ready);
                 signal_mutex(&mutex_queue_susp_ready);
                 // PONER EN READY
-                poner_en_ready(proceso);
+                poner_en_ready(proceso, false);
                 log_debug(logger_kernel, "Cola de ready:");
                 mostrar_lista(queue_ready);
 			}
@@ -368,7 +388,7 @@ void *planificar_largo_plazo_PMCP(void* arg){
                     // PONER EN READY
                     log_debug(logger_kernel, "Cola de ready:");
                     mostrar_lista(queue_ready);
-                    poner_en_ready(proceso);
+                    poner_en_ready(proceso, false);
                 }
             }
         }
@@ -404,7 +424,7 @@ void *comprobar_procesos_nuevos(void* arg){
                 list_remove_element(queue_new, proceso);
                 signal_mutex(&mutex_queue_new);
 
-                poner_en_ready(proceso);
+                poner_en_ready(proceso, false);
             }
         }
         else{
@@ -459,7 +479,7 @@ bool vuelta_swap(t_pcb* proceso){
     return resultado == OK;
 }
 
-void poner_en_ready(t_pcb* proceso){
+void poner_en_ready(t_pcb* proceso, bool interrumpido){
     wait_mutex(&mutex_cpu);
     cambiar_estado(proceso, READY);
     wait_mutex(&mutex_queue_ready);
@@ -482,15 +502,17 @@ void poner_en_ready(t_pcb* proceso){
     
     t_cpu* cpu;
     if(strcmp(algoritmo_corto_plazo, "SRT") == 0){
-        wait_mutex(&mutex_lista_cpus);
-        if(hay_cpu_libre(&cpu)){
-            log_debug(logger_kernel, "Signal del planificacion principal por proceso (<%d>)", proceso->pid);
-            signal_sem(&planificacion_principal);
-            signal_mutex(&mutex_lista_cpus);
-        } else{
-            signal_mutex(&mutex_lista_cpus);
-            log_debug(logger_kernel, "Signal del check desalojo, por proceso (<%d>)", proceso->pid);
-            signal_sem(&check_desalojo);
+        if(!interrumpido){
+            wait_mutex(&mutex_lista_cpus);
+            if(hay_cpu_libre(&cpu)){
+                log_debug(logger_kernel, "Signal del planificacion principal por proceso (<%d>)", proceso->pid);
+                signal_sem(&planificacion_principal);
+                signal_mutex(&mutex_lista_cpus);
+            } else{
+                signal_mutex(&mutex_lista_cpus);
+                log_debug(logger_kernel, "Signal del check desalojo, por proceso (<%d>)", proceso->pid);
+                signal_sem(&check_desalojo);
+            }
         }
     }
     /* 
