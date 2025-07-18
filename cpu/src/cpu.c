@@ -23,32 +23,34 @@ int main(int argc, char* argv[]) {
     id = atoi(argv[1]);
     log_debug(logger, "Id CPU: %d", id);
     cpu_config = crear_config(logger, "cpu.config");
+    //char* ruta_config = malloc(sizeof(argv[1])+sizeof("cpu")+sizeof("_estabilidad.config"));
     char* ruta_config = malloc(sizeof(argv[1])+sizeof("cpu")+sizeof("_largo_plazo.config"));
     strcpy(ruta_config, "cpu");
     strcat(ruta_config, argv[1]);
-    strcat(ruta_config, "_corto_plazo.config");
+    //strcat(ruta_config, "_corto_plazo.config");
     //strcat(ruta_config, "_estabilidad.config");
+    strcat(ruta_config, "_largo_plazo.config");
     pruebas_config = crear_config(logger, ruta_config);
     free(ruta_config);
 
     inicializar_tlb(logger, pruebas_config);
     inicializar_cache(logger, pruebas_config);
 
-TAMANIO_PAGINA = config_get_int_value(pruebas_config, "TAMANIO_PAGINA");
-retardo_cache = config_get_int_value(pruebas_config, "RETARDO_CACHE");
+    TAMANIO_PAGINA = config_get_int_value(pruebas_config, "TAMANIO_PAGINA");
+    retardo_cache = config_get_int_value(pruebas_config, "RETARDO_CACHE");
 
-log_info(logger, "CPU - TAM_PAGINA = %d", TAMANIO_PAGINA);
+    log_info(logger, "CPU - TAM_PAGINA = %d", TAMANIO_PAGINA);
 
 
-//ENTRADAS_CACHE = config_get_int_value(cpu_config, "ENTRADAS_CACHE");
-    
+    //ENTRADAS_CACHE = config_get_int_value(cpu_config, "ENTRADAS_CACHE");
+        
     pthread_mutex_init(&mutex_interrupt, NULL);  
-    /*  typedef union
-{
-  struct __pthread_mutex_s __data;
-  char __size[__SIZEOF_PTHREAD_MUTEX_T];
-  long int __align;
-} pthread_mutex_t;   */
+        /*  typedef union
+    {
+    struct __pthread_mutex_s __data;
+    char __size[__SIZEOF_PTHREAD_MUTEX_T];
+    long int __align;
+    } pthread_mutex_t;   */
 
 
     char* ip_memoria = config_get_string_value(cpu_config, "IP_MEMORIA");

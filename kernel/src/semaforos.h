@@ -28,7 +28,9 @@ extern sem_t planificacion_principal;
 extern sem_t espacio_memoria;
 extern sem_t dispositivo_libre;
 extern sem_t nuevo_proceso_suspendido_ready;
-extern sem_t planificador_largo_plazo;
+extern sem_t proceso_suspendido_ready;
+
+extern sem_t planificar;
 
 void iniciar_semaforos();
 void signal_sem(sem_t *sem);

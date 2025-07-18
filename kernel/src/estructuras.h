@@ -35,6 +35,7 @@ extern t_list* queue_ready;
 extern t_list* queue_block;
 extern t_queue* queue_susp_ready;
 extern t_queue* queue_exit;
+extern t_dictionary* diccionario_dispositivos_io;
 
 typedef struct{
     t_estado estado;

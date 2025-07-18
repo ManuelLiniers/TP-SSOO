@@ -23,6 +23,7 @@ void* planificar_largo_plazo_FIFO(void* arg);
 void* planificar_corto_plazo_SJF(void* arg);
 void* planificar_corto_plazo_SJF_desalojo(void* arg);
 void *comprobar_desalojo(void *arg);
+void comprobar_procesos_suspendidos(void* arg);
 bool shortest_job_first_desalojo(void* a, void* b);
 void* planificar_largo_plazo_PMCP(void* arg);
 void *comprobar_procesos_nuevos(void* arg);
@@ -43,6 +44,8 @@ void comprobar_cola_bloqueados(t_dispositivo_io* dispositivo);
 void comprobar_suspendido(t_pcb* proceso);
 void notificar_suspension_memoria(t_pcb* proceso);
 void verificar_procesos_ready();
+void* comprobar_ready(void* arg);
+void* comprobar_espacio(void* arg);
 
 bool hay_cpu_libre(t_cpu** cpu_encargada);
 bool espacio_en_memoria(t_pcb* proceso);

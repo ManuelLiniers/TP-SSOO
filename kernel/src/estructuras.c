@@ -19,6 +19,8 @@ t_list* queue_block;
 t_queue* queue_susp_ready;
 t_queue* queue_exit;
 
+t_dictionary* diccionario_dispositivos_io;
+
 void agregar_a_lista(void* cola_ready, t_pcb* proceso){
     list_add( (t_list*) cola_ready, proceso); 
 }
@@ -46,6 +48,7 @@ void scheduler_destroy(void) {
 
 void iniciar_dispositivos_io(){
     lista_dispositivos_io = list_create();
+    diccionario_dispositivos_io = dictionary_create();
 }
 
 void iniciar_cpus(){
@@ -130,15 +133,12 @@ void pcb_destroy(void* pcb_void) {
 }
 
 t_dispositivo_io* buscar_io(char* nombre_io){
-    wait_mutex(&mutex_lista_dispositivos_io);
     for(int i = 0; i<list_size(lista_dispositivos_io); i++){
         t_dispositivo_io* actual = list_get(lista_dispositivos_io, i);
         if(strcmp(nombre_io, actual->nombre) == 0){
-            signal_mutex(&mutex_lista_dispositivos_io);
             return actual;
         }
     }
-    signal_mutex(&mutex_lista_dispositivos_io);
     return NULL;
 }
 
@@ -162,6 +162,8 @@ t_dispositivo_io* buscar_io_libre(char* nombre_io){
 }
 
 t_dispositivo_io* buscar_io_menos_ocupada(char* nombre_io){
+    wait_mutex(&mutex_lista_dispositivos_io);
+    wait_mutex(&mutex_queue_block);
     t_dispositivo_io* dispositivo = buscar_io(nombre_io);
     for(int i=0; i<list_size(lista_dispositivos_io); i++){
         /* if(dispositivo != NULL){
@@ -171,12 +173,13 @@ t_dispositivo_io* buscar_io_menos_ocupada(char* nombre_io){
             log_debug(logger_kernel, "Buscando IO menos ocupada, dispositivo actual: no hay dispositivo");
         } */
         t_dispositivo_io* siguiente = (t_dispositivo_io*) list_get(lista_dispositivos_io, i);
-        wait_mutex(&mutex_queue_block);
         if(siguiente->nombre == nombre_io && queue_size(obtener_cola_io(siguiente->id)) < queue_size(obtener_cola_io(dispositivo->id))){
             dispositivo = siguiente;
         }
         signal_mutex(&mutex_queue_block);
     }
+    signal_mutex(&mutex_queue_block);
+    signal_mutex(&mutex_lista_dispositivos_io);
     return dispositivo;
 }
 
@@ -233,7 +236,7 @@ t_unidad_ejecucion* buscar_por_cpu(t_cpu* cpu_encargada){
 
 void sacar_proceso_ejecucion(t_pcb* proceso){
     wait_mutex(&mutex_procesos_ejecutando);
-    wait_mutex(&mutex_cpu);
+    //wait_mutex(&mutex_cpu);
     for(int i = 0; i<list_size(lista_procesos_ejecutando); i++){
         t_unidad_ejecucion* actual = list_get(lista_procesos_ejecutando, i);
         if(actual->proceso->pid == proceso->pid){
@@ -243,11 +246,11 @@ void sacar_proceso_ejecucion(t_pcb* proceso){
         }
     }
     signal_mutex(&mutex_procesos_ejecutando);
-    log_debug(logger_kernel, "----------Espero mutex cpu ");
+    //log_debug(logger_kernel, "----------Espero mutex cpu ");
     signal_sem(&cpu_libre);
     //log_debug(logger_kernel, "Semaforo cpu_libre: %ld", cpu_libre.__align);
-    signal_mutex(&mutex_cpu);
-    log_debug(logger_kernel, "-------- libero mutex cpu");
+    //signal_mutex(&mutex_cpu);
+    //log_debug(logger_kernel, "-------- libero mutex cpu");
     signal_sem(&planificacion_principal);
 }
 
@@ -380,7 +383,9 @@ long calcular_rafaga(t_list* estados_exec){
 }
 
 t_queue* obtener_cola_io(int io_id){
-    return list_get(queue_block, io_id);
+    char id_dispositivo[12];
+    sprintf(id_dispositivo, "%d", io_id);
+    return dictionary_get(diccionario_dispositivos_io, id_dispositivo);
 }
 
 void mostrar_cola(t_queue** cola){

@@ -239,24 +239,24 @@ void* esperar_dispatch(void* arg){
 
                 //log_debug(logger_kernel, "Metricas del proceso (<%d>): %d", proceso->pid, list_size(proceso->metricas_tiempo));
 				if(strcmp(algoritmo_corto_plazo,"SRT") == 0){
-				wait_mutex(&mutex_procesos_ejecutando);
-				for(int i = 0; i<list_size(lista_procesos_ejecutando); i++){
-					t_unidad_ejecucion* unidad = (t_unidad_ejecucion*) list_get(lista_procesos_ejecutando, i);
-					if(unidad->cpu->cpu_id == cpu_encargada->cpu_id){
-						if(unidad->interrumpido == INTERRUMPIDO){
-							ignorar_interrupcion = true;
-							motivo_interrupcion = FINALIZADO;
+					wait_mutex(&mutex_procesos_ejecutando);
+					for(int i = 0; i<list_size(lista_procesos_ejecutando); i++){
+						t_unidad_ejecucion* unidad = (t_unidad_ejecucion*) list_get(lista_procesos_ejecutando, i);
+						if(unidad->cpu->cpu_id == cpu_encargada->cpu_id){
+							if(unidad->interrumpido == INTERRUMPIDO){
+								ignorar_interrupcion = true;
+								motivo_interrupcion = FINALIZADO;
+							}
 						}
 					}
+					signal_mutex(&mutex_procesos_ejecutando);
 				}
-				signal_mutex(&mutex_procesos_ejecutando);}
 
 				log_info(logger_kernel, "## (<%d>) - Solicito syscall: <%s>", proceso->pid, "EXIT");
-				
-				//cambiar_estado(proceso, EXIT);
 
 				send(cpu_encargada->socket_dispatch, &respuesta, sizeof(int), 0);
                 sacar_proceso_ejecucion(proceso);
+				signal_sem(&espacio_memoria);
                 
 				finalizar_proceso(proceso);
                 
@@ -291,10 +291,9 @@ void* esperar_dispatch(void* arg){
                 sacar_proceso_ejecucion(proceso);
 				
                 t_dispositivo_io* dispositivo = buscar_io_libre(nombre_io);
-                if(dispositivo != NULL){
-                    enviar_proceso_a_io(proceso, dispositivo, io_tiempo);
-                }
-                else{
+				bool libre_encontrada = true;
+                if(dispositivo == NULL){
+					libre_encontrada = false;
                     dispositivo = buscar_io_menos_ocupada(nombre_io);
                 }
 
@@ -305,8 +304,15 @@ void* esperar_dispatch(void* arg){
                 }
 
                 wait_mutex(&mutex_queue_block);
-                queue_push(obtener_cola_io(dispositivo->id), proceso_bloqueado);
-                signal_mutex(&mutex_queue_block);
+                // queue_push(obtener_cola_io(dispositivo->id), proceso_bloqueado);
+				char id_dispositivo[12];
+				sprintf(id_dispositivo, "%d", dispositivo->id);
+                queue_push(dictionary_get(diccionario_dispositivos_io, id_dispositivo), proceso_bloqueado);
+				signal_mutex(&mutex_queue_block);
+				if(libre_encontrada == true){
+                	enviar_proceso_a_io(proceso, dispositivo, io_tiempo);
+				}
+				log_info(logger_kernel, "Cola de IO: %s - Cantidad de procesos en cola: %d", dispositivo->nombre, queue_size(obtener_cola_io(dispositivo->id)));
 
                 log_debug(logger_kernel, "Proceso <%d> en dispositivo %s: ",proceso->pid ,dispositivo->nombre);
 
@@ -315,6 +321,9 @@ void* esperar_dispatch(void* arg){
                 pthread_t comprobacion_suspendido;
                 pthread_create(&comprobacion_suspendido, NULL, (void*) comprobar_suspendido, proceso);
                 pthread_detach(comprobacion_suspendido);
+
+				log_debug(logger_kernel, "Creo hilo para comprobar suspendido");
+
                 break;
 
             case INIT_PROC:
@@ -362,10 +371,9 @@ void* esperar_dispatch(void* arg){
 					}
 				}
 				signal_mutex(&mutex_procesos_ejecutando);}
-
-
 				
                 if(resultado_dump){
+					log_debug(logger_kernel, "Fallo el DUMP de memoria del proceso <%d>", proceso->pid);
                     poner_en_ready(proceso, false);
                 } else {
                     cambiar_estado(proceso, EXIT);
@@ -512,8 +520,14 @@ void* identificar_io(t_buffer* unBuffer, int socket_fd){
 
 	list_add(lista_dispositivos_io, dispositivo);
 
+
 	t_queue* cola_io = queue_create();
-	list_add_in_index(queue_block, dispositivo->id, cola_io);
+	char id_dispositivo[12];
+	sprintf(id_dispositivo, "%d", dispositivo->id);
+	dictionary_put(diccionario_dispositivos_io, id_dispositivo, cola_io);
+
+	// list_add_in_index(queue_block, dispositivo->id, cola_io);
+	
 	id_io_incremental++;
 	signal_sem(&dispositivo_libre);
 
@@ -529,25 +543,43 @@ void* escuchar_socket_io(void* arg){
 	t_dispositivo_io* dispositivo = (t_dispositivo_io*) arg;
 	while(1){
 		int codigo = recibir_operacion(dispositivo->socket);
+		log_debug(logger_kernel, "Recibi codigo: %d de dispositivo: %s", codigo, dispositivo->nombre);
 		switch (codigo){
 			case FINALIZACION_IO:
 				wait_mutex(&mutex_queue_block);
-				t_queue* cola = obtener_cola_io(dispositivo->id);
-				tiempo_en_io* proceso = queue_pop(cola);
-
 				
+				char id_dispositivo[12];
+				sprintf(id_dispositivo, "%d", dispositivo->id);
+
+				t_queue* cola = dictionary_get(diccionario_dispositivos_io, id_dispositivo);
+				// t_queue* cola = obtener_cola_io(dispositivo->id);
+				if(cola == NULL){
+					log_error(logger_kernel, "No se encontro cola de IO para el dispositivo %s", dispositivo->nombre);
+				}
+				log_debug(logger_kernel, "Cantidad de procesos en IO: %d", queue_size(cola));
+				tiempo_en_io* proceso = queue_pop(cola); // posible memory leak
+
+				// poner un mutex que verifique io de cada proceso?
 				if(proceso->pcb->estado == SUSP_BLOCKED){
 					cambiar_estado(proceso->pcb, SUSP_READY);
 					wait_mutex(&mutex_queue_susp_ready);
 					queue_push(queue_susp_ready, proceso->pcb);
+					log_debug(logger_kernel, "Cantidad de procesos en susp ready: %d", queue_size(queue_susp_ready));
 					signal_mutex(&mutex_queue_susp_ready);
+					signal_sem(&proceso_suspendido_ready);
+					log_debug(logger_kernel, "Signal semaforo proceso susp ready: %ld", proceso_suspendido_ready.__align);
 					signal_sem(&nuevo_proceso);
-					signal_sem(&planificador_largo_plazo);
-					log_debug(logger_kernel, "Signal del planificador_largo_plazo (%ld) por proceso suspendido pid <%d>", 
-						planificador_largo_plazo.__align, proceso->pcb->pid);
+					/* log_debug(logger_kernel, "Signal del planificador_largo_plazo (%ld) por proceso suspendido pid <%d>", 
+						planificador_largo_plazo.__align, proceso->pcb->pid); */
 					if(nuevo_proceso_suspendido_ready.__align < 0){
 						signal_sem(&nuevo_proceso_suspendido_ready);
 						//log_debug(logger_kernel, "Signal nuevo proceso suspendido a ready");
+					}
+					if(planificar.__align < 0){
+						signal_sem(&planificar);
+						if(espacio_memoria.__align < 0 && queue_is_empty(queue_susp_ready)){
+							signal_sem(&espacio_memoria);
+						}
 					}
 				}
 				else{
@@ -604,9 +636,9 @@ void finalizar_proceso(t_pcb* proceso){
 		log_metricas_estado(proceso);
 		free(proceso);
 		signal_sem(&espacio_memoria);
-		signal_sem(&planificador_largo_plazo);
-		log_debug(logger_kernel, "Signal del planificador_largo_plazo (%ld) por finalizar proceso pid <%d>", 
-			planificador_largo_plazo.__align, proceso->pid);
+		//signal_sem(&planificador_largo_plazo);
+		/* log_debug(logger_kernel, "Signal del planificador_largo_plazo (%ld) por finalizar proceso pid <%d>", 
+			planificador_largo_plazo.__align, proceso->pid); */
 		log_debug(logger_kernel, "HAY ESPACIO FINALIZACION EN MEMORIA");
 	}
 	else{
