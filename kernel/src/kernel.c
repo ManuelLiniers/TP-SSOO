@@ -158,14 +158,14 @@ void* esperar_dispatch(void* arg){
 			log_debug(logger_kernel, "Recibi CONTEXTO_PROCESO de CPU ID: %d", cpu_encargada->cpu_id);
 		}
         t_buffer* paquete = recibir_paquete(cpu_encargada->socket_dispatch);
-
         uint32_t pid = recibir_uint32_del_buffer(paquete);
-        t_pcb* proceso = buscar_proceso_pid(pid);
-		log_debug(logger_kernel, "Proceso recibido por cpu PID <%d>", proceso->pid);
         uint32_t pc = recibir_uint32_del_buffer(paquete);
         int motivo = recibir_int_del_buffer(paquete);
-		if(proceso != NULL){
-        	proceso->program_counter = pc;
+		t_pcb* proceso = NULL;
+		if(motivo_interrupcion != FINALIZADO && motivo_interrupcion != CAUSA_IO && motivo_interrupcion != MEMORY_DUMP){
+			proceso = buscar_proceso_pid(pid);
+			log_debug(logger_kernel, "Proceso recibido por cpu PID <%d>", proceso->pid);
+			proceso->program_counter = pc;
 		}
 
         //log_debug(logger_kernel, "Motivo: %d", motivo);
@@ -194,7 +194,7 @@ void* esperar_dispatch(void* arg){
 						}
 					}
 					signal_mutex(&mutex_procesos_ejecutando);
-					if(motivo_interrupcion != FINALIZADO && motivo_interrupcion != CAUSA_IO){
+					if(motivo_interrupcion != FINALIZADO && motivo_interrupcion != CAUSA_IO && motivo_interrupcion != MEMORY_DUMP){
 						if(proceso_ejecutando != NULL){
 							poner_en_ready(proceso_ejecutando->proceso, true);
 							log_info(logger_kernel, "## (<%d>) - Desalojado por algoritmo SJF/SRT", proceso_ejecutando->proceso->pid); 
@@ -238,7 +238,7 @@ void* esperar_dispatch(void* arg){
                 //log_debug(logger_kernel, "Metricas del proceso %d: %d", proceso->pid, list_size(proceso->metricas_tiempo));
 
                 //log_debug(logger_kernel, "Metricas del proceso (<%d>): %d", proceso->pid, list_size(proceso->metricas_tiempo));
-				if(strcmp(algoritmo_corto_plazo,"SJF") == 0){
+				if(strcmp(algoritmo_corto_plazo,"SRT") == 0){
 				wait_mutex(&mutex_procesos_ejecutando);
 				for(int i = 0; i<list_size(lista_procesos_ejecutando); i++){
 					t_unidad_ejecucion* unidad = (t_unidad_ejecucion*) list_get(lista_procesos_ejecutando, i);
@@ -271,7 +271,7 @@ void* esperar_dispatch(void* arg){
                 proceso_bloqueado->pcb = proceso;
                 proceso_bloqueado->tiempo = io_tiempo;
 
-				if(strcmp(algoritmo_corto_plazo,"SJF") == 0){
+				if(strcmp(algoritmo_corto_plazo,"SRT") == 0){
 					wait_mutex(&mutex_procesos_ejecutando);
 					for(int i = 0; i<list_size(lista_procesos_ejecutando); i++){
 						t_unidad_ejecucion* unidad = (t_unidad_ejecucion*) list_get(lista_procesos_ejecutando, i);
@@ -323,7 +323,7 @@ void* esperar_dispatch(void* arg){
                 int longitud = recibir_int_del_buffer(paquete);
                 char* archivo = recibir_informacion_del_buffer(paquete, longitud);
 
-				if(strcmp(algoritmo_corto_plazo,"SJF") == 0){
+				if(strcmp(algoritmo_corto_plazo,"SRT") == 0){
 				wait_mutex(&mutex_procesos_ejecutando);
 				for(int i = 0; i<list_size(lista_procesos_ejecutando); i++){
 					t_unidad_ejecucion* unidad = (t_unidad_ejecucion*) list_get(lista_procesos_ejecutando, i);
@@ -350,7 +350,7 @@ void* esperar_dispatch(void* arg){
 				cambiar_estado(proceso, BLOCKED);
                 bool resultado_dump = paquete_memoria_pid(proceso, DUMP_MEMORY); 
 
-				if(strcmp(algoritmo_corto_plazo,"SJF") == 0){
+				if(strcmp(algoritmo_corto_plazo,"SRT") == 0){
 				wait_mutex(&mutex_procesos_ejecutando);
 				for(int i = 0; i<list_size(lista_procesos_ejecutando); i++){
 					t_unidad_ejecucion* unidad = (t_unidad_ejecucion*) list_get(lista_procesos_ejecutando, i);

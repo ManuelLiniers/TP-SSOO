@@ -204,10 +204,11 @@ void atender_proceso_del_kernel(t_contexto* contexto, t_log* logger) {
         }
 
         ciclo_de_instruccion_execute(instruccion, contexto, logger, conexion_memoria);
-
         if (hay_interrupcion()) {
+            
             log_debug(logger, "Se detectó una interrupción luego de ejecutar la instrucción");
             enviar_contexto_a_kernel(contexto, INTERRUPCION, conexion_kernel_dispatch, logger);
+            
             //le avisa al kernel que hubo interrupción, desaloja el proceso y resetea el flag a false para poder seguir escuchando futuras interrupciones
 
             pthread_mutex_lock(&mutex_interrupt);
@@ -559,7 +560,9 @@ void enviar_contexto_a_kernel(t_contexto* contexto, motivo_desalojo motivo, int 
     "EXIT", "CAUSA_IO", "WAIT", "SIGNAL", "PAGE_FAULT", "INTERRUPCION", "DESALOJO_POR_QUANTUM"}; //mismo orden que el enum de motivodesalojo
     log_debug(logger, "## PID: %d - Desalojado - Motivo: %s", contexto->pid, motivo_str[motivo]);
 
-    contexto->program_counter++;
+    if(motivo != INTERRUPCION){
+        contexto->program_counter++;
+    }
 
     t_paquete* paquete = crear_paquete(CONTEXTO_PROCESO); // contxtoproceso es opcode
 
