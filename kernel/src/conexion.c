@@ -9,6 +9,7 @@ char* puerto_interrupt;
 char* puerto_io;
 int conexion_memoria;
 t_config *config_kernel;
+t_config* config_pruebas;
 t_log* logger_kernel;
 char* algoritmo_corto_plazo;
 char* algoritmo_largo_plazo;

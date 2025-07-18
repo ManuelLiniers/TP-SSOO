@@ -23,6 +23,7 @@ void iniciar_config(){
     if(config_kernel == NULL){
         log_error(logger_kernel, "Error al crear el config del Kernel");
     }
+	config_pruebas = config_create("/home/utnso/tp-2025-1c-queCompileALaPrimera/kernel/corto_plazo.config");
 	//log_debug(logger_kernel, "Config creada existosamente");
 }
 
@@ -39,12 +40,14 @@ void inicializar_kernel(char* instrucciones, char* tamanio_proceso){
 	puerto_dispatch = config_get_string_value(config_kernel, "PUERTO_ESCUCHA_DISPATCH");
 	puerto_interrupt = config_get_string_value(config_kernel, "PUERTO_ESCUCHA_INTERRUPT");
 	puerto_io = config_get_string_value(config_kernel, "PUERTO_ESCUCHA_IO");
-	algoritmo_corto_plazo = config_get_string_value(config_kernel, "ALGORITMO_PLANIFICACION"); // FIFO, SJF, SRT
-	algoritmo_largo_plazo = config_get_string_value(config_kernel, "ALGORITMO_INGRESO_A_READY"); // FIFO, PMCP
-	estimacion_inicial = config_get_int_value(config_kernel, "ESTIMACION_INICIAL");
-	estimador_alfa = config_get_double_value(config_kernel, "ALFA");
-	tiempo_suspension = config_get_int_value(config_kernel, "TIEMPO_SUSPENSION");
 	log_level = config_get_string_value(config_kernel, "LOG_LEVEL");
+
+
+	algoritmo_corto_plazo = config_get_string_value(config_pruebas, "ALGORITMO_PLANIFICACION"); // FIFO, SJF, SRT
+	algoritmo_largo_plazo = config_get_string_value(config_pruebas, "ALGORITMO_INGRESO_A_READY"); // FIFO, PMCP
+	estimacion_inicial = config_get_int_value(config_pruebas, "ESTIMACION_INICIAL");
+	estimador_alfa = config_get_double_value(config_pruebas, "ALFA");
+	tiempo_suspension = config_get_int_value(config_pruebas, "TIEMPO_SUSPENSION");
 
 	logger_kernel = log_create("kernel.log", "[Kernel]", 1, log_level_from_string(log_level));
 	log_debug(logger_kernel, "kernel inicializado");
@@ -250,6 +253,7 @@ void* esperar_dispatch(void* arg){
                 
                 break;
             case CAUSA_IO:
+				log_debug(logger_kernel, "Envio respuesta: %d a cpu ID: %d", respuesta, cpu_encargada->cpu_id);
 				send(cpu_encargada->socket_dispatch, &respuesta, sizeof(int), 0);
                 int tamanio = recibir_int_del_buffer(paquete);
                 char* nombre_io = recibir_informacion_del_buffer(paquete, tamanio);

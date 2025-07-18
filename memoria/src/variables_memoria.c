@@ -23,6 +23,7 @@ t_list* lista_swap;
 
 t_log* memoria_logger;
 t_config* memoria_config;
+t_config* pruebas_config;
 
 t_bitarray* bit_marcos;
 int marcos_totales;

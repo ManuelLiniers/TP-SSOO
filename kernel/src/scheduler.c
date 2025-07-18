@@ -10,9 +10,7 @@ void *planificar_corto_plazo_FIFO(void* arg){
             log_debug(logger_kernel, "Busco una CPU libre");
             t_cpu* cpu_encargada = NULL;
             if(hay_cpu_libre(&cpu_encargada)){
-                wait_mutex(&mutex_queue_ready);
                 t_pcb* proceso = (t_pcb*) list_remove(queue_ready, 0);
-                signal_mutex(&mutex_queue_ready);
                 poner_en_ejecucion(proceso, cpu_encargada);
                 // free(cpu_encargada);
             }

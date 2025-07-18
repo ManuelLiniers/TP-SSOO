@@ -65,6 +65,7 @@ extern t_list* lista_swap;
 // Logs y config
 extern t_log* memoria_logger;
 extern t_config* memoria_config;
+extern t_config* pruebas_config;
 
 // Marcos
 extern t_bitarray* bit_marcos;

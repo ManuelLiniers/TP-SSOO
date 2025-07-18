@@ -12,18 +12,19 @@ int main(int argc, char* argv[]) {
     return EXIT_SUCCESS;
 }
 
-void leer_config(t_config* config){
+void leer_config(t_config* config, t_config* pruebas){
 	PUERTO_ESCUCHA = config_get_string_value(config, "PUERTO_ESCUCHA");
-	TAM_MEMORIA = config_get_int_value(config, "TAM_MEMORIA");
-	TAM_PAGINA = config_get_int_value(config, "TAM_PAGINA");
-	ENTRADAS_POR_TABLA = config_get_int_value(config, "ENTRADAS_POR_TABLA");
-	CANTIDAD_NIVELES = config_get_int_value(config, "CANTIDAD_NIVELES");
-	RETARDO_MEMORIA = config_get_int_value(config, "RETARDO_MEMORIA") * 1000;
-	PATH_SWAPFILE = config_get_string_value(config, "PATH_SWAPFILE");
-	RETARDO_SWAP = config_get_int_value(config, "RETARDO_SWAP") * 1000;
 	LOG_LEVEL = config_get_string_value(config, "LOG_LEVEL");
 	DUMP_PATH = config_get_string_value(config, "DUMP_PATH");
 	PATH_INSTRUCCIONES = config_get_string_value(config, "PATH_INSTRUCCIONES");
+	PATH_SWAPFILE = config_get_string_value(config, "PATH_SWAPFILE");
+	
+	TAM_MEMORIA = config_get_int_value(pruebas, "TAM_MEMORIA");
+	TAM_PAGINA = config_get_int_value(pruebas, "TAM_PAGINA");
+	ENTRADAS_POR_TABLA = config_get_int_value(pruebas, "ENTRADAS_POR_TABLA");
+	CANTIDAD_NIVELES = config_get_int_value(pruebas, "CANTIDAD_NIVELES");
+	RETARDO_MEMORIA = config_get_int_value(pruebas, "RETARDO_MEMORIA") * 1000;
+	RETARDO_SWAP = config_get_int_value(pruebas, "RETARDO_SWAP") * 1000;
 }
 
 void leer_log(t_log* logger){
@@ -43,13 +44,14 @@ void leer_log(t_log* logger){
 
 char* inicializar_memoria(){	
     memoria_config = config_create("/home/utnso/tp-2025-1c-queCompileALaPrimera/memoria/Memoria.config");
-	
+	pruebas_config = config_create("/home/utnso/tp-2025-1c-queCompileALaPrimera/memoria/corto_plazo.config");
+
 	if (memoria_config == NULL) {
 		log_error(memoria_logger, "No se pudo crear el config de la memoria");
 		exit(1);
 	}
 	
-	leer_config(memoria_config);
+	leer_config(memoria_config, pruebas_config);
 	//  leer_log(memoria_logger);  		(Para pruebas)
 	
 	memoria_logger = log_create("Memoria.log", "[Memoria]", 1, log_level_from_string(LOG_LEVEL));

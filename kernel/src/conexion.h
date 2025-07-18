@@ -12,6 +12,7 @@ extern char* puerto_interrupt;
 extern char* puerto_io;
 extern int conexion_memoria;
 extern t_config *config_kernel;
+extern t_config* config_pruebas;;
 extern t_log* logger_kernel;
 extern char* algoritmo_corto_plazo;
 extern char* algoritmo_largo_plazo;
