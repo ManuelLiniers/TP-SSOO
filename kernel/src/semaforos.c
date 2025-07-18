@@ -9,6 +9,8 @@ pthread_mutex_t mutex_queue_susp_ready;
 pthread_mutex_t mutex_procesos_ejecutando;
 pthread_mutex_t mutex_cpu;
 pthread_mutex_t mutex_lista_cpus;
+pthread_mutex_t mutex_memoria_swap;
+pthread_mutex_t mutex_lista_dispositivos_io;
 
 // Semáforos
 sem_t nuevo_proceso;
@@ -52,6 +54,8 @@ void iniciar_semaforos(){
     pthread_mutex_init(&mutex_procesos_ejecutando, NULL);
     pthread_mutex_init(&mutex_cpu, NULL);
     pthread_mutex_init(&mutex_lista_cpus, NULL);
+    pthread_mutex_init(&mutex_memoria_swap, NULL);
+    pthread_mutex_init(&mutex_lista_dispositivos_io, NULL);
     
     sem_init(&nuevo_proceso, 0, 0);
     sem_init(&proceso_ready, 0, 0);
@@ -74,6 +78,7 @@ void destruir_semaforos() {
     pthread_mutex_destroy(&mutex_queue_exit);
     pthread_mutex_destroy(&mutex_queue_susp_ready);
     pthread_mutex_destroy(&mutex_procesos_ejecutando);
+    pthread_mutex_destroy(&mutex_lista_dispositivos_io);
 
     sem_destroy(&nuevo_proceso);
     sem_destroy(&proceso_ready);

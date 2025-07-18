@@ -11,7 +11,9 @@ void* obtener_lectura(uint32_t direccion_fisica, uint32_t tamanio, int pid) {
     log_info(memoria_logger, "## PID: %d - Lectura - Dir. Física: %d - Tamaño: %d",
              pid, direccion_fisica, tamanio);
 
+    pthread_mutex_lock(&mutex_procesos_memoria);
     t_proceso* proceso = obtener_proceso_por_id(pid, procesos_memoria);
+    pthread_mutex_unlock(&mutex_procesos_memoria);
     proceso->metricas->lecturas_memoria++;
 
     return espacio_usuario + direccion_fisica;
@@ -31,7 +33,10 @@ int escribir_espacio(uint32_t direccion_fisica, int tamanio, void* valor, int pi
     log_info(memoria_logger, "## PID: %d - Escritura - Dir. Física: %d - Tamaño: %d",
              pid, direccion_fisica, tamanio);
 
+    pthread_mutex_lock(&mutex_procesos_memoria);
     t_proceso* proceso = obtener_proceso_por_id(pid, procesos_memoria);
+    pthread_mutex_unlock(&mutex_procesos_memoria);
+
     proceso->metricas->escrituras_memoria++;
 
     pthread_mutex_lock(&mutex_espacio_usuario);
@@ -44,7 +49,10 @@ int escribir_espacio(uint32_t direccion_fisica, int tamanio, void* valor, int pi
 int dump_de_memoria(uint32_t pid) {
     log_info(memoria_logger, "## PID: %d - Memory Dump solicitado", pid);
 
+    pthread_mutex_lock(&mutex_procesos_memoria);
     t_proceso* proceso = obtener_proceso_por_id(pid, procesos_memoria);
+    pthread_mutex_unlock(&mutex_procesos_memoria);
+
     if (!proceso) {
         log_error(memoria_logger, "PID: %d - No se encuentra el proceso para el dump", pid);
         return -1;

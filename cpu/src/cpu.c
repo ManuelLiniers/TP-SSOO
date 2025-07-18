@@ -26,8 +26,8 @@ int main(int argc, char* argv[]) {
     char* ruta_config = malloc(sizeof(argv[1])+sizeof("cpu")+sizeof("_corto_plazo.config"));
     strcpy(ruta_config, "cpu");
     strcat(ruta_config, argv[1]);
-    //strcat(ruta_config, "_corto_plazo.config");
-    strcat(ruta_config, "_estabilidad.config");
+    strcat(ruta_config, "_corto_plazo.config");
+    //strcat(ruta_config, "_estabilidad.config");
     pruebas_config = crear_config(logger, ruta_config);
     free(ruta_config);
 
@@ -619,6 +619,7 @@ void enviar_contexto_a_kernel_io(t_contexto* contexto, motivo_desalojo motivo, i
     log_debug(logger, "Se envio el contexto actualizado con motivo IO al Kernel.");
     int resultado;
     recv(fd, &resultado, sizeof(int), 0);
+    log_debug(logger, "Resultado del contexto proceso recibido");
     if(resultado != OK){
         log_error(logger, "Contexto Mal recibido por Kernel");
     }

@@ -38,7 +38,10 @@ void atender_kernel(int kernel_fd){ // agregar que reciba el buffer
 				unBuffer = recibir_paquete(kernel_fd);
 
 				usleep(RETARDO_SWAP);
+
+				pthread_mutex_lock(&mutex_manejando_swap);
 				atender_swap(unBuffer, kernel_fd);
+				pthread_mutex_unlock(&mutex_manejando_swap);
 
 				eliminar_buffer(unBuffer);
 				break;
@@ -47,7 +50,10 @@ void atender_kernel(int kernel_fd){ // agregar que reciba el buffer
 				unBuffer = recibir_paquete(kernel_fd);
 
 				usleep(RETARDO_SWAP);
+
+				pthread_mutex_lock(&mutex_manejando_swap);
 				atender_vuelta_swap(unBuffer, kernel_fd);
+				pthread_mutex_unlock(&mutex_manejando_swap);
 
 				eliminar_buffer(unBuffer);
 				break;
@@ -96,7 +102,10 @@ void iniciar_proceso(t_buffer* unBuffer, int kernel_fd){
 	
 		log_info(memoria_logger, "## PID: <%d> - Proceso Creado - Tamaño: <%d>", pid, tamanio);
 
+		pthread_mutex_lock(&mutex_procesos_memoria);
 		agregar_proceso_a_lista(procesoNuevo, procesos_memoria);
+		pthread_mutex_unlock(&mutex_procesos_memoria);
+		
 		int aviso = PROC_CREADO;
     	send(kernel_fd, &aviso, sizeof(int), 0);
 	} else {
@@ -111,12 +120,14 @@ void fin_proceso(t_buffer* unBuffer, int kernel_fd){
 
 	pid = recibir_int_del_buffer(unBuffer);
 
+	pthread_mutex_lock(&mutex_procesos_memoria);
 	t_proceso* proceso = obtener_proceso_por_id(pid, procesos_memoria);
 
 	exponer_metricas(proceso->metricas, pid);
 
 	list_remove_element(procesos_memoria, proceso);
-
+	pthread_mutex_unlock(&mutex_procesos_memoria);
+	
 	int resultado = finalizar_proceso(proceso);
 	
 	int codigo_respuesta = OK;
@@ -165,7 +176,9 @@ void atender_swap(t_buffer* unBuffer, int kernel_fd){
 void atender_vuelta_swap(t_buffer* unBuffer, int kernel_fd){
 	int pid = recibir_int_del_buffer(unBuffer);
 
+	pthread_mutex_lock(&mutex_procesos_swap);
 	t_proceso* proceso = obtener_proceso_por_id(pid, procesos_swap);
+	pthread_mutex_unlock(&mutex_procesos_swap);
 	if(!proceso){
 		log_error(memoria_logger, "Error al obtener proceso de lista de procesos en swap");
 	}

@@ -19,10 +19,9 @@
 
 
 
-void leer_config();
-void leer_log();
+void leer_config(t_config* config, t_config* pruebas);
 char* inicializar_memoria();
-void finalizar_memoria();
+void finalizar_memoria(char* bits);
 int servidor_escucha(int server_fd_memoria);
 void saludar_cliente(void *void_args);
 void identificar_modulo(t_buffer* unBuffer, int cliente_fd);

@@ -13,6 +13,8 @@ extern pthread_mutex_t mutex_queue_susp_ready;
 extern pthread_mutex_t mutex_procesos_ejecutando;
 extern pthread_mutex_t mutex_cpu;
 extern pthread_mutex_t mutex_lista_cpus;
+extern pthread_mutex_t mutex_memoria_swap;
+extern pthread_mutex_t mutex_lista_dispositivos_io;
 
 extern sem_t bloqueante_sem;
 extern sem_t cpu_libre;

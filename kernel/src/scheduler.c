@@ -1,7 +1,6 @@
 #include "scheduler.h"
 
 void *planificar_corto_plazo_FIFO(void* arg){
-    //log_debug(logger_kernel, "Entre a Corto Plazo FIFO");
 	while(1){
         wait_sem(&proceso_ready);
         wait_sem(&cpu_libre);
@@ -12,7 +11,6 @@ void *planificar_corto_plazo_FIFO(void* arg){
             if(hay_cpu_libre(&cpu_encargada)){
                 t_pcb* proceso = (t_pcb*) list_remove(queue_ready, 0);
                 poner_en_ejecucion(proceso, cpu_encargada);
-                // free(cpu_encargada);
             }
             else{
                 signal_sem(&proceso_ready);
@@ -20,7 +18,6 @@ void *planificar_corto_plazo_FIFO(void* arg){
         }
         signal_mutex(&mutex_queue_ready);
 	}
-
 }
 
 void* planificar_corto_plazo_SJF(void* arg){
@@ -39,10 +36,8 @@ void* planificar_corto_plazo_SJF(void* arg){
                 //free(cpu_encargada);
             }
         }
-        signal_mutex(&mutex_queue_ready);
-        
+        signal_mutex(&mutex_queue_ready);     
     }
-
 }
 
 void* planificar_corto_plazo_SJF_desalojo(void* arg){
@@ -54,16 +49,15 @@ void* planificar_corto_plazo_SJF_desalojo(void* arg){
         wait_mutex(&mutex_procesos_ejecutando);
         actualizar_estimaciones();
         signal_mutex(&mutex_procesos_ejecutando);
-        wait_mutex(&mutex_cpu);
         wait_sem(&cpu_libre);
         wait_mutex(&mutex_queue_ready);
+        wait_mutex(&mutex_cpu);
         if(!list_is_empty(queue_ready)){
             list_sort(queue_ready, shortest_job_first);
             signal_mutex(&mutex_queue_ready);
             //mostrar_lista(queue_ready);
             t_cpu* cpu_encargada = malloc(sizeof(t_cpu)); // Posible memory leak
             wait_sem(&desalojando);
-            wait_mutex(&mutex_lista_cpus);
             bool seguir = true;
             if(hay_cpu_libre(&cpu_encargada)){
                 wait_mutex(&mutex_procesos_ejecutando);
@@ -85,7 +79,6 @@ void* planificar_corto_plazo_SJF_desalojo(void* arg){
                 } 
             }
             signal_sem(&desalojando);
-            signal_mutex(&mutex_lista_cpus);
         }
         else{
             signal_mutex(&mutex_queue_ready);
@@ -110,15 +103,15 @@ void *comprobar_desalojo(void *arg){
         list_sort(queue_ready, shortest_job_first);
         if(!list_is_empty(queue_ready)){
             t_pcb* proceso_prueba = list_get(queue_ready, 0);
-            signal_mutex(&mutex_queue_ready);
+            //signal_mutex(&mutex_queue_ready);
             log_debug(logger_kernel, "Compruebo procesos a desalojar");
             wait_mutex(&mutex_procesos_ejecutando);
             for(int i = 0; i<list_size(lista_procesos_ejecutando) && desalojo_encontrado == false; i++){
                 t_unidad_ejecucion* proceso_ejecutando = list_get(lista_procesos_ejecutando, i);
                 if(shortest_job_first_desalojo((void*) proceso_prueba, (void*) proceso_ejecutando->proceso) && proceso_ejecutando->interrumpido == EJECUTANDO){
-                    wait_mutex(&mutex_queue_ready);
+                    //wait_mutex(&mutex_queue_ready);
                     list_remove_element(queue_ready, proceso_prueba);
-                    signal_mutex(&mutex_queue_ready);
+                    //signal_mutex(&mutex_queue_ready);
                     log_debug(logger_kernel, "Proceso removido por hilo desalojo pid <%d>", proceso_prueba->pid);
                     t_paquete* paquete = crear_paquete(INTERRUPCION_CPU);
                     enviar_paquete(paquete, proceso_ejecutando->cpu->socket_interrupt);
@@ -145,11 +138,10 @@ void *comprobar_desalojo(void *arg){
             }
         } else {
             signal_sem(&desalojando);
-            signal_mutex(&mutex_queue_ready);
         }
+        signal_mutex(&mutex_queue_ready);
     }
-        //signal_mutex(&mutex_cpu);
-        
+        //signal_mutex(&mutex_cpu);   
 }
 
 bool shortest_job_first_desalojo(void* a, void* b){
@@ -356,10 +348,8 @@ void *planificar_largo_plazo_PMCP(void* arg){
         wait_mutex(&mutex_queue_susp_ready);
         if(!queue_is_empty(queue_susp_ready)){
             t_pcb* proceso = queue_peek(queue_susp_ready);
-            signal_mutex(&mutex_queue_susp_ready);
             if(vuelta_swap(proceso)){
 
-                wait_mutex(&mutex_queue_susp_ready);
 				queue_pop(queue_susp_ready);
                 signal_mutex(&mutex_queue_susp_ready);
                 // PONER EN READY
@@ -430,6 +420,8 @@ void *comprobar_procesos_nuevos(void* arg){
                 signal_mutex(&mutex_queue_new);
 
                 poner_en_ready(proceso, false);
+            } else if(!queue_is_empty(queue_susp_ready)){
+                signal_sem(&planificador_largo_plazo);
             }
         }
         else{
@@ -466,6 +458,7 @@ bool espacio_en_memoria(t_pcb* proceso){
 }
 
 bool vuelta_swap(t_pcb* proceso){
+    wait_mutex(&mutex_memoria_swap);
     int conexion = crear_conexion_memoria();
     t_paquete* paquete = crear_paquete(VUELTA_SWAP);
 
@@ -475,6 +468,7 @@ bool vuelta_swap(t_pcb* proceso){
 
     int resultado;
     recv(conexion, &resultado, sizeof(int), 0);
+    signal_mutex(&mutex_memoria_swap);
     if(resultado == OK){
         log_debug(logger_kernel, "Vuelta swap exitoso para PID: %d", proceso->pid);
     }
@@ -494,13 +488,11 @@ void poner_en_ready(t_pcb* proceso, bool interrumpido){
     t_cpu* cpu;
     if(strcmp(algoritmo_corto_plazo, "SRT") == 0){
         if(!interrumpido){
-            wait_mutex(&mutex_lista_cpus);
+            
             if(hay_cpu_libre(&cpu)){
                 log_debug(logger_kernel, "Signal del planificacion principal por proceso (<%d>)", proceso->pid);
                 signal_sem(&planificacion_principal);
-                signal_mutex(&mutex_lista_cpus);
             } else{
-                signal_mutex(&mutex_lista_cpus);
                 log_debug(logger_kernel, "Signal del check desalojo, por proceso (<%d>)", proceso->pid);
                 signal_sem(&check_desalojo);
             }
@@ -519,6 +511,7 @@ void poner_en_ejecucion(t_pcb* proceso, t_cpu* cpu_encargada){
     eliminar_paquete(paquete);
 
     wait_mutex(&mutex_procesos_ejecutando);
+    wait_mutex(&mutex_lista_cpus);
     if(!esta_ejecutando(proceso)){
         cpu_encargada->esta_libre = 0;
         t_unidad_ejecucion* nueva = malloc(sizeof(t_unidad_ejecucion));
@@ -534,6 +527,7 @@ void poner_en_ejecucion(t_pcb* proceso, t_cpu* cpu_encargada){
         }
         cambiar_estado(proceso, EXEC);
     }
+    signal_mutex(&mutex_lista_cpus);
     signal_mutex(&mutex_procesos_ejecutando);
 }
 
@@ -558,15 +552,23 @@ void enviar_proceso_a_io(t_pcb* proceso, t_dispositivo_io* dispositivo, int io_t
 
 void comprobar_suspendido(t_pcb* proceso){
     usleep(tiempo_suspension * 1000); // tiempo_suspension en ms / 1000 = tiempo_suspension en us
+    wait_mutex(&mutex_memoria_swap);
+    wait_mutex(&mutex_queue_block);
     if(proceso->estado == BLOCKED){
         cambiar_estado(proceso, SUSP_BLOCKED);
         paquete_memoria_pid(proceso, SWAP);
+        signal_mutex(&mutex_memoria_swap);
+        signal_mutex(&mutex_queue_block);
         log_debug(logger_kernel, "Proceso en suspendido, swap exitoso para PID: %d", proceso->pid);
         signal_sem(&espacio_memoria);
         signal_sem(&planificador_largo_plazo);
         log_debug(logger_kernel, "Signal del planificador_largo_plazo (%ld) por proceso suspendido pid <%d>", 
             planificador_largo_plazo.__align, proceso->pid);
         log_debug(logger_kernel, "HAY ESPACIO EN MEMORIA");
+    }
+    else{
+        signal_mutex(&mutex_queue_block);
+        signal_mutex(&mutex_memoria_swap);
     }
 }
 

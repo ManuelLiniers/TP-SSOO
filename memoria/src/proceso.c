@@ -68,13 +68,11 @@ t_proceso* obtener_proceso_por_id(int pid, t_list* lista_procesos){
     bool buscar_el_pid(t_proceso* proceso){
 		return proceso->pid == pid;
 	};
-    pthread_mutex_lock(&mutex_procesos);
 	t_proceso* un_proceso = list_find(lista_procesos, (void*)buscar_el_pid);
 	if(un_proceso == NULL){
 		log_error(memoria_logger, "PID<%d> No encontrado en la lista de procesos", pid);
-		exit(EXIT_FAILURE);
+		return NULL;
 	}
-    pthread_mutex_unlock(&mutex_procesos);
 	return un_proceso;
 }
 
@@ -82,7 +80,7 @@ t_proceso* obtener_proceso_por_id(int pid, t_list* lista_procesos){
 char* obtener_instruccion_por_indice(t_proceso* un_proceso, int indice_instruccion){
 	if (un_proceso == NULL || un_proceso->instrucciones == NULL) {
         log_error(memoria_logger, "Proceso o lista de instrucciones es NULL");
-        exit(EXIT_FAILURE);
+        return NULL;
     }
 
 	if(indice_instruccion >= 0 && indice_instruccion < list_size(un_proceso->instrucciones)){
@@ -90,7 +88,7 @@ char* obtener_instruccion_por_indice(t_proceso* un_proceso, int indice_instrucci
 	}
 	else{
 		log_error(memoria_logger, "PID<%d> - Nro de Instruccion <%d> NO VALIDA", un_proceso->pid, indice_instruccion);
-		exit(EXIT_FAILURE);
+		return NULL;
 	}
 }
 

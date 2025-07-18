@@ -76,5 +76,9 @@ extern pthread_mutex_t m_tablas;
 extern pthread_mutex_t mutex_bit_marcos;
 extern pthread_mutex_t mutex_espacio_usuario;
 extern pthread_mutex_t mutex_procesos;
+extern pthread_mutex_t mutex_procesos_memoria;
+extern pthread_mutex_t mutex_procesos_swap;
+extern pthread_mutex_t mutex_lista_swap;
+extern pthread_mutex_t mutex_manejando_swap;
 
 #endif

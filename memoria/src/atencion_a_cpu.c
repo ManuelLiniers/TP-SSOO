@@ -66,7 +66,9 @@ void atender_peticion_de_instruccion(t_buffer* unBuffer, int cpu_fd){
 
 	log_debug(memoria_logger, "CPU pide instrucción para PID %d, PC %d", pid, pc);
 
+	pthread_mutex_lock(&mutex_procesos_memoria);
 	t_proceso* un_proceso = obtener_proceso_por_id(pid, procesos_memoria);
+	pthread_mutex_unlock(&mutex_procesos_memoria);
 
 	// Obtener la instruccion
 	char* instruccion = obtener_instruccion_por_indice(un_proceso, pc);
@@ -101,7 +103,9 @@ void atender_peticion_marco(t_buffer* unBuffer, int cpu_fd){
 	pid = recibir_uint32_del_buffer(unBuffer);
 	nro_pagina_logica = recibir_uint32_del_buffer(unBuffer);
 
+	pthread_mutex_lock(&mutex_procesos_memoria);
 	t_proceso* proceso = obtener_proceso_por_id(pid, procesos_memoria);
+	pthread_mutex_unlock(&mutex_procesos_memoria);
 
 	t_tabla_nivel* tabla = proceso->tabla_paginas_raiz;
 	if (tabla == NULL) {

@@ -130,26 +130,34 @@ void pcb_destroy(void* pcb_void) {
 }
 
 t_dispositivo_io* buscar_io(char* nombre_io){
+    wait_mutex(&mutex_lista_dispositivos_io);
     for(int i = 0; i<list_size(lista_dispositivos_io); i++){
         t_dispositivo_io* actual = list_get(lista_dispositivos_io, i);
         if(strcmp(nombre_io, actual->nombre) == 0){
+            signal_mutex(&mutex_lista_dispositivos_io);
             return actual;
         }
     }
+    signal_mutex(&mutex_lista_dispositivos_io);
     return NULL;
 }
 
 t_dispositivo_io* buscar_io_libre(char* nombre_io){
+    wait_mutex(&mutex_lista_dispositivos_io);
+    wait_mutex(&mutex_queue_block);
     log_debug(logger_kernel, "Dispositivo a buscar: %s", nombre_io);
     for(int i = 0; i<list_size(lista_dispositivos_io); i++){
         t_dispositivo_io* actual =list_get(lista_dispositivos_io, i);
-        wait_mutex(&mutex_queue_block);
         if(strcmp(nombre_io, actual->nombre) == 0 && queue_is_empty(obtener_cola_io(actual->id))){
             signal_mutex(&mutex_queue_block);
+            signal_mutex(&mutex_lista_dispositivos_io);
+            log_debug(logger_kernel, "IO Encontrada");
             return actual;
         }
-        signal_mutex(&mutex_queue_block);
     }
+    signal_mutex(&mutex_queue_block);
+    signal_mutex(&mutex_lista_dispositivos_io);
+    log_debug(logger_kernel, "No se encontro IO libre");
     return NULL;
 }
 
@@ -173,13 +181,16 @@ t_dispositivo_io* buscar_io_menos_ocupada(char* nombre_io){
 }
 
 t_cpu* buscar_cpu_libre(t_list* lista_cpus){
+    wait_mutex(&mutex_lista_cpus);
     for(int i = 0; i<list_size(lista_cpus); i++){
         t_cpu* actual = list_get(lista_cpus, i);
         mostrar_cpu(actual);
         if(actual->esta_libre){
+            signal_mutex(&mutex_lista_cpus);
             return actual;
         }
     }
+    signal_mutex(&mutex_lista_cpus);
     log_error(logger_kernel, "No hay CPUs libres");
     return NULL;
 }
@@ -195,6 +206,7 @@ void liberar_cpu(t_cpu* cpu_encargada){
 
 t_pcb* buscar_proceso_pid(uint32_t pid){
     wait_mutex(&mutex_procesos_ejecutando);
+    log_debug(logger_kernel, "Buscando proceso PID <%d>", pid);
     for(int i=0; i<list_size(lista_procesos_ejecutando); i++){
         t_unidad_ejecucion* actual = list_get(lista_procesos_ejecutando, i);
         if(actual->proceso->pid == (uint32_t)pid){
@@ -207,12 +219,15 @@ t_pcb* buscar_proceso_pid(uint32_t pid){
 }
 
 t_unidad_ejecucion* buscar_por_cpu(t_cpu* cpu_encargada){
+    wait_mutex(&mutex_procesos_ejecutando);
     for(int i=0; i<list_size(lista_procesos_ejecutando); i++){
         t_unidad_ejecucion* actual = list_get(lista_procesos_ejecutando, i);
         if(actual->cpu->cpu_id == cpu_encargada->cpu_id){
+            signal_mutex(&mutex_procesos_ejecutando);
             return actual;
         }
     }
+    signal_mutex(&mutex_procesos_ejecutando);
     return NULL;
 }
 

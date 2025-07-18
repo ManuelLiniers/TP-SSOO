@@ -27,24 +27,9 @@ void leer_config(t_config* config, t_config* pruebas){
 	RETARDO_SWAP = config_get_int_value(pruebas, "RETARDO_SWAP") * 1000;
 }
 
-void leer_log(t_log* logger){
-	log_debug(memoria_logger, "PUERTO_ESCUCHA: %s", PUERTO_ESCUCHA);
-	log_debug(memoria_logger, "TAM_MEMORIA: %d", TAM_MEMORIA);
-	log_debug(memoria_logger, "TAM_PAGINA: %d", TAM_PAGINA);
-	log_debug(memoria_logger, "ENTRADAS_POR_TABLA: %d", ENTRADAS_POR_TABLA);
-	log_debug(memoria_logger, "CANTIDAD_NIVELES: %d", CANTIDAD_NIVELES);
-	log_debug(memoria_logger, "RETARDO_MEMORIA: %d", RETARDO_MEMORIA);
-	log_debug(memoria_logger, "PATH_SWAPFILE: %s", PATH_SWAPFILE);
-	log_debug(memoria_logger, "RETARDO_SWAP: %d", RETARDO_SWAP);
-	log_debug(memoria_logger, "LOG_LEVEL: %s", LOG_LEVEL);
-	log_debug(memoria_logger, "DUMP_PATH: %s", DUMP_PATH);
-	log_debug(memoria_logger, "PATH_INSTRUCCIONES: %s", PATH_INSTRUCCIONES);
-}
-
-
 char* inicializar_memoria(){	
     memoria_config = config_create("/home/utnso/tp-2025-1c-queCompileALaPrimera/memoria/Memoria.config");
-	pruebas_config = config_create("/home/utnso/tp-2025-1c-queCompileALaPrimera/memoria/estabilidad_general.config");
+	pruebas_config = config_create("/home/utnso/tp-2025-1c-queCompileALaPrimera/memoria/corto_plazo.config");
 
 	if (memoria_config == NULL) {
 		log_error(memoria_logger, "No se pudo crear el config de la memoria");
@@ -52,14 +37,13 @@ char* inicializar_memoria(){
 	}
 	
 	leer_config(memoria_config, pruebas_config);
-	//  leer_log(memoria_logger);  		(Para pruebas)
 	
 	memoria_logger = log_create("Memoria.log", "[Memoria]", 1, log_level_from_string(LOG_LEVEL));
 
 	espacio_usuario = calloc(1, TAM_MEMORIA);
 	if(espacio_usuario == NULL){
     	log_error(memoria_logger, "Error al crear memoria de usuario");
-    	exit(1);
+    	return NULL;
 	}
 	pthread_mutex_init(&mutex_espacio_usuario, NULL);
 
@@ -78,6 +62,11 @@ char* inicializar_memoria(){
 
 	procesos_swap = list_create();
 	lista_swap = list_create();
+
+	pthread_mutex_init(&mutex_procesos_memoria, NULL);
+	pthread_mutex_init(&mutex_procesos_swap, NULL);
+	pthread_mutex_init(&mutex_lista_swap, NULL);
+	pthread_mutex_init(&mutex_manejando_swap, NULL);
 
 	FILE* swap = fopen(PATH_SWAPFILE, "w");
 	if(!swap){
@@ -155,7 +144,7 @@ void identificar_modulo(t_buffer* unBuffer, int cliente_fd){
 			break;
 		default:
 			log_error(memoria_logger, "[%d] Error al identificar modulo",modulo_id);
-			exit(EXIT_FAILURE);
+			return;
 			break;
 	}
 }
