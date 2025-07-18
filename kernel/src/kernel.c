@@ -23,7 +23,7 @@ void iniciar_config(){
     if(config_kernel == NULL){
         log_error(logger_kernel, "Error al crear el config del Kernel");
     }
-	config_pruebas = config_create("/home/utnso/tp-2025-1c-queCompileALaPrimera/kernel/corto_plazo.config");
+	config_pruebas = config_create("/home/utnso/tp-2025-1c-queCompileALaPrimera/kernel/largo_plazo.config");
 	//config_pruebas = config_create("/home/utnso/tp-2025-1c-queCompileALaPrimera/kernel/estabilidad_general.config");
 	//log_debug(logger_kernel, "Config creada existosamente");
 }
@@ -253,7 +253,7 @@ void* esperar_dispatch(void* arg){
 
 				log_info(logger_kernel, "## (<%d>) - Solicito syscall: <%s>", proceso->pid, "EXIT");
 				
-				cambiar_estado(proceso, EXIT);
+				//cambiar_estado(proceso, EXIT);
 
 				send(cpu_encargada->socket_dispatch, &respuesta, sizeof(int), 0);
                 sacar_proceso_ejecucion(proceso);

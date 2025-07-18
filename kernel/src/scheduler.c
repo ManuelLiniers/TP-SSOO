@@ -347,6 +347,7 @@ void *planificar_largo_plazo_PMCP(void* arg){
         log_debug(logger_kernel, "Despues de espacio memoria");
         wait_mutex(&mutex_queue_susp_ready);
         if(!queue_is_empty(queue_susp_ready)){
+            log_debug(logger_kernel, "Entro a revisar suspendido_ready");
             t_pcb* proceso = queue_peek(queue_susp_ready);
             if(vuelta_swap(proceso)){
 
@@ -357,12 +358,14 @@ void *planificar_largo_plazo_PMCP(void* arg){
                 // log_debug(logger_kernel, "Cola de ready:");
                 // mostrar_lista(queue_ready);
 			} else {
-                signal_sem(&espacio_memoria);
+                signal_mutex(&mutex_queue_susp_ready);
+                signal_sem(&espacio_memoria); ////////////////
             }
         }
         else{
             signal_mutex(&mutex_queue_susp_ready);
             wait_mutex(&mutex_queue_new);
+            log_debug(logger_kernel, "Entro a revisar new");
             if(!list_is_empty(queue_new)){
                 list_sort(queue_new, proceso_es_mas_chico);
                 t_pcb *proceso = list_get(queue_new, 0);
@@ -378,7 +381,7 @@ void *planificar_largo_plazo_PMCP(void* arg){
                     poner_en_ready(proceso, false);
                 }
                 else{
-                    signal_sem(&espacio_memoria);
+                    signal_sem(&espacio_memoria); ////////////////
                 }
             }
             else{
@@ -458,8 +461,10 @@ bool espacio_en_memoria(t_pcb* proceso){
 }
 
 bool vuelta_swap(t_pcb* proceso){
+    log_debug(logger_kernel, "Espero semaforo memoria swap");
     wait_mutex(&mutex_memoria_swap);
     int conexion = crear_conexion_memoria();
+    log_debug(logger_kernel, "Pregunto si hay espacio en memoria swap para el proceso <%d>", proceso->pid);
     t_paquete* paquete = crear_paquete(VUELTA_SWAP);
 
     agregar_a_paquete(paquete, &proceso->pid, sizeof(int));
@@ -469,6 +474,7 @@ bool vuelta_swap(t_pcb* proceso){
     int resultado;
     recv(conexion, &resultado, sizeof(int), 0);
     signal_mutex(&mutex_memoria_swap);
+    log_debug(logger_kernel, "Libero semaforo memoria swap");
     if(resultado == OK){
         log_debug(logger_kernel, "Vuelta swap exitoso para PID: %d", proceso->pid);
     }
