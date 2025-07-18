@@ -44,7 +44,7 @@ void leer_log(t_log* logger){
 
 char* inicializar_memoria(){	
     memoria_config = config_create("/home/utnso/tp-2025-1c-queCompileALaPrimera/memoria/Memoria.config");
-	pruebas_config = config_create("/home/utnso/tp-2025-1c-queCompileALaPrimera/memoria/corto_plazo.config");
+	pruebas_config = config_create("/home/utnso/tp-2025-1c-queCompileALaPrimera/memoria/estabilidad_general.config");
 
 	if (memoria_config == NULL) {
 		log_error(memoria_logger, "No se pudo crear el config de la memoria");

@@ -26,6 +26,7 @@ int main(int argc, char* argv[]) {
     char* ruta_config = malloc(sizeof(argv[1])+sizeof("cpu")+sizeof("_corto_plazo.config"));
     strcpy(ruta_config, "cpu");
     strcat(ruta_config, argv[1]);
+    //strcat(ruta_config, "_corto_plazo.config");
     strcat(ruta_config, "_estabilidad.config");
     pruebas_config = crear_config(logger, ruta_config);
     free(ruta_config);
@@ -33,7 +34,7 @@ int main(int argc, char* argv[]) {
     inicializar_tlb(logger, pruebas_config);
     inicializar_cache(logger, pruebas_config);
 
-TAMANIO_PAGINA = config_get_int_value(cpu_config, "TAMANIO_PAGINA");
+TAMANIO_PAGINA = config_get_int_value(pruebas_config, "TAMANIO_PAGINA");
 retardo_cache = config_get_int_value(pruebas_config, "RETARDO_CACHE");
 
 log_info(logger, "CPU - TAM_PAGINA = %d", TAMANIO_PAGINA);
