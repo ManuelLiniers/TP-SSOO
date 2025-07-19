@@ -209,8 +209,8 @@ t_unidad_ejecucion* buscar_por_cpu(t_cpu* cpu_encargada){
 }
 
 void sacar_proceso_ejecucion(t_pcb* proceso){
-    wait_mutex(&mutex_procesos_ejecutando);
     wait_mutex(&mutex_lista_cpus);
+    wait_mutex(&mutex_procesos_ejecutando);
     for(int i = 0; i<list_size(lista_procesos_ejecutando); i++){
         t_unidad_ejecucion* actual = list_get(lista_procesos_ejecutando, i);
         if(actual->proceso->pid == proceso->pid){
@@ -286,8 +286,10 @@ bool no_fue_desalojado(t_pcb* proceso){
 }
 
 void calcular_estimacion(t_pcb* proceso){
+    wait_mutex(&mutex_pcb);
     proceso->estimacion_actual = temporal_gettime(proceso->rafaga_real) * estimador_alfa + proceso->estimacion_anterior * (1-estimador_alfa);
     proceso->estimacion_anterior = proceso->estimacion_actual;
+    signal_mutex(&mutex_pcb);
 }
 
 char* estado_to_string(t_estado estado){

@@ -1,7 +1,7 @@
 include settings.mk
 
 ################################################################################
-
+CDEBUG = -g -Wall -pthread
 outname = bin/$(1)
 
 define compile_out
@@ -65,7 +65,7 @@ debug: CFLAGS = $(CDEBUG)
 debug: $(OUT)
 
 .PHONY: release
-release: CFLAGS = $(CRELEASE)
+release: CFLAGS = $(CDEBUG)
 release: $(OUT)
 
 .PHONY: test

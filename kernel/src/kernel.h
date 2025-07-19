@@ -6,7 +6,7 @@
 #include <scheduler.h>
 #include <semaforos.h>
 
-void iniciar_config();
+void iniciar_config(char* pruebas);
 void iniciar_conexion();
 void inicializar_kernel();
 void inicializar_planificacion();

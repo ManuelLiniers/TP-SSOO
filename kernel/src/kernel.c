@@ -24,10 +24,16 @@ void iniciar_config(char* pruebas){
     if(config_kernel == NULL){
         log_error(logger_kernel, "Error al crear el config del Kernel");
     }
-	char* resultado = malloc(sizeof(pruebas)+sizeof("/home/utnso/tp-2025-1c-queCompileALaPrimera/kernel/")+1);
-	strcpy(resultado, "/home/utnso/tp-2025-1c-queCompileALaPrimera/kernel/");
-	strcpy(resultado, pruebas);
+	char* base_path = "/home/utnso/tp-2025-1c-queCompileALaPrimera/kernel/";
+	char* resultado = malloc(strlen(base_path) + strlen(pruebas) + 1);
+	strcpy(resultado, base_path);
+	strcat(resultado, pruebas);
+
 	config_pruebas = config_create(resultado);
+	if (config_pruebas == NULL) {
+    	log_error(logger_kernel, "config_kernel es NULL");
+    	exit(EXIT_FAILURE);
+	}	
 	free(resultado);
 }
 
@@ -62,36 +68,45 @@ void inicializar_planificacion(){
 	pthread_t planificador_largo_plazo;
 	if(strcmp(algoritmo_corto_plazo,"FIFO") == 0){
 		log_debug(logger_kernel, "Planificacion corto plazo con FIFO");
+		pthread_mutex_lock(&mutex_creacion_hilos);
 		pthread_create(&planificador_corto_plazo, NULL, (void*) planificar_corto_plazo_FIFO, NULL);
+		pthread_mutex_unlock(&mutex_creacion_hilos);
 		pthread_detach(planificador_corto_plazo);
 	}
 	if(strcmp(algoritmo_corto_plazo,"SJF") == 0){
 
 		log_debug(logger_kernel, "Planificacion corto plazo con SJF");
+		pthread_mutex_lock(&mutex_creacion_hilos);
 		pthread_create(&planificador_corto_plazo, NULL, (void*) planificar_corto_plazo_SJF, NULL);
+		pthread_mutex_unlock(&mutex_creacion_hilos);
 		pthread_detach(planificador_corto_plazo);
 	}
 	if(strcmp(algoritmo_corto_plazo,"SRT") == 0){
 
 		log_debug(logger_kernel, "Planificacion corto plazo con SRT");
+		pthread_mutex_lock(&mutex_creacion_hilos);
 		pthread_create(&planificador_corto_plazo, NULL, (void*) planificar_corto_plazo_SJF_desalojo, NULL);
+		pthread_mutex_unlock(&mutex_creacion_hilos);
 		pthread_detach(planificador_corto_plazo);
 	}
 
 	if(strcmp(algoritmo_largo_plazo,"FIFO") == 0){
 
 		log_debug(logger_kernel, "Planificacion largo plazo con FIFO");
+		pthread_mutex_lock(&mutex_creacion_hilos);
 		pthread_create(&planificador_largo_plazo, NULL, (void *) planificar_largo_plazo_FIFO, NULL);
+		pthread_mutex_unlock(&mutex_creacion_hilos);
 		pthread_detach(planificador_largo_plazo);
 	}
 	if(strcmp(algoritmo_largo_plazo,"PMCP") == 0){
 
 		log_debug(logger_kernel, "Planificacion largo plazo con PMCP");
+		pthread_mutex_lock(&mutex_creacion_hilos);
 		pthread_create(&planificador_largo_plazo, NULL, (void *) planificar_largo_plazo_PMCP, NULL);
+		pthread_mutex_unlock(&mutex_creacion_hilos);
 		pthread_detach(planificador_largo_plazo);
 	}
 
-	//log_debug(logger_kernel, "Planificacion inicializada");
 }
 
 void inicializar_servidores(){
@@ -101,16 +116,15 @@ void inicializar_servidores(){
 	pthread_t cpu_interrupt;
 	pthread_t io;
 
+	pthread_mutex_lock(&mutex_creacion_hilos);
 	pthread_create(&io, NULL, (void*) iniciar_servidor_io, NULL);
-	pthread_detach(io);
-
 	pthread_create(&cpu_dispatch, NULL, (void*) iniciar_cpu_dispatch, NULL);
-	pthread_detach(cpu_dispatch);
-
 	pthread_create(&cpu_interrupt, NULL, (void*) iniciar_cpu_interrupt, NULL);
+	pthread_mutex_unlock(&mutex_creacion_hilos);
+	
+	pthread_detach(io);
+	pthread_detach(cpu_dispatch);
 	pthread_detach(cpu_interrupt);
-
-	//log_debug(logger_kernel, "servidores iniciados");
 }
 
 void* iniciar_cpu_dispatch(void* arg){
@@ -125,8 +139,9 @@ void* iniciar_cpu_dispatch(void* arg){
 			pthread_t hilo_cliente;
 			int *args = malloc(sizeof(int));
 			*args = cliente_fd;
+			pthread_mutex_lock(&mutex_creacion_hilos);
 			pthread_create(&hilo_cliente, NULL, (void*) atender_dispatch, args);
-			//log_debug(logger_kernel, "[THREAD] Creo hilo para atender dispatch");
+			pthread_mutex_unlock(&mutex_creacion_hilos);
 			pthread_detach(hilo_cliente);
 		}
 	}
@@ -178,9 +193,9 @@ void* esperar_dispatch(void* arg){
             case INTERRUPCION:
 				t_unidad_ejecucion* proceso_ejecutando = NULL;
 				t_unidad_ejecucion* proceso_a_ejecutar = NULL;
+				wait_mutex(&mutex_lista_cpus);
+				wait_mutex(&mutex_procesos_ejecutando);
 				if(!ignorar_interrupcion || motivo_interrupcion == FINALIZADO || motivo_interrupcion == CAUSA_IO || motivo_interrupcion == MEMORY_DUMP){
-					wait_mutex(&mutex_procesos_ejecutando);
-					wait_mutex(&mutex_lista_cpus);
 					for(int i = 0; i<list_size(lista_procesos_ejecutando); i++){
 						t_unidad_ejecucion* unidad = (t_unidad_ejecucion*) list_get(lista_procesos_ejecutando, i);
 						if(unidad->cpu->cpu_id == cpu_encargada->cpu_id){
@@ -201,9 +216,10 @@ void* esperar_dispatch(void* arg){
 					signal_mutex(&mutex_procesos_ejecutando);
 					if(motivo_interrupcion != FINALIZADO && motivo_interrupcion != CAUSA_IO && motivo_interrupcion != MEMORY_DUMP){
 						if(proceso_ejecutando != NULL){
-							wait_mutex(&mutex_lista_cpus);
+							wait_mutex(&mutex_queue_ready);
+		
 							poner_en_ready(proceso_ejecutando->proceso, true);
-							signal_mutex(&mutex_lista_cpus);
+							signal_mutex(&mutex_queue_ready);
 							log_info(logger_kernel, "## (<%d>) - Desalojado por algoritmo SJF/SRT", proceso_ejecutando->proceso->pid); 
 							log_debug(logger_kernel, " -----------------------------");
 							temporal_destroy(proceso_ejecutando->tiempo_ejecutando);
@@ -219,8 +235,8 @@ void* esperar_dispatch(void* arg){
 						}
 					}
 				} else {
-					wait_mutex(&mutex_procesos_ejecutando);
 					wait_mutex(&mutex_lista_cpus);
+					wait_mutex(&mutex_procesos_ejecutando);
 					for(int i = 0; i<list_size(lista_procesos_ejecutando); i++){
 						t_unidad_ejecucion* unidad = (t_unidad_ejecucion*) list_get(lista_procesos_ejecutando, i);
 						if(unidad->cpu->cpu_id == cpu_encargada->cpu_id){
@@ -251,8 +267,8 @@ void* esperar_dispatch(void* arg){
 
                 //log_debug(logger_kernel, "Metricas del proceso (<%d>): %d", proceso->pid, list_size(proceso->metricas_tiempo));
 				if(strcmp(algoritmo_corto_plazo,"SRT") == 0){
-					wait_mutex(&mutex_procesos_ejecutando);
 					wait_mutex(&mutex_lista_cpus);
+					wait_mutex(&mutex_procesos_ejecutando);
 					for(int i = 0; i<list_size(lista_procesos_ejecutando); i++){
 						t_unidad_ejecucion* unidad = (t_unidad_ejecucion*) list_get(lista_procesos_ejecutando, i);
 						if(unidad->cpu->cpu_id == cpu_encargada->cpu_id){
@@ -285,9 +301,9 @@ void* esperar_dispatch(void* arg){
                 proceso_bloqueado->pcb = proceso;
                 proceso_bloqueado->tiempo = io_tiempo;
 
-				if(strcmp(algoritmo_corto_plazo,"SRT") == 0){
-					wait_mutex(&mutex_procesos_ejecutando);
+ 				if(strcmp(algoritmo_corto_plazo,"SRT") == 0){
 					wait_mutex(&mutex_lista_cpus);
+					wait_mutex(&mutex_procesos_ejecutando);
 					for(int i = 0; i<list_size(lista_procesos_ejecutando); i++){
 						t_unidad_ejecucion* unidad = (t_unidad_ejecucion*) list_get(lista_procesos_ejecutando, i);
 						if(unidad->cpu->cpu_id == cpu_encargada->cpu_id){
@@ -349,7 +365,9 @@ void* esperar_dispatch(void* arg){
 				signal_mutex(&mutex_queue_block);
 
 				pthread_t comprobacion_suspendido;
+				pthread_mutex_lock(&mutex_creacion_hilos);
                 pthread_create(&comprobacion_suspendido, NULL, (void*) comprobar_suspendido, proceso);
+				pthread_mutex_unlock(&mutex_creacion_hilos);
                 pthread_detach(comprobacion_suspendido);
 
                 break;
@@ -361,18 +379,19 @@ void* esperar_dispatch(void* arg){
                 char* archivo = recibir_informacion_del_buffer(paquete, longitud);
 
 				if(strcmp(algoritmo_corto_plazo,"SRT") == 0){
-				wait_mutex(&mutex_procesos_ejecutando);
-				wait_mutex(&mutex_lista_cpus);
-				for(int i = 0; i<list_size(lista_procesos_ejecutando); i++){
-					t_unidad_ejecucion* unidad = (t_unidad_ejecucion*) list_get(lista_procesos_ejecutando, i);
-					if(unidad->cpu->cpu_id == cpu_encargada->cpu_id){
-						if(unidad->interrumpido == INTERRUMPIDO){
-							ignorar_interrupcion = true;
+					wait_mutex(&mutex_lista_cpus);
+					wait_mutex(&mutex_procesos_ejecutando);
+					for(int i = 0; i<list_size(lista_procesos_ejecutando); i++){
+						t_unidad_ejecucion* unidad = (t_unidad_ejecucion*) list_get(lista_procesos_ejecutando, i);
+						if(unidad->cpu->cpu_id == cpu_encargada->cpu_id){
+							if(unidad->interrumpido == INTERRUMPIDO){
+								ignorar_interrupcion = true;
+							}
 						}
 					}
+					signal_mutex(&mutex_lista_cpus);
+					signal_mutex(&mutex_procesos_ejecutando);
 				}
-				signal_mutex(&mutex_lista_cpus);
-				signal_mutex(&mutex_procesos_ejecutando);}
 
 				send(cpu_encargada->socket_dispatch, &respuesta, sizeof(int), 0);
 
@@ -394,8 +413,8 @@ void* esperar_dispatch(void* arg){
                 bool resultado_dump = paquete_memoria_pid(proceso, DUMP_MEMORY); 
 
 				if(strcmp(algoritmo_corto_plazo,"SRT") == 0){
-				wait_mutex(&mutex_procesos_ejecutando);
 				wait_mutex(&mutex_lista_cpus);
+				wait_mutex(&mutex_procesos_ejecutando);
 				for(int i = 0; i<list_size(lista_procesos_ejecutando); i++){
 					t_unidad_ejecucion* unidad = (t_unidad_ejecucion*) list_get(lista_procesos_ejecutando, i);
 					if(unidad->cpu->cpu_id == cpu_encargada->cpu_id){
@@ -410,7 +429,9 @@ void* esperar_dispatch(void* arg){
 				
                 if(resultado_dump){
                     wait_mutex(&mutex_lista_cpus);
+					wait_mutex(&mutex_queue_ready);
                     poner_en_ready(proceso, false);
+					signal_mutex(&mutex_queue_ready);
 					signal_mutex(&mutex_lista_cpus);
                 } else {
 					log_debug(logger_kernel, "Fallo el DUMP de memoria del proceso <%d>", proceso->pid);
@@ -452,6 +473,7 @@ t_cpu* cpu_ya_existe(t_list* lista, t_cpu* buscada){
 
 t_cpu* identificar_cpu(t_buffer* buffer, int socket_fd, void (*funcion)(t_cpu*, int)){
 	int id = recibir_int_del_buffer(buffer);
+	wait_mutex(&mutex_lista_cpus);
 	//void* nombre_raw = recibir_informacion_del_buffer(buffer, tamanio_nombre);
 	//memcpy(cpu_nueva->cpu_id, cpu_id, tamanio_nombre);
 	t_cpu* cpu_nueva = malloc(sizeof(t_cpu));
@@ -460,7 +482,6 @@ t_cpu* identificar_cpu(t_buffer* buffer, int socket_fd, void (*funcion)(t_cpu*, 
 	if(encontrada == NULL){
 		cpu_nueva->esta_libre = 1;
 		funcion(cpu_nueva, socket_fd);
-		wait_mutex(&mutex_lista_cpus);
 		list_add(lista_cpus, cpu_nueva);
 		signal_sem(&cpu_libre);
 		log_debug(logger_kernel, "Semaforo cpu_libre: %ld", cpu_libre.__align);
@@ -476,11 +497,13 @@ t_cpu* identificar_cpu(t_buffer* buffer, int socket_fd, void (*funcion)(t_cpu*, 
 		mostrar_cpus();
 
 		pthread_t esperar_devolucion;
+		pthread_mutex_lock(&mutex_creacion_hilos);
     	pthread_create(&esperar_devolucion, NULL, esperar_dispatch, (void*) encontrada);
+		pthread_mutex_unlock(&mutex_creacion_hilos);
 		pthread_detach(esperar_devolucion);
+		signal_mutex(&mutex_lista_cpus);
 		return encontrada;
 	}
-
 }
 
 void modificar_dispatch(t_cpu* una_cpu, int socket_fd){
@@ -499,7 +522,9 @@ void* iniciar_cpu_interrupt(void* arg){
 			pthread_t hilo_cliente;
 			int *args = malloc(sizeof(int));
 			*args = cliente_fd;
+			pthread_mutex_lock(&mutex_creacion_hilos);
 			pthread_create(&hilo_cliente, NULL, (void*) atender_interrupt, args);
+			pthread_mutex_unlock(&mutex_creacion_hilos);
 			log_debug(logger_kernel, "[THREAD] Creo hilo para atender interrupt");
 			pthread_detach(hilo_cliente);
 		}
@@ -532,7 +557,9 @@ void* iniciar_servidor_io(void* arg){
 			pthread_t hilo_cliente;
 			int *args = malloc(sizeof(int));
 			*args = cliente_fd;
+			pthread_mutex_lock(&mutex_creacion_hilos);
 			pthread_create(&hilo_cliente, NULL, (void*) atender_io, args);
+			pthread_mutex_unlock(&mutex_creacion_hilos);
 			log_debug(logger_kernel, "[THREAD] Creo hilo para atender io");
 			pthread_detach(hilo_cliente);
 		}
@@ -570,7 +597,9 @@ void* identificar_io(t_buffer* unBuffer, int socket_fd){
 	signal_sem(&dispositivo_libre);
 
 	pthread_t hilo_escucha_io;
+	pthread_mutex_lock(&mutex_creacion_hilos);
 	pthread_create(&hilo_escucha_io, NULL, (void*) escuchar_socket_io, dispositivo);
+	pthread_mutex_unlock(&mutex_creacion_hilos);
 	pthread_detach(hilo_escucha_io);
 
 	log_debug(logger_kernel,"Se registro dispositivo: %s", dispositivo->nombre);
@@ -619,7 +648,9 @@ void* escuchar_socket_io(void* arg){
 				}
 				else{
 					wait_mutex(&mutex_lista_cpus);
+					wait_mutex(&mutex_queue_ready);
 					poner_en_ready(proceso->pcb, false);
+					signal_mutex(&mutex_queue_ready);
 					signal_mutex(&mutex_lista_cpus);
 				}
 				signal_mutex(&mutex_lista_dispositivos_io);
