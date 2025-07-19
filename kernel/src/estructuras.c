@@ -159,7 +159,7 @@ t_dispositivo_io* buscar_io_menos_ocupada(char* nombre_io){
     t_dispositivo_io* dispositivo = buscar_io(nombre_io);
     for(int i=0; i<list_size(lista_dispositivos_io); i++){
         t_dispositivo_io* siguiente = (t_dispositivo_io*) list_get(lista_dispositivos_io, i);
-        if(siguiente->nombre == nombre_io && queue_size(obtener_cola_io(siguiente->id)) < queue_size(obtener_cola_io(dispositivo->id))){
+        if(strcmp(siguiente->nombre, nombre_io) == 0 && queue_size(obtener_cola_io(siguiente->id)) < queue_size(obtener_cola_io(dispositivo->id))){
             dispositivo = siguiente;
         }
     }
@@ -275,8 +275,8 @@ void cambiar_estado(t_pcb* proceso, t_estado estado){
     }
     else{
         log_info(logger_kernel, "## (<%d>) Pasa del estado <%s> al estado <%s>", proceso->pid, estado_to_string(metrica_anterior->estado), estado_to_string(estado));
-        log_info(logger_kernel, "Tiempo en estado %s: %llu", estado_to_string(metrica_anterior->estado),
-        obtener_diferencia_tiempo( metrica_anterior->tiempo_fin, metrica_anterior->tiempo_inicio));
+        //log_info(logger_kernel, "Tiempo en estado %s: %llu", estado_to_string(metrica_anterior->estado),
+        obtener_diferencia_tiempo( metrica_anterior->tiempo_fin, metrica_anterior->tiempo_inicio);
     }
 }
 

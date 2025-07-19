@@ -14,6 +14,7 @@ pthread_mutex_t mutex_lista_dispositivos_io;
 
 pthread_mutex_t mutex_creacion_hilos;
 pthread_mutex_t mutex_pcb;
+pthread_mutex_t mutex_diccionario_io;
 
 // Semáforos
 sem_t nuevo_proceso;
@@ -62,6 +63,7 @@ void iniciar_semaforos(){
     pthread_mutex_init(&mutex_lista_dispositivos_io, NULL);
     pthread_mutex_init(&mutex_creacion_hilos, NULL);
     pthread_mutex_init(&mutex_pcb, NULL);
+    pthread_mutex_init(&mutex_diccionario_io, NULL);
     
     sem_init(&nuevo_proceso, 0, 0);
     sem_init(&proceso_ready, 0, 0);
@@ -91,6 +93,7 @@ void destruir_semaforos() {
     pthread_mutex_destroy(&mutex_memoria_swap);
     pthread_mutex_destroy(&mutex_creacion_hilos);
     pthread_mutex_destroy(&mutex_pcb);
+    pthread_mutex_destroy(&mutex_diccionario_io);
 
     sem_destroy(&nuevo_proceso);
     sem_destroy(&proceso_ready);

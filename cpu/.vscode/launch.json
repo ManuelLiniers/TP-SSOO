@@ -4,12 +4,13 @@
 
 
 
+
     {
       "name": "run",
       "type": "cppdbg",
       "request": "launch",
       "program": "${workspaceFolder}/bin/${workspaceFolderBasename}",
-      "args": ["1"],
+      "args": ["1", "_estabilidad.config"],
       "stopAtEntry": false,
       "cwd": "${workspaceFolder}",
       "environment": [],

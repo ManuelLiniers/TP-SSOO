@@ -2,7 +2,7 @@
 #include <math.h>
 
 int main(int argc, char* argv[]) {
-	char* bits = inicializar_memoria();
+	char* bits = inicializar_memoria(argv[1]);
 
 	while(servidor_escucha(server_fd_memoria));
 
@@ -27,11 +27,22 @@ void leer_config(t_config* config, t_config* pruebas){
 	RETARDO_SWAP = config_get_int_value(pruebas, "RETARDO_SWAP") * 1000;
 }
 
-char* inicializar_memoria(){	
+char* inicializar_memoria(char* pruebass){	
     memoria_config = config_create("/home/utnso/tp-2025-1c-queCompileALaPrimera/memoria/Memoria.config");
-	//pruebas_config = config_create("/home/utnso/tp-2025-1c-queCompileALaPrimera/memoria/corto_plazo.config");
-	//pruebas_config = config_create("/home/utnso/tp-2025-1c-queCompileALaPrimera/memoria/largo_plazo.config");
-	pruebas_config = config_create("/home/utnso/tp-2025-1c-queCompileALaPrimera/memoria/estabilidad_general.config");
+    if(memoria_config == NULL){
+        log_error(memoria_logger, "Error al crear el config de memoria");
+    }
+	char* base_path = "/home/utnso/tp-2025-1c-queCompileALaPrimera/memoria/";
+	char* resultado = malloc(strlen(base_path) + strlen(pruebass) + 1);
+	strcpy(resultado, base_path);
+	strcat(resultado, pruebass);
+
+	pruebas_config = config_create(resultado);
+	if (pruebas_config == NULL) {
+    	log_error(memoria_logger, "config_memoria es NULL");
+    	exit(EXIT_FAILURE);
+	}	
+	free(resultado);
 	if (memoria_config == NULL) {
 		log_error(memoria_logger, "No se pudo crear el config de la memoria");
 		exit(1);

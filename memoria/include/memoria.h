@@ -20,7 +20,7 @@
 
 
 void leer_config(t_config* config, t_config* pruebas);
-char* inicializar_memoria();
+char* inicializar_memoria(char* pruebas);
 void finalizar_memoria(char* bits);
 int servidor_escucha(int server_fd_memoria);
 void saludar_cliente(void *void_args);

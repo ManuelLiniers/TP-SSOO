@@ -107,31 +107,31 @@ void agregar_a_cache(int pid, uint32_t pagina, char* contenido, uint32_t marco, 
 }
 
 void mostrar_cache(t_log* logger) {
-    log_info(logger, "==============================");
-    log_info(logger, "Contenido actual de la Caché:");
-    log_info(logger, "==============================");
+    //log_info(logger, "==============================");
+    //log_info(logger, "Contenido actual de la Caché:");
+    //log_info(logger, "==============================");
 
     if (list_is_empty(cache_paginas)) {
-        log_info(logger, "[CACHÉ VACÍA]");
+      //  log_info(logger, "[CACHÉ VACÍA]");
         return;
     }
 
-    for (int i = 0; i < list_size(cache_paginas); i++) {
-        t_entrada_cache* entrada = list_get(cache_paginas, i);
-        log_info(
-            logger,
-            "[Entrada %d] PID: %d | Página: %u | Marco: %u | Contenido: %s | Uso: %s | Modificado: %s",
-            i,
-            entrada->pid,
-            entrada->pagina,
-            entrada->marco,
-            entrada->contenido,
-            entrada->bit_uso ? "Sí" : "No",
-            entrada->bit_modificado ? "Sí" : "No"
-        );
-    }
+    //for (int i = 0; i < list_size(cache_paginas); i++) {
+      //  t_entrada_cache* entrada = list_get(cache_paginas, i);
+        //log_info(
+        //     logger,
+        //     "[Entrada %d] PID: %d | Página: %u | Marco: %u | Contenido: %s | Uso: %s | Modificado: %s",
+        //     i,
+        //     entrada->pid,
+        //     entrada->pagina,
+        //     entrada->marco,
+        //     entrada->contenido,
+        //     entrada->bit_uso ? "Sí" : "No",
+        //     entrada->bit_modificado ? "Sí" : "No"
+        // );
+    //}
 
-    log_info(logger, "==============================\n");
+//    log_info(logger, "==============================\n");
 }
 
 void limpiar_cache_por_pid(int pid, int conexion_memoria, t_log* logger) {

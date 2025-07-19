@@ -60,22 +60,23 @@ void* planificar_corto_plazo_SJF_desalojo(void* arg){
         wait_mutex(&mutex_pcb);
         actualizar_estimaciones();
         signal_mutex(&mutex_pcb);
-        wait_sem(&cpu_libre);
         if(!list_is_empty(queue_ready)){
             list_sort(queue_ready, shortest_job_first);
             //signal_mutex(&mutex_queue_ready);
             //mostrar_lista(queue_ready);
-            t_cpu* cpu_encargada = malloc(sizeof(t_cpu)); // Posible memory leak
-            wait_sem(&desalojando);
+            t_cpu* cpu_encargada = NULL; // Posible memory leak
 
-            bool seguir = true;
             if(hay_cpu_libre(&cpu_encargada)){
+                wait_sem(&cpu_libre);
+                wait_sem(&desalojando);
+                bool seguir = true;
                 
 				for(int i = 0; i<list_size(lista_procesos_ejecutando); i++){
 					t_unidad_ejecucion* unidad = (t_unidad_ejecucion*) list_get(lista_procesos_ejecutando, i);
 					if(unidad->cpu->cpu_id == cpu_encargada->cpu_id){
 						if(unidad->interrumpido == AEJECUTAR){
 							seguir = false;
+                            break;
 						}
 					}
 				}
@@ -87,15 +88,15 @@ void* planificar_corto_plazo_SJF_desalojo(void* arg){
                     poner_en_ejecucion(proceso, cpu_encargada);
                 } else {
                     signal_sem(&cpu_libre); ///////////////////???????????????
+                    signal_sem(&planificacion_principal);
                 }
             }
             signal_sem(&desalojando);
-            signal_mutex(&mutex_queue_ready);
         }
         else{
-            signal_mutex(&mutex_queue_ready);
             signal_sem(&cpu_libre);
         }
+        signal_mutex(&mutex_queue_ready);
         signal_mutex(&mutex_lista_cpus);
         signal_mutex(&mutex_procesos_ejecutando);
     }
@@ -611,24 +612,23 @@ bool vuelta_swap(t_pcb* proceso){
 void poner_en_ready(t_pcb* proceso, bool interrumpido){
     cambiar_estado(proceso, READY);
     log_debug(logger_kernel, "Pongo en ready al proceso <%d>", proceso->pid);
-	list_add(queue_ready, proceso);
+    list_add(queue_ready, proceso);
     mostrar_lista(queue_ready);
     signal_sem(&proceso_ready);
     
     t_cpu* cpu;
     if(strcmp(algoritmo_corto_plazo, "SRT") == 0){
         if(!interrumpido){
-            
             if(hay_cpu_libre(&cpu)){
                 log_debug(logger_kernel, "Signal del planificacion principal por proceso (<%d>)", proceso->pid);
                 signal_sem(&planificacion_principal);
             } else{
                 log_debug(logger_kernel, "Signal del check desalojo, por proceso (<%d>)", proceso->pid);
+                signal_sem(&planificacion_principal);
                 signal_sem(&check_desalojo);
             }
         }
-    } 
-    
+    }
 }
 
 void poner_en_ejecucion(t_pcb* proceso, t_cpu* cpu_encargada){
@@ -711,7 +711,9 @@ void comprobar_cola_bloqueados(t_dispositivo_io* dispositivo){
     //t_queue* cola_io = obtener_cola_io(dispositivo->id);
     char id_dispositivo[12];
     sprintf(id_dispositivo, "%d", dispositivo->id);
+    wait_mutex(&mutex_diccionario_io);
     t_queue* cola_io = dictionary_get(diccionario_dispositivos_io, id_dispositivo);
+    signal_mutex(&mutex_diccionario_io);
     if(!queue_is_empty(cola_io)){
         tiempo_en_io *proceso = queue_peek(cola_io);
         signal_mutex(&mutex_queue_block);

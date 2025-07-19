@@ -216,16 +216,20 @@ void* esperar_dispatch(void* arg){
 					signal_mutex(&mutex_procesos_ejecutando);
 					if(motivo_interrupcion != FINALIZADO && motivo_interrupcion != CAUSA_IO && motivo_interrupcion != MEMORY_DUMP){
 						if(proceso_ejecutando != NULL){
-							wait_mutex(&mutex_queue_ready);
 		
+							wait_mutex(&mutex_lista_cpus);
+							wait_mutex(&mutex_queue_ready);
+							wait_mutex(&mutex_procesos_ejecutando);
 							poner_en_ready(proceso_ejecutando->proceso, true);
-							signal_mutex(&mutex_queue_ready);
 							log_info(logger_kernel, "## (<%d>) - Desalojado por algoritmo SJF/SRT", proceso_ejecutando->proceso->pid); 
 							log_debug(logger_kernel, " -----------------------------");
 							temporal_destroy(proceso_ejecutando->tiempo_ejecutando);
 							
 							list_remove_element(lista_procesos_ejecutando, proceso_ejecutando);
 							//free(proceso_ejecutando);
+							signal_mutex(&mutex_lista_cpus);
+							signal_mutex(&mutex_queue_ready);
+							signal_mutex(&mutex_procesos_ejecutando);
 						}
 						if(proceso_a_ejecutar == NULL){
 							log_error(logger_kernel, "ERROR: la unidad de ejecucion es NULL");
@@ -297,7 +301,7 @@ void* esperar_dispatch(void* arg){
                 char* nombre_io = recibir_informacion_del_buffer(paquete, tamanio);
                 int io_tiempo = recibir_int_del_buffer(paquete);
 
-                tiempo_en_io* proceso_bloqueado = malloc(sizeof(t_dispositivo_io));
+                tiempo_en_io* proceso_bloqueado = malloc(sizeof(tiempo_en_io));
                 proceso_bloqueado->pcb = proceso;
                 proceso_bloqueado->tiempo = io_tiempo;
 
@@ -323,39 +327,39 @@ void* esperar_dispatch(void* arg){
 				cambiar_estado(proceso, BLOCKED);
 				send(cpu_encargada->socket_dispatch, &respuesta, sizeof(int), 0);
 
-				log_info(logger_kernel, "Compruebo BLOCKED 1");
+				//log_info(logger_kernel, "Compruebo BLOCKED 1");
 
                 sacar_proceso_ejecucion(proceso);
 
-				log_info(logger_kernel, "Compruebo BLOCKED 2");
+				//log_info(logger_kernel, "Compruebo BLOCKED 2");
 				
                 t_dispositivo_io* dispositivo = buscar_io_libre(nombre_io);
 				bool libre_encontrada = true;
 
-				log_info(logger_kernel, "Compruebo BLOCKED 3");
+				//log_info(logger_kernel, "Compruebo BLOCKED 3");
                 if(dispositivo == NULL){
 					libre_encontrada = false;
                     dispositivo = buscar_io_menos_ocupada(nombre_io);
                 }
 
-				log_info(logger_kernel, "Compruebo BLOCKED 4");
+				//log_info(logger_kernel, "Compruebo BLOCKED 4");
                 if(dispositivo == NULL){
                     log_info(logger_kernel, "No se encontro la IO: %s", nombre_io);
 					finalizar_proceso(proceso);
                     break;
                 }
 
-				log_info(logger_kernel, "Compruebo BLOCKED 5");
+				//log_info(logger_kernel, "Compruebo BLOCKED 5");
                 
                 // queue_push(obtener_cola_io(dispositivo->id), proceso_bloqueado);
                 queue_push(obtener_cola_io(dispositivo->id), proceso_bloqueado);
 				
-				log_info(logger_kernel, "Compruebo BLOCKED 6");
+				//log_info(logger_kernel, "Compruebo BLOCKED 6");
 				if(libre_encontrada == true){
                 	enviar_proceso_a_io(proceso, dispositivo, io_tiempo);
 				}
-				log_info(logger_kernel, "Cola de IO: (%s, %d) - Cantidad de procesos en cola: %d",
-					 dispositivo->nombre, dispositivo->id, queue_size(obtener_cola_io(dispositivo->id)));
+				//log_info(logger_kernel, "Cola de IO: (%s, %d) - Cantidad de procesos en cola: %d",
+					 //dispositivo->nombre, dispositivo->id, queue_size(obtener_cola_io(dispositivo->id)));
 
                 log_debug(logger_kernel, "Proceso <%d> en dispositivo %s: ",proceso->pid ,dispositivo->nombre);
                 
@@ -652,12 +656,17 @@ void* escuchar_socket_io(void* arg){
 					poner_en_ready(proceso->pcb, false);
 					signal_mutex(&mutex_queue_ready);
 					signal_mutex(&mutex_lista_cpus);
+
+					if(strcmp(algoritmo_corto_plazo, "SRT") != 0){
+        				signal_sem(&planificacion_principal);
+    				}
 				}
 				signal_mutex(&mutex_lista_dispositivos_io);
 				signal_mutex(&mutex_queue_block);
 				log_info(logger_kernel, "## %d finalizó IO", proceso->pcb->pid);
 
 				comprobar_cola_bloqueados(dispositivo);
+				free(proceso);
 				break;
 			case -1:
 				log_debug(logger_kernel, "[Dispositivo %s IO Desconectado]", dispositivo->nombre);
@@ -718,7 +727,7 @@ void finalizar_proceso(t_pcb* proceso){
 }
 
 void finalizar_proceso_io(void* arg){
-	t_unidad_ejecucion* proceso_io = (t_unidad_ejecucion*) arg;
-	finalizar_proceso(proceso_io->proceso);
+	tiempo_en_io* proceso_io = (tiempo_en_io*) arg;
+	finalizar_proceso(proceso_io->pcb);
 	free(proceso_io);
 }
