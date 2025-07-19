@@ -23,13 +23,13 @@ int main(int argc, char* argv[]) {
     id = atoi(argv[1]);
     log_debug(logger, "Id CPU: %d", id);
     cpu_config = crear_config(logger, "cpu.config");
-    //char* ruta_config = malloc(sizeof(argv[1])+sizeof("cpu")+sizeof("_estabilidad.config"));
-    char* ruta_config = malloc(sizeof(argv[1])+sizeof("cpu")+sizeof("_largo_plazo.config"));
+    char* ruta_config = malloc(sizeof(argv[1])+sizeof("cpu")+sizeof("_estabilidad.config"));
+    //char* ruta_config = malloc(sizeof(argv[1])+sizeof("cpu")+sizeof("_largo_plazo.config"));
     strcpy(ruta_config, "cpu");
     strcat(ruta_config, argv[1]);
     //strcat(ruta_config, "_corto_plazo.config");
-    //strcat(ruta_config, "_estabilidad.config");
-    strcat(ruta_config, "_largo_plazo.config");
+    strcat(ruta_config, "_estabilidad.config");
+    //strcat(ruta_config, "_largo_plazo.config");
     pruebas_config = crear_config(logger, ruta_config);
     free(ruta_config);
 

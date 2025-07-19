@@ -143,57 +143,37 @@ t_dispositivo_io* buscar_io(char* nombre_io){
 }
 
 t_dispositivo_io* buscar_io_libre(char* nombre_io){
-    wait_mutex(&mutex_lista_dispositivos_io);
-    wait_mutex(&mutex_queue_block);
     log_debug(logger_kernel, "Dispositivo a buscar: %s", nombre_io);
     for(int i = 0; i<list_size(lista_dispositivos_io); i++){
         t_dispositivo_io* actual =list_get(lista_dispositivos_io, i);
         if(strcmp(nombre_io, actual->nombre) == 0 && queue_is_empty(obtener_cola_io(actual->id))){
-            signal_mutex(&mutex_queue_block);
-            signal_mutex(&mutex_lista_dispositivos_io);
             log_debug(logger_kernel, "IO Encontrada");
             return actual;
         }
     }
-    signal_mutex(&mutex_queue_block);
-    signal_mutex(&mutex_lista_dispositivos_io);
     log_debug(logger_kernel, "No se encontro IO libre");
     return NULL;
 }
 
 t_dispositivo_io* buscar_io_menos_ocupada(char* nombre_io){
-    wait_mutex(&mutex_lista_dispositivos_io);
-    wait_mutex(&mutex_queue_block);
     t_dispositivo_io* dispositivo = buscar_io(nombre_io);
     for(int i=0; i<list_size(lista_dispositivos_io); i++){
-        /* if(dispositivo != NULL){
-            log_debug(logger_kernel, "Buscando IO libre, dispositivo actual: %s", dispositivo->nombre);
-        }
-        else{
-            log_debug(logger_kernel, "Buscando IO menos ocupada, dispositivo actual: no hay dispositivo");
-        } */
         t_dispositivo_io* siguiente = (t_dispositivo_io*) list_get(lista_dispositivos_io, i);
         if(siguiente->nombre == nombre_io && queue_size(obtener_cola_io(siguiente->id)) < queue_size(obtener_cola_io(dispositivo->id))){
             dispositivo = siguiente;
         }
-        signal_mutex(&mutex_queue_block);
     }
-    signal_mutex(&mutex_queue_block);
-    signal_mutex(&mutex_lista_dispositivos_io);
     return dispositivo;
 }
 
 t_cpu* buscar_cpu_libre(t_list* lista_cpus){
-    wait_mutex(&mutex_lista_cpus);
     for(int i = 0; i<list_size(lista_cpus); i++){
         t_cpu* actual = list_get(lista_cpus, i);
         mostrar_cpu(actual);
         if(actual->esta_libre){
-            signal_mutex(&mutex_lista_cpus);
             return actual;
         }
     }
-    signal_mutex(&mutex_lista_cpus);
     log_error(logger_kernel, "No hay CPUs libres");
     return NULL;
 }
@@ -208,35 +188,29 @@ void liberar_cpu(t_cpu* cpu_encargada){
 }
 
 t_pcb* buscar_proceso_pid(uint32_t pid){
-    wait_mutex(&mutex_procesos_ejecutando);
     log_debug(logger_kernel, "Buscando proceso PID <%d>", pid);
     for(int i=0; i<list_size(lista_procesos_ejecutando); i++){
         t_unidad_ejecucion* actual = list_get(lista_procesos_ejecutando, i);
         if(actual->proceso->pid == (uint32_t)pid){
-            signal_mutex(&mutex_procesos_ejecutando);
             return actual->proceso;
         }
     }
-    signal_mutex(&mutex_procesos_ejecutando);
     return NULL;
 }
 
 t_unidad_ejecucion* buscar_por_cpu(t_cpu* cpu_encargada){
-    wait_mutex(&mutex_procesos_ejecutando);
     for(int i=0; i<list_size(lista_procesos_ejecutando); i++){
         t_unidad_ejecucion* actual = list_get(lista_procesos_ejecutando, i);
         if(actual->cpu->cpu_id == cpu_encargada->cpu_id){
-            signal_mutex(&mutex_procesos_ejecutando);
             return actual;
         }
     }
-    signal_mutex(&mutex_procesos_ejecutando);
     return NULL;
 }
 
 void sacar_proceso_ejecucion(t_pcb* proceso){
     wait_mutex(&mutex_procesos_ejecutando);
-    //wait_mutex(&mutex_cpu);
+    wait_mutex(&mutex_lista_cpus);
     for(int i = 0; i<list_size(lista_procesos_ejecutando); i++){
         t_unidad_ejecucion* actual = list_get(lista_procesos_ejecutando, i);
         if(actual->proceso->pid == proceso->pid){
@@ -245,6 +219,7 @@ void sacar_proceso_ejecucion(t_pcb* proceso){
             log_debug(logger_kernel, "Libero cpu <%d> de proceso pid <%d>", actual->cpu->cpu_id, proceso->pid);
         }
     }
+    signal_mutex(&mutex_lista_cpus);
     signal_mutex(&mutex_procesos_ejecutando);
     //log_debug(logger_kernel, "----------Espero mutex cpu ");
     signal_sem(&cpu_libre);
@@ -255,12 +230,11 @@ void sacar_proceso_ejecucion(t_pcb* proceso){
 }
 
 void cambiar_estado(t_pcb* proceso, t_estado estado){
-    //log_debug(logger_kernel, "Metricas de tiempo 1: %d", list_size(proceso->metricas_tiempo));
     t_metricas_estado_tiempo* metrica_anterior = obtener_ultima_metrica(proceso);
 
     if(metrica_anterior != NULL){
         metrica_anterior->tiempo_fin = temporal_get_string_time("%H:%M:%S:%MS");
-        //log_debug(logger_kernel, "Tiempo de fin en estado %s: %s", estado_to_string(metrica_anterior->estado), metrica_anterior->tiempo_fin); 
+         
         switch (metrica_anterior->estado)
         {
         case EXEC:
@@ -293,10 +267,8 @@ void cambiar_estado(t_pcb* proceso, t_estado estado){
         t_metricas_estado_tiempo* metrica = malloc(sizeof(t_metricas_estado_tiempo));
         metrica->estado = estado;
         metrica->tiempo_inicio = temporal_get_string_time("%H:%M:%S:%MS");
-        //log_debug(logger_kernel, "Tiempo de inicio en estado %s: %s", estado_to_string(estado), metrica->tiempo_inicio);
         list_add(proceso->metricas_tiempo, metrica);
     }
-    //log_debug(logger_kernel, "Cantidad de metricas: %d", list_size(proceso->metricas_tiempo));
 
     if(metrica_anterior == NULL){
         log_info(logger_kernel, "## (<%d>) Pasa al estado <%s>", proceso->pid, estado_to_string(estado));

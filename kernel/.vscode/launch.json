@@ -11,7 +11,7 @@
       "type": "cppdbg",
       "request": "launch",
       "program": "${workspaceFolder}/bin/${workspaceFolderBasename}",
-      "args": ["PLANI_LYM_PLAZO","0"],
+      "args": ["ESTABILIDAD_GENERAL","0","estabilidad_general.config"],
       "stopAtEntry": false,
       "cwd": "${workspaceFolder}",
       "environment": [],
