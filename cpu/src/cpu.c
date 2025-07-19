@@ -168,7 +168,7 @@ t_config* crear_config(t_log* logger, char* archivo){
     //     abort();
     // }
     // free(resultado);
-    char* base_path = "/cpu/";
+    char* base_path = "/";
 	char* resultado = malloc(strlen(base_path) + strlen(archivo) + 1);
 	strcpy(resultado, base_path);
 	strcat(resultado, archivo);
