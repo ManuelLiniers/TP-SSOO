@@ -1,5 +1,5 @@
 //#include "/home/utnso/tp-2025-1c-queCompileALaPrimera/utils/socket.h"
-#include</home/utnso/tp-2025-1c-queCompileALaPrimera/utils/src/utils/socket.h>
+#include<utils/socket.h>
 
 int iniciar_servidor(t_log* logger, char* ip, char* puerto)
 {
