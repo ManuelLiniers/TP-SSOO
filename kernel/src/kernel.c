@@ -20,7 +20,7 @@ int main(int argc, char* argv[]) {
 }
 
 void iniciar_config(char* pruebas){
-    config_kernel = config_create("/home/utnso/tp-2025-1c-queCompileALaPrimera/kernel/kernel.config");
+    config_kernel = config_create("/kernel/kernel.config");
     if(config_kernel == NULL){
         log_error(logger_kernel, "Error al crear el config del Kernel");
     }
