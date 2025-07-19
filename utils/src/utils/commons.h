@@ -15,7 +15,7 @@
 #include <pthread.h>
 #include <time.h>
 #include <commons/temporal.h>
-#include </home/utnso/tp-2025-1c-queCompileALaPrimera/utils/src/utils/socket.h>
+#include </home/utnso/so-deploy/tp-2025-1c-queCompileALaPrimera/utils/src/utils/socket.h>
 
 typedef enum {
     KERNEL,
