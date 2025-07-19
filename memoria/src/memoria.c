@@ -28,7 +28,7 @@ void leer_config(t_config* config, t_config* pruebas){
 }
 
 char* inicializar_memoria(char* pruebass){	
-    memoria_config = config_create("/home/utnso/tp-2025-1c-queCompileALaPrimera/memoria/Memoria.config");
+    memoria_config = config_create("/memoria/Memoria.config");
     if(memoria_config == NULL){
         log_error(memoria_logger, "Error al crear el config de memoria");
     }
