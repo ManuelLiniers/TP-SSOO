@@ -58,7 +58,7 @@ int main(int argc, char* argv[]) {
 }
 
 t_config* iniciar_config(void) {
-	t_config* nuevo_config = config_create("/home/utnso/tp-2025-1c-queCompileALaPrimera/io/io.config");
+	t_config* nuevo_config = config_create("io.config");
 	if(nuevo_config == NULL) {
         perror("Error al intentar cargar el config");
         exit(EXIT_FAILURE);

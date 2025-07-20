@@ -28,21 +28,21 @@ void leer_config(t_config* config, t_config* pruebas){
 }
 
 char* inicializar_memoria(char* pruebass){	
-    memoria_config = config_create("/memoria/Memoria.config");
+    memoria_config = config_create("Memoria.config");
     if(memoria_config == NULL){
         log_error(memoria_logger, "Error al crear el config de memoria");
     }
-	char* base_path = "/home/utnso/tp-2025-1c-queCompileALaPrimera/memoria/";
-	char* resultado = malloc(strlen(base_path) + strlen(pruebass) + 1);
-	strcpy(resultado, base_path);
-	strcat(resultado, pruebass);
+	//char* base_path = "/home/utnso/tp-2025-1c-queCompileALaPrimera/memoria/";
+	//char* resultado = malloc(strlen(pruebass) + 1);
+	//strcpy(resultado, pruebass);
+	//strcat(resultado, pruebass);
 
-	pruebas_config = config_create(resultado);
+	pruebas_config = config_create(pruebass);
 	if (pruebas_config == NULL) {
     	log_error(memoria_logger, "config_memoria es NULL");
     	exit(EXIT_FAILURE);
 	}	
-	free(resultado);
+	//free(resultado);
 	if (memoria_config == NULL) {
 		log_error(memoria_logger, "No se pudo crear el config de la memoria");
 		exit(1);

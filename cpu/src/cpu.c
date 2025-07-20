@@ -7,6 +7,7 @@ bool flag_interrupcion = false;
 int TAMANIO_PAGINA;
 int ENTRADAS_CACHE;
 int retardo_cache;
+char* log_level;
 
 int id;
 
@@ -18,10 +19,7 @@ pthread_mutex_t mutex_interrupt;
 int main(int argc, char* argv[]) {
     //saludar("cpu");
 
-    logger = crear_log();
 
-    id = atoi(argv[1]);
-    log_debug(logger, "Id CPU: %d", id);
     cpu_config = crear_config(logger, "cpu.config");
     char* ruta_config = malloc(sizeof(argv[1])+sizeof("cpu")+sizeof(argv[2]));
     //char* ruta_config = malloc(sizeof(argv[1])+sizeof("cpu")+sizeof("_largo_plazo.config"));
@@ -33,14 +31,18 @@ int main(int argc, char* argv[]) {
     pruebas_config = crear_config(logger,ruta_config);
     //free(ruta_config);
 
-    inicializar_tlb(logger, pruebas_config);
-    inicializar_cache(logger, pruebas_config);
 
     TAMANIO_PAGINA = config_get_int_value(pruebas_config, "TAMANIO_PAGINA");
     retardo_cache = config_get_int_value(pruebas_config, "RETARDO_CACHE");
+    log_level = config_get_string_value(cpu_config, "LOG_LEVEL");
 
+    logger = crear_log();
+    id = atoi(argv[1]);
+    log_debug(logger, "Id CPU: %d", id);
     //log_info(logger, "CPU - TAM_PAGINA = %d", TAMANIO_PAGINA);
 
+    inicializar_tlb(logger, pruebas_config);
+    inicializar_cache(logger, pruebas_config);
 
     //ENTRADAS_CACHE = config_get_int_value(cpu_config, "ENTRADAS_CACHE");
         
@@ -153,7 +155,7 @@ t_contexto* deserializar_contexto(t_buffer* buffer) {
 
 t_log* crear_log(){
 
-    t_log* logger = log_create("cpu.log", "[CPU]", 1, LOG_LEVEL_INFO);
+    t_log* logger = log_create("cpu.log", "[CPU]", 1, log_level_from_string(log_level));
     return logger;
 }
 
@@ -168,15 +170,16 @@ t_config* crear_config(t_log* logger, char* archivo){
     //     abort();
     // }
     // free(resultado);
-    char* base_path = "../";
+    char* base_path = "/home/utnso/tp-2025-1c-queCompileALaPrimera/cpu/";
 	char* resultado = malloc(strlen(base_path) + strlen(archivo) + 1);
 	strcpy(resultado, base_path);
 	strcat(resultado, archivo);
 
 	t_config* config_pruebas = config_create(resultado);
 	if (config_pruebas == NULL) {
-    	log_error(logger, "config_kernel es NULL");
-    	exit(EXIT_FAILURE);
+    	//log_error(logger, "config_kernel es NULL");
+    	printf("Error al crear config");
+        exit(EXIT_FAILURE);
 	}	
 	free(resultado);
     return config_pruebas;
@@ -217,10 +220,14 @@ void atender_proceso_del_kernel(t_contexto* contexto, t_log* logger) {
         }
 
         ciclo_de_instruccion_execute(instruccion, contexto, logger, conexion_memoria);
+
         if (hay_interrupcion()) {
-            
-            log_debug(logger, "Se detectó una interrupción luego de ejecutar la instrucción");
-            enviar_contexto_a_kernel(contexto, INTERRUPCION, conexion_kernel_dispatch, logger);
+            //if(!string_equals_ignore_case(instruccion->opcode, "DUMP_MEMORY") && !string_equals_ignore_case(instruccion->opcode, "EXIT") && !string_equals_ignore_case(instruccion->opcode, "IO")){
+                log_debug(logger, "Se detectó una interrupción luego de ejecutar la instrucción");
+                enviar_contexto_a_kernel(contexto, INTERRUPCION, conexion_kernel_dispatch, logger);
+            //} else {
+              //  log_debug(logger, "Interrupcion abortada porque proceso iba a desalojarse igualmente");
+            //}
             
             //le avisa al kernel que hubo interrupción, desaloja el proceso y resetea el flag a false para poder seguir escuchando futuras interrupciones
 

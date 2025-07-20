@@ -17,8 +17,13 @@ extern pthread_mutex_t mutex_memoria_swap;
 extern pthread_mutex_t mutex_lista_dispositivos_io;
 extern pthread_mutex_t mutex_pcb;
 extern pthread_mutex_t mutex_diccionario_io;
+extern pthread_mutex_t desalojando;
+extern pthread_mutex_t mutex_sem_espacio_memoria;
+extern pthread_mutex_t mutex_susp_o_memoria;
+extern pthread_mutex_t comprobar_memoria;
 
 extern pthread_mutex_t mutex_creacion_hilos;
+extern pthread_mutex_t mutex_pid_inc;
 
 extern sem_t bloqueante_sem;
 extern sem_t cpu_libre;
@@ -27,7 +32,6 @@ extern sem_t ver_desalojo;
 extern sem_t nuevo_proceso;
 extern sem_t proceso_ready;
 extern sem_t check_desalojo;
-extern sem_t desalojando;
 extern sem_t planificacion_principal;
 extern sem_t espacio_memoria;
 extern sem_t dispositivo_libre;
@@ -35,6 +39,7 @@ extern sem_t nuevo_proceso_suspendido_ready;
 extern sem_t proceso_suspendido_ready;
 
 extern sem_t planificar;
+extern sem_t largo_plazo;
 
 void iniciar_semaforos();
 void signal_sem(sem_t *sem);

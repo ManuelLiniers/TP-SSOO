@@ -15,13 +15,18 @@ pthread_mutex_t mutex_lista_dispositivos_io;
 pthread_mutex_t mutex_creacion_hilos;
 pthread_mutex_t mutex_pcb;
 pthread_mutex_t mutex_diccionario_io;
+pthread_mutex_t mutex_pid_inc;
+
+pthread_mutex_t desalojando;
+pthread_mutex_t mutex_susp_o_memoria;
+pthread_mutex_t mutex_sem_espacio_memoria;
+pthread_mutex_t comprobar_memoria;
 
 // Semáforos
 sem_t nuevo_proceso;
 sem_t espacio_memoria;
 sem_t proceso_ready;
 sem_t check_desalojo;
-sem_t desalojando;
 sem_t nuevo_proceso_suspendido_ready;
 sem_t proceso_suspendido_ready;
 
@@ -32,6 +37,7 @@ sem_t planificacion_principal;
 sem_t ver_desalojo;
 
 sem_t planificar;
+sem_t largo_plazo;
 
 // wait y signal para semaforos
 void wait_mutex(pthread_mutex_t *mutex){
@@ -63,7 +69,12 @@ void iniciar_semaforos(){
     pthread_mutex_init(&mutex_lista_dispositivos_io, NULL);
     pthread_mutex_init(&mutex_creacion_hilos, NULL);
     pthread_mutex_init(&mutex_pcb, NULL);
+    pthread_mutex_init(&mutex_pid_inc, NULL);
     pthread_mutex_init(&mutex_diccionario_io, NULL);
+    pthread_mutex_init(&desalojando, NULL);
+    pthread_mutex_init(&mutex_sem_espacio_memoria, NULL);
+    pthread_mutex_init(&mutex_susp_o_memoria, NULL);
+    pthread_mutex_init(&comprobar_memoria, NULL);
     
     sem_init(&nuevo_proceso, 0, 0);
     sem_init(&proceso_ready, 0, 0);
@@ -73,11 +84,11 @@ void iniciar_semaforos(){
     sem_init(&dispositivo_libre, 0, 0);
     sem_init(&nuevo_proceso_suspendido_ready, 0, 0);
     sem_init(&check_desalojo, 0, 0);
-    sem_init(&desalojando, 0, 1);
     sem_init(&planificacion_principal, 0, 0);
     sem_init(&ver_desalojo, 0, 0);
     sem_init(&proceso_suspendido_ready, 0, 0);
     sem_init(&planificar, 0, 0);
+    sem_init(&largo_plazo, 0, 0);
 };
 
 void destruir_semaforos() {
@@ -94,6 +105,10 @@ void destruir_semaforos() {
     pthread_mutex_destroy(&mutex_creacion_hilos);
     pthread_mutex_destroy(&mutex_pcb);
     pthread_mutex_destroy(&mutex_diccionario_io);
+    pthread_mutex_destroy(&desalojando);
+    pthread_mutex_destroy(&mutex_sem_espacio_memoria);
+    pthread_mutex_destroy(&mutex_susp_o_memoria);
+    pthread_mutex_destroy(&comprobar_memoria);
 
     sem_destroy(&nuevo_proceso);
     sem_destroy(&proceso_ready);

@@ -61,11 +61,13 @@ t_pcb* pcb_create() {
     if (pcb == NULL){ 
         return NULL;
     };
-    pcb->pid = pid_incremental;
     pcb->program_counter = 0;
     pcb->estado = NEW;
 
+    wait_mutex(&mutex_pid_inc);
+    pcb->pid = pid_incremental;
     pid_incremental++;
+    signal_mutex(&mutex_pid_inc);
 
     int metricas_estado[7] = {0, 0, 0, 0, 0, 0, 0};
     memcpy(pcb->metricas_estado, metricas_estado, sizeof(int[7]));

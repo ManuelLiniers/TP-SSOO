@@ -20,21 +20,21 @@ int main(int argc, char* argv[]) {
 }
 
 void iniciar_config(char* pruebas){
-    config_kernel = config_create("/kernel/kernel.config");
+    config_kernel = config_create("kernel.config");
     if(config_kernel == NULL){
         log_error(logger_kernel, "Error al crear el config del Kernel");
     }
-	char* base_path = "/home/utnso/tp-2025-1c-queCompileALaPrimera/kernel/";
-	char* resultado = malloc(strlen(base_path) + strlen(pruebas) + 1);
-	strcpy(resultado, base_path);
-	strcat(resultado, pruebas);
+	//char* base_path = "/home/utnso/tp-2025-1c-queCompileALaPrimera/kernel/";
+	//char* resultado = malloc(strlen(base_path) + strlen(pruebas) + 1);
+	//strcpy(resultado, base_path);
+	//strcat(resultado, pruebas);
 
-	config_pruebas = config_create(resultado);
+	config_pruebas = config_create(pruebas);
 	if (config_pruebas == NULL) {
     	log_error(logger_kernel, "config_kernel es NULL");
     	exit(EXIT_FAILURE);
 	}	
-	free(resultado);
+//	free(resultado);
 }
 
 
@@ -179,7 +179,7 @@ void* esperar_dispatch(void* arg){
         uint32_t pc = recibir_uint32_del_buffer(paquete);
         int motivo = recibir_int_del_buffer(paquete);
 		t_pcb* proceso = NULL;
-		if(motivo_interrupcion != FINALIZADO && motivo_interrupcion != CAUSA_IO && motivo_interrupcion != MEMORY_DUMP){
+		if(motivo_interrupcion != 1 && motivo_interrupcion != 2 && motivo_interrupcion != 3){
 			wait_mutex(&mutex_procesos_ejecutando);
 			proceso = buscar_proceso_pid(pid);
 			signal_mutex(&mutex_procesos_ejecutando);
@@ -195,7 +195,7 @@ void* esperar_dispatch(void* arg){
 				t_unidad_ejecucion* proceso_a_ejecutar = NULL;
 				wait_mutex(&mutex_lista_cpus);
 				wait_mutex(&mutex_procesos_ejecutando);
-				if(!ignorar_interrupcion || motivo_interrupcion == FINALIZADO || motivo_interrupcion == CAUSA_IO || motivo_interrupcion == MEMORY_DUMP){
+				if(!ignorar_interrupcion || motivo_interrupcion == 1 || motivo_interrupcion == 2 || motivo_interrupcion == 3){
 					for(int i = 0; i<list_size(lista_procesos_ejecutando); i++){
 						t_unidad_ejecucion* unidad = (t_unidad_ejecucion*) list_get(lista_procesos_ejecutando, i);
 						if(unidad->cpu->cpu_id == cpu_encargada->cpu_id){
@@ -214,7 +214,7 @@ void* esperar_dispatch(void* arg){
 					}
 					signal_mutex(&mutex_lista_cpus);
 					signal_mutex(&mutex_procesos_ejecutando);
-					if(motivo_interrupcion != FINALIZADO && motivo_interrupcion != CAUSA_IO && motivo_interrupcion != MEMORY_DUMP){
+					if(motivo_interrupcion != 1 && motivo_interrupcion != 2 && motivo_interrupcion != 3){
 						if(proceso_ejecutando != NULL){
 		
 							wait_mutex(&mutex_lista_cpus);
@@ -261,7 +261,7 @@ void* esperar_dispatch(void* arg){
 				signal_mutex(&mutex_procesos_ejecutando);
 				proceso_a_ejecutar->tiempo_ejecutando = temporal_create();
 				cambiar_estado(proceso_a_ejecutar->proceso, EXEC);
-				signal_sem(&desalojando);
+				signal_mutex(&desalojando);
 				ignorar_interrupcion = false;
 				motivo_interrupcion = -1;
 				//log_debug(logger_kernel, "Proceso removido por hilo principal pid <%d>", proceso->pid);
@@ -278,7 +278,7 @@ void* esperar_dispatch(void* arg){
 						if(unidad->cpu->cpu_id == cpu_encargada->cpu_id){
 							if(unidad->interrumpido == INTERRUMPIDO){
 								ignorar_interrupcion = true;
-								motivo_interrupcion = FINALIZADO;
+								motivo_interrupcion = 1;
 							}
 						}
 					}
@@ -290,7 +290,7 @@ void* esperar_dispatch(void* arg){
 
 				send(cpu_encargada->socket_dispatch, &respuesta, sizeof(int), 0);
                 sacar_proceso_ejecucion(proceso);
-				signal_sem(&espacio_memoria);
+				//signal_sem(&espacio_memoria);
                 
 				finalizar_proceso(proceso);
                 
@@ -313,7 +313,7 @@ void* esperar_dispatch(void* arg){
 						if(unidad->cpu->cpu_id == cpu_encargada->cpu_id){
 							if(unidad->interrumpido == INTERRUMPIDO){
 								ignorar_interrupcion = true;
-								motivo_interrupcion = CAUSA_IO;
+								motivo_interrupcion = 2;
 								log_debug(logger_kernel, "Seteo ignorar interrupcion por IO al PID <%d>", unidad->proceso->pid);
 							}
 						}
@@ -424,7 +424,7 @@ void* esperar_dispatch(void* arg){
 					if(unidad->cpu->cpu_id == cpu_encargada->cpu_id){
 						if(unidad->interrumpido == INTERRUMPIDO){
 							ignorar_interrupcion = true;
-							motivo_interrupcion = MEMORY_DUMP;
+							motivo_interrupcion = 3;
 						}
 					}
 				}
@@ -488,7 +488,9 @@ t_cpu* identificar_cpu(t_buffer* buffer, int socket_fd, void (*funcion)(t_cpu*, 
 		funcion(cpu_nueva, socket_fd);
 		list_add(lista_cpus, cpu_nueva);
 		signal_sem(&cpu_libre);
-		log_debug(logger_kernel, "Semaforo cpu_libre: %ld", cpu_libre.__align);
+		int valor = -1;
+		sem_getvalue(&cpu_libre, &valor);
+		log_debug(logger_kernel, "Semaforo cpu_libre: %d", valor);
 		//log_debug(logger_kernel, "Tamanio del nombre: %d", tamanio_nombre);
 		log_debug(logger_kernel, "Se identifico la CPU: %d", cpu_nueva->cpu_id);
 		mostrar_cpus();
@@ -637,18 +639,30 @@ void* escuchar_socket_io(void* arg){
 					signal_sem(&proceso_suspendido_ready);
 					log_debug(logger_kernel, "Signal semaforo proceso susp ready: %ld", proceso_suspendido_ready.__align);
 					signal_sem(&nuevo_proceso);
+					signal_sem(&nuevo_proceso_suspendido_ready);
+					signal_sem(&espacio_memoria);
+					signal_sem(&largo_plazo);
 					/* log_debug(logger_kernel, "Signal del planificador_largo_plazo (%ld) por proceso suspendido pid <%d>", 
-						planificador_largo_plazo.__align, proceso->pcb->pid); */
-					if(nuevo_proceso_suspendido_ready.__align < 0){
+						planificador_largo_plazo.__align, proceso->pcb->pid); 
+					int valor = 0;
+					sem_getvalue(&nuevo_proceso_suspendido_ready, &valor);
+					//if(nuevo_proceso_suspendido_ready.__align < 0){
+					if(valor < 0){
 						signal_sem(&nuevo_proceso_suspendido_ready);
 						//log_debug(logger_kernel, "Signal nuevo proceso suspendido a ready");
 					}
-					if(planificar.__align < 0){
+					int valorPlani = 0;
+					sem_getvalue(&planificar, &valorPlani);
+					//if(planificar.__align < 0){
+					if(valorPlani < 0){
 						signal_sem(&planificar);
-						if(espacio_memoria.__align < 0 && queue_is_empty(queue_susp_ready)){
+						int valorEM = 0;
+						sem_getvalue(&espacio_memoria, &valorEM);
+						//if(espacio_memoria.__align < 0 && queue_is_empty(queue_susp_ready)){
+						if(valorEM < 0 && queue_is_empty(queue_susp_ready)){
 							signal_sem(&espacio_memoria);
 						}
-					}
+					}*/
 				}
 				else{
 					wait_mutex(&mutex_lista_cpus);
@@ -704,6 +718,7 @@ void crear_proceso(char* instrucciones, int tamanio_proceso){
 	list_add(queue_new, pcb_nuevo);
 	signal_mutex(&mutex_queue_new);
 	signal_sem(&nuevo_proceso);
+	signal_sem(&largo_plazo);
 }
 
 void finalizar_proceso(t_pcb* proceso){
@@ -716,6 +731,7 @@ void finalizar_proceso(t_pcb* proceso){
 		log_metricas_estado(proceso);
 		free(proceso);
 		signal_sem(&espacio_memoria);
+		signal_sem(&largo_plazo);
 		//signal_sem(&planificador_largo_plazo);
 		/* log_debug(logger_kernel, "Signal del planificador_largo_plazo (%ld) por finalizar proceso pid <%d>", 
 			planificador_largo_plazo.__align, proceso->pid); */
