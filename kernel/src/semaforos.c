@@ -20,8 +20,6 @@ pthread_mutex_t desalojando;
 pthread_mutex_t mutex_susp_o_memoria;
 pthread_mutex_t mutex_sem_espacio_memoria;
 pthread_mutex_t comprobar_memoria;
-pthread_mutex_t desalojo_revisado;
-pthread_mutex_t check_desalojo;
 
 pthread_mutex_t mutex_cpu;
 
@@ -30,7 +28,8 @@ pthread_mutex_t mutex_cpu;
 sem_t nuevo_proceso;
 sem_t espacio_memoria;
 sem_t proceso_ready;
-//sem_t check_desalojo;
+sem_t check_desalojo;
+sem_t desalojo_revisado;
 sem_t nuevo_proceso_suspendido_ready;
 sem_t proceso_suspendido_ready;
 
@@ -79,8 +78,6 @@ void iniciar_semaforos(){
     pthread_mutex_init(&mutex_sem_espacio_memoria, NULL);
     pthread_mutex_init(&mutex_susp_o_memoria, NULL);
     pthread_mutex_init(&comprobar_memoria, NULL);
-    pthread_mutex_init(&desalojo_revisado, NULL);
-    pthread_mutex_init(&check_desalojo, NULL);
     
     sem_init(&nuevo_proceso, 0, 0);
     sem_init(&proceso_ready, 0, 0);
@@ -89,7 +86,8 @@ void iniciar_semaforos(){
     sem_init(&cpu_libre, 0, 0);
     sem_init(&dispositivo_libre, 0, 0);
     sem_init(&nuevo_proceso_suspendido_ready, 0, 0);
-    //sem_init(&check_desalojo, 0, 0);
+    sem_init(&check_desalojo, 0, 0);
+    sem_init(&desalojo_revisado, 0, 0);
     sem_init(&planificacion_principal, 0, 0);
     sem_init(&ver_desalojo, 0, 0);
     sem_init(&proceso_suspendido_ready, 0, 0);
@@ -115,12 +113,12 @@ void destruir_semaforos() {
     pthread_mutex_destroy(&mutex_sem_espacio_memoria);
     pthread_mutex_destroy(&mutex_susp_o_memoria);
     pthread_mutex_destroy(&comprobar_memoria);
-    pthread_mutex_destroy(&desalojo_revisado);
-    pthread_mutex_destroy(&check_desalojo);
 
     sem_destroy(&nuevo_proceso);
     sem_destroy(&proceso_ready);
     sem_destroy(&espacio_memoria);
     sem_destroy(&ver_desalojo);
     sem_destroy(&planificar);
+    sem_destroy(&desalojo_revisado);
+    sem_destroy(&check_desalojo);
 };
