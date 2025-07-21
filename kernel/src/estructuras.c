@@ -211,8 +211,8 @@ t_unidad_ejecucion* buscar_por_cpu(t_cpu* cpu_encargada){
 }
 
 void sacar_proceso_ejecucion(t_pcb* proceso){
-    wait_mutex(&mutex_lista_cpus);
-    wait_mutex(&mutex_procesos_ejecutando);
+    //wait_mutex(&mutex_lista_cpus);
+    //wait_mutex(&mutex_procesos_ejecutando);
     for(int i = 0; i<list_size(lista_procesos_ejecutando); i++){
         t_unidad_ejecucion* actual = list_get(lista_procesos_ejecutando, i);
         if(actual->proceso->pid == proceso->pid){
@@ -221,8 +221,8 @@ void sacar_proceso_ejecucion(t_pcb* proceso){
             log_debug(logger_kernel, "Libero cpu <%d> de proceso pid <%d>", actual->cpu->cpu_id, proceso->pid);
         }
     }
-    signal_mutex(&mutex_lista_cpus);
-    signal_mutex(&mutex_procesos_ejecutando);
+    //signal_mutex(&mutex_lista_cpus);
+    //signal_mutex(&mutex_procesos_ejecutando);
     //log_debug(logger_kernel, "----------Espero mutex cpu ");
     signal_sem(&cpu_libre);
     //log_debug(logger_kernel, "Semaforo cpu_libre: %ld", cpu_libre.__align);

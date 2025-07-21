@@ -105,11 +105,11 @@ void* planificar_corto_plazo_SJF_desalojo(void* arg){
         signal_mutex(&mutex_lista_cpus);
         signal_mutex(&mutex_procesos_ejecutando);
         if(esperar_cpu){
-            int valorPP = 0;
-		    sem_getvalue(&check_desalojo, &valorPP);
-            if(valorPP < 0){
+            // int valorPP = 0;
+		    // sem_getvalue(&check_desalojo, &valorPP);
+            // if(valorPP > 0){
                 signal_sem(&check_desalojo);
-            }
+            //}
             wait_sem(&desalojo_revisado);
         }
     }
@@ -169,11 +169,11 @@ void *comprobar_desalojo(void *arg){
             signal_sem(&planificacion_principal);
             signal_mutex(&desalojando);
         }
-        int valorPP = 0;
-		sem_getvalue(&desalojo_revisado, &valorPP);
-        if(valorPP < 0){
+        // int valorPP = 0;
+		// sem_getvalue(&desalojo_revisado, &valorPP);
+        // if(valorPP < 0){
             signal_sem(&desalojo_revisado);
-        }
+        //}
         signal_mutex(&mutex_pcb);
         signal_mutex(&mutex_procesos_ejecutando);
         signal_mutex(&mutex_queue_ready);
@@ -782,7 +782,7 @@ void comprobar_suspendido(t_pcb* proceso){
 }
 
 void comprobar_cola_bloqueados(t_dispositivo_io* dispositivo){
-    wait_mutex(&mutex_queue_block);
+    //wait_mutex(&mutex_queue_block);
     //wait_mutex(&mutex_lista_dispositivos_io);
     //t_queue* cola_io = obtener_cola_io(dispositivo->id);
     char id_dispositivo[12];
@@ -799,6 +799,6 @@ void comprobar_cola_bloqueados(t_dispositivo_io* dispositivo){
         //signal_mutex(&mutex_queue_block);
         log_info(logger_kernel, "## No hay procesos bloqueados en el dispositivo (%s, %d)", dispositivo->nombre, dispositivo->id);
     }
-    signal_mutex(&mutex_queue_block);
+    //signal_mutex(&mutex_queue_block);
     signal_mutex(&mutex_diccionario_io);
 }

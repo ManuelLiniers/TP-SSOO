@@ -96,11 +96,11 @@ void iniciar_semaforos(){
 };
 
 void destruir_semaforos() {
+    pthread_mutex_destroy(&mutex_queue_susp_ready);
     pthread_mutex_destroy(&mutex_queue_new);
     pthread_mutex_destroy(&mutex_queue_ready);
     pthread_mutex_destroy(&mutex_queue_block);
     pthread_mutex_destroy(&mutex_queue_exit);
-    pthread_mutex_destroy(&mutex_queue_susp_ready);
     pthread_mutex_destroy(&mutex_procesos_ejecutando);
     pthread_mutex_destroy(&mutex_lista_dispositivos_io);
     pthread_mutex_destroy(&mutex_cpu);
