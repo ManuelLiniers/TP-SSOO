@@ -219,6 +219,7 @@ void atender_proceso_del_kernel(t_contexto* contexto, t_log* logger) {
             break;
         }
 
+        pthread_mutex_lock(&mutex_interrupt);
         ciclo_de_instruccion_execute(instruccion, contexto, logger, conexion_memoria);
 
         if (hay_interrupcion()) {
@@ -231,11 +232,11 @@ void atender_proceso_del_kernel(t_contexto* contexto, t_log* logger) {
             
             //le avisa al kernel que hubo interrupción, desaloja el proceso y resetea el flag a false para poder seguir escuchando futuras interrupciones
 
-            pthread_mutex_lock(&mutex_interrupt);
             flag_interrupcion = false;
             pthread_mutex_unlock(&mutex_interrupt);
             break;
         }
+        pthread_mutex_unlock(&mutex_interrupt);
 
         if (contexto->program_counter == -1){
             break;
@@ -269,9 +270,9 @@ void* escuchar_interrupt(void* arg) {
 }
 
 bool hay_interrupcion() {
-    pthread_mutex_lock(&mutex_interrupt);
+    //pthread_mutex_lock(&mutex_interrupt);
     bool resultado = flag_interrupcion;  //definida al ppio, es false por defecto, se pone en true cuadndo hay una interrupcion
-    pthread_mutex_unlock(&mutex_interrupt);
+    //pthread_mutex_unlock(&mutex_interrupt);
     return resultado;
 }
 

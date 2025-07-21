@@ -4,8 +4,8 @@ void *planificar_corto_plazo_FIFO(void* arg){
 	while(1){
         wait_sem(&proceso_ready);
         wait_sem(&cpu_libre);
-        wait_mutex(&mutex_lista_cpus);
         wait_mutex(&mutex_queue_ready);
+        wait_mutex(&mutex_lista_cpus);
         wait_mutex(&mutex_procesos_ejecutando);
         if(!list_is_empty(queue_ready)){
             log_debug(logger_kernel, "Busco una CPU libre");
@@ -28,8 +28,8 @@ void* planificar_corto_plazo_SJF(void* arg){
     while(1){
         wait_sem(&proceso_ready);
         wait_sem(&cpu_libre);
-        wait_mutex(&mutex_lista_cpus);
         wait_mutex(&mutex_queue_ready);
+        wait_mutex(&mutex_lista_cpus);
         wait_mutex(&mutex_procesos_ejecutando);
         if(!list_is_empty(queue_ready)){
             list_sort(queue_ready, shortest_job_first);
@@ -49,14 +49,17 @@ void* planificar_corto_plazo_SJF(void* arg){
 }
 
 void* planificar_corto_plazo_SJF_desalojo(void* arg){
+    wait_mutex(&check_desalojo);
+
     pthread_t hilo_comprobar_desalojo;
     pthread_create(&hilo_comprobar_desalojo, NULL, (void*)comprobar_desalojo, NULL);
     pthread_detach(hilo_comprobar_desalojo);
+    
     while(1){
         int esperar_cpu = false;
         wait_sem(&planificacion_principal);
-        wait_mutex(&mutex_lista_cpus); 
         wait_mutex(&mutex_queue_ready);
+        wait_mutex(&mutex_lista_cpus); 
         wait_mutex(&mutex_procesos_ejecutando);
         wait_mutex(&mutex_pcb);
         actualizar_estimaciones();
@@ -65,7 +68,7 @@ void* planificar_corto_plazo_SJF_desalojo(void* arg){
             list_sort(queue_ready, shortest_job_first);
             //signal_mutex(&mutex_queue_ready);
             //mostrar_lista(queue_ready);
-            t_cpu* cpu_encargada = NULL; // Posible memory leak
+            t_cpu* cpu_encargada = NULL;
 
             if(hay_cpu_libre(&cpu_encargada)){
                 //wait_sem(&cpu_libre);
@@ -88,7 +91,7 @@ void* planificar_corto_plazo_SJF_desalojo(void* arg){
                     //signal_mutex(&mutex_queue_ready);
                     poner_en_ejecucion(proceso, cpu_encargada);
                 } else {
-                    signal_sem(&cpu_libre); ///////////////////???????????????
+                    //signal_sem(&cpu_libre); ///////////////////???????????????
                     //signal_sem(&desalojando);
 
                     //###############################
@@ -98,14 +101,12 @@ void* planificar_corto_plazo_SJF_desalojo(void* arg){
                 esperar_cpu = true; //// cambio de posicion
             }
         }
-        else{
-            //signal_sem(&cpu_libre);
-        }
         signal_mutex(&mutex_queue_ready);
         signal_mutex(&mutex_lista_cpus);
         signal_mutex(&mutex_procesos_ejecutando);
         if(esperar_cpu){
-            wait_sem(&cpu_libre);
+            signal_mutex(&check_desalojo);
+            wait_mutex(&desalojo_revisado);
         }
     }
 }
@@ -114,11 +115,11 @@ void *comprobar_desalojo(void *arg){
     bool desalojo_encontrado;
     while(1){
         desalojo_encontrado = false;
-        wait_sem(&check_desalojo);
+        wait_mutex(&check_desalojo);
         wait_mutex(&desalojando);
         log_debug(logger_kernel, "Entro a revisar posible desalojo");
-        wait_mutex(&mutex_procesos_ejecutando);
         wait_mutex(&mutex_queue_ready);
+        wait_mutex(&mutex_procesos_ejecutando);
         wait_mutex(&mutex_pcb);
         list_sort(queue_ready, shortest_job_first);
         if(!list_is_empty(queue_ready)){
@@ -150,18 +151,21 @@ void *comprobar_desalojo(void *arg){
             }
             log_debug(logger_kernel, "Salgo de comprobar procesos a desalojar");
             if(desalojo_encontrado == false){
-                int valorPP = 0;
-				sem_getvalue(&planificacion_principal, &valorPP);
+                //int valorPP = 0;
+				//sem_getvalue(&planificacion_principal, &valorPP);
                 //if(planificacion_principal.__align <= 0){
-                if(valorPP <= 0){
-                    signal_sem(&planificacion_principal);
-                }
+                //if(valorPP <= 0){
+                //signal_sem(&planificacion_principal);
+                //}
                 log_debug(logger_kernel, "No hubo desalojo y signal del proceso ready");
                 signal_mutex(&desalojando);
+                signal_sem(&planificacion_principal);
             }
         } else {
+            signal_sem(&planificacion_principal);
             signal_mutex(&desalojando);
         }
+        signal_mutex(&desalojo_revisado);
         signal_mutex(&mutex_pcb);
         signal_mutex(&mutex_procesos_ejecutando);
         signal_mutex(&mutex_queue_ready);
@@ -311,8 +315,8 @@ void *planificar_largo_plazo_FIFO(void* arg){
                 signal_mutex(&mutex_queue_susp_ready);
 
                 // PONER EN READY
-                wait_mutex(&mutex_lista_cpus);
                 wait_mutex(&mutex_queue_ready);
+                wait_mutex(&mutex_lista_cpus);
                 poner_en_ready(proceso, false);
                 signal_mutex(&mutex_queue_ready);
                 signal_mutex(&mutex_lista_cpus);
@@ -340,8 +344,8 @@ void *planificar_largo_plazo_FIFO(void* arg){
                     signal_mutex(&mutex_queue_new);
 
                     // PONER EN READY
-                    wait_mutex(&mutex_lista_cpus);
                     wait_mutex(&mutex_queue_ready);
+                    wait_mutex(&mutex_lista_cpus);
                     poner_en_ready(proceso, false);
                     signal_mutex(&mutex_queue_ready);
                     signal_mutex(&mutex_lista_cpus);
@@ -393,8 +397,8 @@ void *planificar_largo_plazo_PMCP(void* arg){
             t_pcb* proceso = queue_peek(queue_susp_ready);
             if(vuelta_swap(proceso)){
                 queue_pop(queue_susp_ready);
-                wait_mutex(&mutex_lista_cpus);
                 wait_mutex(&mutex_queue_ready);
+                wait_mutex(&mutex_lista_cpus);
                 poner_en_ready(proceso, false);
                 signal_mutex(&mutex_lista_cpus);
                 signal_mutex(&mutex_queue_ready);
@@ -411,6 +415,8 @@ void *planificar_largo_plazo_PMCP(void* arg){
         else{
             signal_mutex(&mutex_queue_susp_ready);
             wait_mutex(&mutex_queue_new);
+            wait_mutex(&mutex_queue_ready);
+            wait_mutex(&mutex_lista_cpus);
             log_debug(logger_kernel, "Compruebo new por espacio memoria");
             bool esperar = false;
             if(!list_is_empty(queue_new)){
@@ -418,16 +424,14 @@ void *planificar_largo_plazo_PMCP(void* arg){
                 t_pcb *proceso = list_get(queue_new, 0);
                 if(espacio_en_memoria(proceso)){
                     list_remove_element(queue_new, proceso);
-                    wait_mutex(&mutex_lista_cpus);
-                    wait_mutex(&mutex_queue_ready);
                     poner_en_ready(proceso, false);
-                    signal_mutex(&mutex_queue_ready);
-                    signal_mutex(&mutex_lista_cpus);
                 } else {
                     esperar = true;
                 }
                 
             }
+            signal_mutex(&mutex_queue_ready);
+            signal_mutex(&mutex_lista_cpus);
             signal_mutex(&mutex_queue_new);
             if(esperar){
                 signal_mutex(&comprobar_memoria);
@@ -591,8 +595,10 @@ void *comprobar_procesos_nuevos(void* arg){
     while(1){
         wait_sem(&nuevo_proceso);
         log_debug(logger_kernel, "Entro a comprobar procesos nuevos");
-        wait_mutex(&mutex_queue_new);
         wait_mutex(&mutex_queue_susp_ready);
+        wait_mutex(&mutex_queue_new);
+        wait_mutex(&mutex_queue_ready);
+        wait_mutex(&mutex_lista_cpus);
         log_debug(logger_kernel, "Veo los procesos nuevos");
         if(!list_is_empty(queue_new)){
             list_sort(queue_new, proceso_es_mas_chico);
@@ -600,11 +606,7 @@ void *comprobar_procesos_nuevos(void* arg){
             if(queue_is_empty(queue_susp_ready)){
                 if(espacio_en_memoria(proceso)){
                     list_remove_element(queue_new, proceso);
-                    wait_mutex(&mutex_lista_cpus);
-                    wait_mutex(&mutex_queue_ready);
                     poner_en_ready(proceso, false);
-                    signal_mutex(&mutex_queue_ready);
-                    signal_mutex(&mutex_lista_cpus);
                 }
             } 
             else {
@@ -613,6 +615,8 @@ void *comprobar_procesos_nuevos(void* arg){
             }
         }
         signal_mutex(&mutex_queue_new);
+        signal_mutex(&mutex_queue_ready);
+        signal_mutex(&mutex_lista_cpus);
         signal_mutex(&mutex_queue_susp_ready);
         
     }
@@ -677,17 +681,17 @@ void poner_en_ready(t_pcb* proceso, bool interrumpido){
     mostrar_lista(queue_ready);
     signal_sem(&proceso_ready);
     
-    t_cpu* cpu;
+    //t_cpu* cpu;
     if(strcmp(algoritmo_corto_plazo, "SRT") == 0){
         if(!interrumpido){
-            if(hay_cpu_libre(&cpu)){
-                log_debug(logger_kernel, "Signal del planificacion principal por proceso (<%d>)", proceso->pid);
-                signal_sem(&planificacion_principal);
-            } else{
-                log_debug(logger_kernel, "Signal del check desalojo, por proceso (<%d>)", proceso->pid);
-                signal_sem(&planificacion_principal);
-                signal_sem(&check_desalojo);
-            }
+            // if(hay_cpu_libre(&cpu)){
+            //     log_debug(logger_kernel, "Signal del planificacion principal por proceso (<%d>)", proceso->pid);
+            //     //signal_sem(&planificacion_principal);
+            // } else{
+            //     log_debug(logger_kernel, "Signal del check desalojo, por proceso (<%d>)", proceso->pid);
+            //     //signal_sem(&check_desalojo);
+            // }
+            signal_sem(&planificacion_principal);
         }
     }
 }
@@ -775,16 +779,16 @@ void comprobar_cola_bloqueados(t_dispositivo_io* dispositivo){
     sprintf(id_dispositivo, "%d", dispositivo->id);
     wait_mutex(&mutex_diccionario_io);
     t_queue* cola_io = dictionary_get(diccionario_dispositivos_io, id_dispositivo);
-    signal_mutex(&mutex_diccionario_io);
     if(!queue_is_empty(cola_io)){
         tiempo_en_io *proceso = queue_peek(cola_io);
-        signal_mutex(&mutex_queue_block);
 
 
         enviar_proceso_a_io(proceso->pcb, dispositivo, proceso->tiempo);
     }
     else{
-        signal_mutex(&mutex_queue_block);
+        //signal_mutex(&mutex_queue_block);
         log_info(logger_kernel, "## No hay procesos bloqueados en el dispositivo (%s, %d)", dispositivo->nombre, dispositivo->id);
     }
+    signal_mutex(&mutex_queue_block);
+    signal_mutex(&mutex_diccionario_io);
 }
