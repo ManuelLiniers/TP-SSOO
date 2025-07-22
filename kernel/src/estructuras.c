@@ -288,10 +288,10 @@ bool no_fue_desalojado(t_pcb* proceso){
 }
 
 void calcular_estimacion(t_pcb* proceso){
-    wait_mutex(&mutex_pcb);
+    //wait_mutex(&mutex_pcb);
     proceso->estimacion_actual = temporal_gettime(proceso->rafaga_real) * estimador_alfa + proceso->estimacion_anterior * (1-estimador_alfa);
     proceso->estimacion_anterior = proceso->estimacion_actual;
-    signal_mutex(&mutex_pcb);
+    //signal_mutex(&mutex_pcb);
 }
 
 char* estado_to_string(t_estado estado){

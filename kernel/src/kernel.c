@@ -199,6 +199,7 @@ void* esperar_dispatch(void* arg){
 				wait_mutex(&mutex_queue_ready);
 				wait_mutex(&mutex_lista_cpus);
 				wait_mutex(&mutex_procesos_ejecutando);
+				wait_mutex(&mutex_pcb);
 				log_debug(logger_kernel, "Estado durante el checkeo<%d>: ignorar_interrupcion = %d, motivo_interrupcion = %d",cpu_encargada->cpu_id, ignorar_interrupcion, motivo_interrupcion);
 				if(!ignorar_interrupcion || motivo_interrupcion == 1 || motivo_interrupcion == 2 || motivo_interrupcion == 3){
 					for(int i = 0; i<list_size(lista_procesos_ejecutando); i++){
@@ -255,6 +256,7 @@ void* esperar_dispatch(void* arg){
                 poner_en_ejecucion(proceso_a_ejecutar->proceso, cpu_encargada);
 				proceso_a_ejecutar->tiempo_ejecutando = temporal_create();
 				cambiar_estado(proceso_a_ejecutar->proceso, EXEC);
+				signal_mutex(&mutex_pcb);
 				signal_mutex(&mutex_queue_ready);
 				signal_mutex(&mutex_lista_cpus);
 				signal_mutex(&mutex_procesos_ejecutando);
@@ -314,6 +316,7 @@ void* esperar_dispatch(void* arg){
 				wait_mutex(&mutex_lista_cpus);
 				wait_mutex(&mutex_procesos_ejecutando);
 				wait_mutex(&mutex_lista_dispositivos_io);
+				wait_mutex(&mutex_pcb);
 
  				if(strcmp(algoritmo_corto_plazo,"SRT") == 0){
 					for(int i = 0; i<list_size(lista_procesos_ejecutando); i++){
@@ -372,6 +375,7 @@ void* esperar_dispatch(void* arg){
                 
 
 				log_debug(logger_kernel, "Creo hilo para comprobar suspendido");
+				signal_mutex(&mutex_pcb);
 				signal_mutex(&mutex_lista_cpus);
 				signal_mutex(&mutex_procesos_ejecutando);
 				signal_mutex(&mutex_lista_dispositivos_io);
@@ -394,6 +398,7 @@ void* esperar_dispatch(void* arg){
 				wait_mutex(&mutex_queue_new);
 				wait_mutex(&mutex_lista_cpus);
 				wait_mutex(&mutex_procesos_ejecutando);
+				wait_mutex(&mutex_pcb);
 				if(strcmp(algoritmo_corto_plazo,"SRT") == 0){
 					for(int i = 0; i<list_size(lista_procesos_ejecutando); i++){
 						t_unidad_ejecucion* unidad = (t_unidad_ejecucion*) list_get(lista_procesos_ejecutando, i);
@@ -419,6 +424,7 @@ void* esperar_dispatch(void* arg){
 				
 				crear_proceso(archivo, tamanio_proceso);
 
+				signal_mutex(&mutex_pcb);
 				signal_mutex(&mutex_queue_new);
 				signal_mutex(&mutex_lista_cpus);
 				signal_mutex(&mutex_procesos_ejecutando);
@@ -645,6 +651,7 @@ void* escuchar_socket_io(void* arg){
 				wait_mutex(&mutex_queue_block);
 				wait_mutex(&mutex_lista_cpus);
 				wait_mutex(&mutex_lista_dispositivos_io);
+				wait_mutex(&mutex_pcb);
 
 				t_queue* cola = obtener_cola_io(dispositivo->id);
 				if(cola == NULL){
@@ -698,6 +705,7 @@ void* escuchar_socket_io(void* arg){
 				
 				log_info(logger_kernel, "## %d finalizó IO", proceso->pcb->pid);
 				
+				signal_mutex(&mutex_pcb);
 				signal_mutex(&mutex_queue_ready);
 				signal_mutex(&mutex_lista_cpus);
 				signal_mutex(&mutex_queue_susp_ready);
@@ -710,8 +718,10 @@ void* escuchar_socket_io(void* arg){
 				log_debug(logger_kernel, "[Dispositivo %s IO Desconectado]", dispositivo->nombre);
 				wait_mutex(&mutex_queue_block);
 				wait_mutex(&mutex_lista_dispositivos_io);
+				wait_mutex(&mutex_pcb);
 				queue_clean_and_destroy_elements(obtener_cola_io(dispositivo->id), finalizar_proceso_io);
 				list_remove_element(lista_dispositivos_io, dispositivo);
+				signal_mutex(&mutex_pcb);
 				signal_mutex(&mutex_lista_dispositivos_io);
 				signal_mutex(&mutex_queue_block);
 				pthread_exit(NULL);
