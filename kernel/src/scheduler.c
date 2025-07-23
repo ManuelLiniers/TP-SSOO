@@ -811,8 +811,8 @@ void comprobar_cola_bloqueados(t_dispositivo_io* dispositivo){
     //t_queue* cola_io = obtener_esperando_io(dispositivo->id);
     //char id_dispositivo[12];
     //sprintf(id_dispositivo, "%d", dispositivo->id);
-    wait_mutex(&mutex_diccionario_esperando_io);
-    wait_mutex(&mutex_diccionario_ejecutando_io);
+    //wait_mutex(&mutex_diccionario_esperando_io);
+    //wait_mutex(&mutex_diccionario_ejecutando_io);
     t_queue* cola_io = obtener_esperando_io(dispositivo->nombre);
     if(!queue_is_empty(cola_io)){
         tiempo_en_io* proceso = queue_pop(cola_io);
@@ -825,6 +825,6 @@ void comprobar_cola_bloqueados(t_dispositivo_io* dispositivo){
         dispositivo->esta_libre = true;
     }
     //signal_mutex(&mutex_queue_block);
-    signal_mutex(&mutex_diccionario_esperando_io);
-    signal_mutex(&mutex_diccionario_ejecutando_io);
+    //signal_mutex(&mutex_diccionario_esperando_io);
+    //signal_mutex(&mutex_diccionario_ejecutando_io);
 }

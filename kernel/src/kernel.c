@@ -357,16 +357,16 @@ void* esperar_dispatch(void* arg){
 					dispositivo->esta_libre = false;
 				} else {
 					dispositivo = buscar_io(nombre_io);
+                	if(dispositivo == NULL){
+                    	log_info(logger_kernel, "No se encontro la IO: %s", nombre_io);
+						finalizar_proceso(proceso);
+                    	break;
+                	} else {
+						t_queue* cola_io = obtener_esperando_io(nombre_io);
+						queue_push(cola_io, proceso_bloqueado);
+					}
 				}
 				
-                if(dispositivo == NULL){
-                    log_info(logger_kernel, "No se encontro la IO: %s", nombre_io);
-					finalizar_proceso(proceso);
-                    break;
-                } else {
-					t_queue* cola_io = obtener_esperando_io(nombre_io);
-					queue_push(cola_io, proceso_bloqueado);
-				}
 
 				//log_info(logger_kernel, "Cola de IO: (%s, %d) - Cantidad de procesos en cola: %d",
 				//dispositivo->nombre, dispositivo->id, queue_size(obtener_esperando_io(dispositivo->id)));
@@ -662,58 +662,44 @@ void* escuchar_socket_io(void* arg){
 				wait_mutex(&mutex_lista_cpus);
 				wait_mutex(&mutex_lista_dispositivos_io);
 				wait_mutex(&mutex_pcb);
+				wait_mutex(&mutex_diccionario_ejecutando_io);
+				wait_mutex(&mutex_diccionario_esperando_io);
 
 				//log_debug(logger_kernel, "Cantidad de procesos en IO (%s, %d): %d",dispositivo->nombre, dispositivo->id, queue_size(cola));
 				tiempo_en_io* proceso = buscar_proceso_en_io(dispositivo->nombre, pid); // necesitamos el pid del proceso para poder buscarlo en la lista
 				
 				if(proceso == NULL){
 					log_debug(logger_kernel, "No se encontro el proceso en io pid <%d>", pid);
-				}
-				// poner un mutex que verifique io de cada proceso?
-				if(proceso->pcb->estado == SUSP_BLOCKED){
-					cambiar_estado(proceso->pcb, SUSP_READY);
-					queue_push(queue_susp_ready, proceso->pcb);
-					log_debug(logger_kernel, "Cantidad de procesos en susp ready: %d", queue_size(queue_susp_ready));
-					signal_sem(&proceso_suspendido_ready);
-					log_debug(logger_kernel, "Signal semaforo proceso susp ready: %ld", proceso_suspendido_ready.__align);
-					signal_sem(&nuevo_proceso);
-					signal_sem(&nuevo_proceso_suspendido_ready);
-					signal_sem(&espacio_memoria);
-					signal_sem(&largo_plazo);
-					/* log_debug(logger_kernel, "Signal del planificador_largo_plazo (%ld) por proceso suspendido pid <%d>", 
-						planificador_largo_plazo.__align, proceso->pcb->pid); 
-					int valor = 0;
-					sem_getvalue(&nuevo_proceso_suspendido_ready, &valor);
-					//if(nuevo_proceso_suspendido_ready.__align < 0){
-					if(valor < 0){
+				} else {
+					// poner un mutex que verifique io de cada proceso?
+					if(proceso->pcb->estado == SUSP_BLOCKED){
+						cambiar_estado(proceso->pcb, SUSP_READY);
+						queue_push(queue_susp_ready, proceso->pcb);
+						log_debug(logger_kernel, "Cantidad de procesos en susp ready: %d", queue_size(queue_susp_ready));
+						signal_sem(&proceso_suspendido_ready);
+						log_debug(logger_kernel, "Signal semaforo proceso susp ready: %ld", proceso_suspendido_ready.__align);
+						signal_sem(&nuevo_proceso);
 						signal_sem(&nuevo_proceso_suspendido_ready);
-						//log_debug(logger_kernel, "Signal nuevo proceso suspendido a ready");
+						signal_sem(&espacio_memoria);
+						signal_sem(&largo_plazo);
 					}
-					int valorPlani = 0;
-					sem_getvalue(&planificar, &valorPlani);
-					//if(planificar.__align < 0){
-					if(valorPlani < 0){
-						signal_sem(&planificar);
-						int valorEM = 0;
-						sem_getvalue(&espacio_memoria, &valorEM);
-						//if(espacio_memoria.__align < 0 && queue_is_empty(queue_susp_ready)){
-						if(valorEM < 0 && queue_is_empty(queue_susp_ready)){
-							signal_sem(&espacio_memoria);
-						}
-					}*/
-				}
-				else{
-					poner_en_ready(proceso->pcb, false);
+					else{
+						poner_en_ready(proceso->pcb, false);
 
-					//if(strcmp(algoritmo_corto_plazo, "SRT") != 0){
-        			signal_sem(&planificacion_principal);
-    				//}
+						//if(strcmp(algoritmo_corto_plazo, "SRT") != 0){
+        				signal_sem(&planificacion_principal);
+    					//}
+					}
+					comprobar_cola_bloqueados(dispositivo);
+					
+					log_info(logger_kernel, "## %d finalizó IO", proceso->pcb->pid);
+					
+					free(proceso);
 				}
 
-				comprobar_cola_bloqueados(dispositivo);
 				
-				log_info(logger_kernel, "## %d finalizó IO", proceso->pcb->pid);
-				
+				signal_mutex(&mutex_diccionario_esperando_io);
+				signal_mutex(&mutex_diccionario_ejecutando_io);
 				signal_mutex(&mutex_pcb);
 				signal_mutex(&mutex_queue_ready);
 				signal_mutex(&mutex_lista_cpus);
@@ -721,7 +707,6 @@ void* escuchar_socket_io(void* arg){
 				signal_mutex(&mutex_lista_dispositivos_io);
 				signal_mutex(&mutex_queue_block);
 
-				free(proceso);
 				break;
 			case -1:
 				log_debug(logger_kernel, "[Dispositivo %s IO Desconectado]", dispositivo->nombre);

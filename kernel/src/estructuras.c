@@ -218,9 +218,8 @@ tiempo_en_io* buscar_proceso_en_io(char* nombre_dispositivo, int pidABuscar){
         tiempo_en_io* proceso_io = list_get(lista, i);
         if(proceso_io == NULL){
             log_debug(logger_kernel, "No se encontro el proceso en io pid <%d>", pidABuscar);
-        }
-        if(proceso_io->pcb->pid == pidABuscar){
-            return proceso_io;
+        } else if(proceso_io->pcb->pid == pidABuscar){
+            return list_remove(lista, i);
         }
     }
     return NULL;
