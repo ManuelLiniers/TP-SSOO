@@ -86,6 +86,10 @@ int main(int argc, char* argv[]) {
     //espero PCBs del Kernel por dispatch
     while (1) {
         log_debug(logger, "Esperando op_code desde Kernel...");
+    
+        pthread_mutex_lock(&mutex_interrupt);
+        flag_interrupcion = false;
+        pthread_mutex_unlock(&mutex_interrupt);
 
         op_code cod_op;
         if (recv(conexion_kernel_dispatch, &cod_op, sizeof(op_code), MSG_WAITALL) <= 0) {

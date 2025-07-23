@@ -235,12 +235,14 @@ void* esperar_dispatch(void* arg){
 				 			log_error(logger_kernel, "ERROR: el proceso a ejecutar es NULL");
 						}
 					}
+					send(cpu_encargada->socket_dispatch, &respuesta, sizeof(int), 0);
 				} else {
 					t_unidad_ejecucion* unidadASacar = NULL;
 					for(int i = 0; i<list_size(lista_procesos_ejecutando); i++){
 						t_unidad_ejecucion* unidad = (t_unidad_ejecucion*) list_get(lista_procesos_ejecutando, i);
 						if(unidad->cpu->cpu_id == cpu_encargada->cpu_id){
 							if(unidad->interrumpido == INTERRUMPIDO){
+								unidad->interrumpido = EJECUTANDO;
 								proceso_a_ejecutar = unidad;
 							}
 							else if(unidad->interrumpido == AEJECUTAR){
@@ -248,10 +250,11 @@ void* esperar_dispatch(void* arg){
 							}
 						}
 					}
+					send(cpu_encargada->socket_dispatch, &respuesta, sizeof(int), 0);
 					poner_en_ready(unidadASacar->proceso, false);
 					list_remove_element(lista_procesos_ejecutando, unidadASacar);
 				}
-				send(cpu_encargada->socket_dispatch, &respuesta, sizeof(int), 0);
+				//send(cpu_encargada->socket_dispatch, &respuesta, sizeof(int), 0);
 				//cpu_encargada->esta_libre = 0;
                 poner_en_ejecucion(proceso_a_ejecutar->proceso, cpu_encargada);
 				proceso_a_ejecutar->tiempo_ejecutando = temporal_create();
@@ -308,8 +311,7 @@ void* esperar_dispatch(void* arg){
 
 				if(proceso == NULL){
 					log_debug(logger_kernel, "Proceso nulo al enviar a IO");
-				}
-				else{}
+				} else {
                 tiempo_en_io* proceso_bloqueado = malloc(sizeof(tiempo_en_io));
                 proceso_bloqueado->pcb = proceso;
                 proceso_bloqueado->tiempo = io_tiempo;
@@ -388,6 +390,7 @@ void* esperar_dispatch(void* arg){
                 pthread_create(&comprobacion_suspendido, NULL, (void*) comprobar_suspendido, proceso);
 				signal_mutex(&mutex_creacion_hilos);
                 pthread_detach(comprobacion_suspendido);
+				}
 
                 break;
 
@@ -401,6 +404,7 @@ void* esperar_dispatch(void* arg){
 				wait_mutex(&mutex_lista_cpus);
 				wait_mutex(&mutex_procesos_ejecutando);
 				wait_mutex(&mutex_pcb);
+
 				if(strcmp(algoritmo_corto_plazo,"SRT") == 0){
 					for(int i = 0; i<list_size(lista_procesos_ejecutando); i++){
 						t_unidad_ejecucion* unidad = (t_unidad_ejecucion*) list_get(lista_procesos_ejecutando, i);
@@ -440,12 +444,6 @@ void* esperar_dispatch(void* arg){
 				wait_mutex(&mutex_procesos_ejecutando);
 				wait_mutex(&mutex_pcb);
 
-                sacar_proceso_ejecucion(proceso);
-				send(cpu_encargada->socket_dispatch, &respuesta, sizeof(int), 0);
-				cambiar_estado(proceso, BLOCKED);
-                bool resultado_dump = paquete_memoria_pid(proceso, DUMP_MEMORY); 
-
-				
 				if(strcmp(algoritmo_corto_plazo,"SRT") == 0){
 					for(int i = 0; i<list_size(lista_procesos_ejecutando); i++){
 						t_unidad_ejecucion* unidad = (t_unidad_ejecucion*) list_get(lista_procesos_ejecutando, i);
@@ -457,6 +455,13 @@ void* esperar_dispatch(void* arg){
 						}
 					}
 				}
+
+
+                sacar_proceso_ejecucion(proceso);
+				send(cpu_encargada->socket_dispatch, &respuesta, sizeof(int), 0);
+				cambiar_estado(proceso, BLOCKED);
+                bool resultado_dump = paquete_memoria_pid(proceso, DUMP_MEMORY); 
+				
 				
                 if(resultado_dump){
                     poner_en_ready(proceso, false);
