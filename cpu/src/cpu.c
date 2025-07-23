@@ -21,15 +21,12 @@ int main(int argc, char* argv[]) {
 
 
     cpu_config = crear_config(logger, "cpu.config");
-    char* ruta_config = malloc(sizeof(argv[1])+sizeof("cpu")+sizeof(argv[2]));
-    //char* ruta_config = malloc(sizeof(argv[1])+sizeof("cpu")+sizeof("_largo_plazo.config"));
+    char* ruta_config = malloc(sizeof(argv[1])+sizeof("cpu")+strlen(argv[2])+1);
     strcpy(ruta_config, "cpu");
     strcat(ruta_config, argv[1]);
-    //strcat(ruta_config, "_corto_plazo.config");
     strcat(ruta_config, argv[2]);
-    //strcat(ruta_config, "_largo_plazo.config");
     pruebas_config = crear_config(logger,ruta_config);
-    //free(ruta_config);
+    free(ruta_config);
 
 
     TAMANIO_PAGINA = config_get_int_value(pruebas_config, "TAMANIO_PAGINA");
@@ -47,12 +44,6 @@ int main(int argc, char* argv[]) {
     //ENTRADAS_CACHE = config_get_int_value(cpu_config, "ENTRADAS_CACHE");
         
     pthread_mutex_init(&mutex_interrupt, NULL);  
-        /*  typedef union
-    {
-    struct __pthread_mutex_s __data;
-    char __size[__SIZEOF_PTHREAD_MUTEX_T];
-    long int __align;
-    } pthread_mutex_t;   */
 
 
     char* ip_memoria = config_get_string_value(cpu_config, "IP_MEMORIA");
@@ -126,32 +117,8 @@ t_buffer* recibir_buffer_contexto(int socket) {
 t_contexto* deserializar_contexto(t_buffer* buffer) {
     t_contexto* contexto = malloc(sizeof(t_contexto));
 
-    /*int offset = 0;
-    memcpy(&(contexto->pid), buffer->stream + offset, sizeof(uint32_t));
-    offset += sizeof(uint32_t);
-
-    memcpy(&(contexto->program_counter), buffer->stream + offset, sizeof(uint32_t));
-    offset += sizeof(uint32_t);
-
-    memcpy(&(contexto->AX), buffer->stream + offset, sizeof(uint32_t));
-    offset += sizeof(uint32_t);
-
-    memcpy(&(contexto->BX), buffer->stream + offset, sizeof(uint32_t));
-    offset += sizeof(uint32_t);
-
-    memcpy(&(contexto->CX), buffer->stream + offset, sizeof(uint32_t));
-    offset += sizeof(uint32_t);
-
-    memcpy(&(contexto->DX), buffer->stream + offset, sizeof(uint32_t));
-    offset += sizeof(uint32_t);*/
-
     contexto->pid = recibir_int_del_buffer(buffer);
     contexto->program_counter = recibir_int_del_buffer(buffer);
-    /* Iria de esta manera pero KERNEL no manda los registros
-    contexto->AX = recibir_int_del_buffer(buffer);
-    contexto->BX = recibir_int_del_buffer(buffer);
-    contexto->CX = recibir_int_del_buffer(buffer);
-    contexto->DX = recibir_int_del_buffer(buffer);*/
 
     return contexto;
 }
@@ -164,28 +131,11 @@ t_log* crear_log(){
 }
 
 t_config* crear_config(t_log* logger, char* archivo){
-    // char* resultado = malloc(sizeof("/home/utnso/tp-2025-1c-queCompileALaPrimera/cpu/")+sizeof(archivo)+1);
-    // strcpy(resultado, "/home/utnso/tp-2025-1c-queCompileALaPrimera/cpu/");
-    // strcpy(resultado, archivo);
-    // //resultado = strcat("/home/utnso/tp-2025-1c-queCompileALaPrimera/cpu/",archivo);
-    // t_config* cpu_config = config_create(resultado);
-    // if(cpu_config == NULL){
-    //     log_error(logger, "error con el config del cpu");
-    //     abort();
-    // }
-    // free(resultado);
-    char* base_path = "/home/utnso/tp-2025-1c-queCompileALaPrimera/cpu/";
-	char* resultado = malloc(strlen(base_path) + strlen(archivo) + 1);
-	strcpy(resultado, base_path);
-	strcat(resultado, archivo);
-
-	t_config* config_pruebas = config_create(resultado);
+	t_config* config_pruebas = config_create(archivo);
 	if (config_pruebas == NULL) {
-    	//log_error(logger, "config_kernel es NULL");
-    	printf("Error al crear config");
-        exit(EXIT_FAILURE);
+    	log_error(logger, "config_cpu es NULL");
+    	exit(EXIT_FAILURE);
 	}	
-	free(resultado);
     return config_pruebas;
 }
 

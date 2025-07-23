@@ -12,7 +12,7 @@
       "type": "cppdbg",
       "request": "launch",
       "program": "${workspaceFolder}/bin/${workspaceFolderBasename}",
-      "args": ["ESTABILIDAD_GENERAL","0","estabilidad_general.config"],
+      "args": ["MEMORIA_IO","90","memoria_swap.config"],
       "stopAtEntry": false,
       "cwd": "${workspaceFolder}",
       "environment": [],
