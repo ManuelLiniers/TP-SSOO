@@ -19,7 +19,8 @@ t_list* queue_block;
 t_queue* queue_susp_ready;
 t_queue* queue_exit;
 
-t_dictionary* diccionario_dispositivos_io;
+t_dictionary* diccionario_esperando_io;
+t_dictionary* diccionario_ejecutando_io;
 
 void agregar_a_lista(void* cola_ready, t_pcb* proceso){
     list_add( (t_list*) cola_ready, proceso); 
@@ -36,7 +37,6 @@ void scheduler_init(void) {
     queue_susp_ready = queue_create();
     queue_exit = queue_create();
     lista_procesos_ejecutando = list_create();
-
 }
 
 void scheduler_destroy(void) {
@@ -48,7 +48,8 @@ void scheduler_destroy(void) {
 
 void iniciar_dispositivos_io(){
     lista_dispositivos_io = list_create();
-    diccionario_dispositivos_io = dictionary_create();
+    diccionario_esperando_io = dictionary_create();
+    diccionario_ejecutando_io = dictionary_create();
 }
 
 void iniciar_cpus(){
@@ -147,8 +148,8 @@ t_dispositivo_io* buscar_io(char* nombre_io){
 t_dispositivo_io* buscar_io_libre(char* nombre_io){
     log_debug(logger_kernel, "Dispositivo a buscar: %s", nombre_io);
     for(int i = 0; i<list_size(lista_dispositivos_io); i++){
-        t_dispositivo_io* actual =list_get(lista_dispositivos_io, i);
-        if(strcmp(nombre_io, actual->nombre) == 0 && queue_is_empty(obtener_cola_io(actual->id))){
+        t_dispositivo_io* actual = list_get(lista_dispositivos_io, i);
+        if(strcmp(nombre_io, actual->nombre) == 0 && actual->esta_libre){
             log_debug(logger_kernel, "IO Encontrada");
             return actual;
         }
@@ -157,16 +158,16 @@ t_dispositivo_io* buscar_io_libre(char* nombre_io){
     return NULL;
 }
 
-t_dispositivo_io* buscar_io_menos_ocupada(char* nombre_io){
+/* t_dispositivo_io* buscar_io_menos_ocupada(char* nombre_io){
     t_dispositivo_io* dispositivo = buscar_io(nombre_io);
     for(int i=0; i<list_size(lista_dispositivos_io); i++){
         t_dispositivo_io* siguiente = (t_dispositivo_io*) list_get(lista_dispositivos_io, i);
-        if(strcmp(siguiente->nombre, nombre_io) == 0 && queue_size(obtener_cola_io(siguiente->id)) < queue_size(obtener_cola_io(dispositivo->id))){
+        if(strcmp(siguiente->nombre, nombre_io) == 0 && queue_size(obtener_esperando_io(siguiente->nombre)) < queue_size(obtener_cola_io(dispositivo->nombre))){
             dispositivo = siguiente;
         }
     }
     return dispositivo;
-}
+} */
 
 t_cpu* buscar_cpu_libre(t_list* lista_cpus){
     for(int i = 0; i<list_size(lista_cpus); i++){
@@ -205,6 +206,21 @@ t_unidad_ejecucion* buscar_por_cpu(t_cpu* cpu_encargada){
         t_unidad_ejecucion* actual = list_get(lista_procesos_ejecutando, i);
         if(actual->cpu->cpu_id == cpu_encargada->cpu_id){
             return actual;
+        }
+    }
+    return NULL;
+}
+
+tiempo_en_io* buscar_proceso_en_io(char* nombre_dispositivo, int pidABuscar){
+    t_list* lista = obtener_ejecutando_io(nombre_dispositivo);
+    
+    for(int i=0; i<list_size(lista); i++){
+        tiempo_en_io* proceso_io = list_get(lista, i);
+        if(proceso_io == NULL){
+            log_debug(logger_kernel, "No se encontro el proceso en io pid <%d>", pidABuscar);
+        }
+        if(proceso_io->pcb->pid == pidABuscar){
+            return proceso_io;
         }
     }
     return NULL;
@@ -358,10 +374,12 @@ long calcular_rafaga(t_list* estados_exec){
     return tiempo_total;
 }
 
-t_queue* obtener_cola_io(int io_id){
-    char id_dispositivo[12];
-    sprintf(id_dispositivo, "%d", io_id);
-    return dictionary_get(diccionario_dispositivos_io, id_dispositivo);
+t_queue* obtener_esperando_io(char* nombre_dispositivo){
+    return dictionary_get(diccionario_esperando_io, nombre_dispositivo);
+}
+
+t_list* obtener_ejecutando_io(char* nombre_dispositivo){
+    return dictionary_get(diccionario_ejecutando_io, nombre_dispositivo);
 }
 
 void mostrar_cola(t_queue** cola){

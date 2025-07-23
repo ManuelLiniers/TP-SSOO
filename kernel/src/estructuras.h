@@ -35,7 +35,8 @@ extern t_list* queue_ready;
 extern t_list* queue_block;
 extern t_queue* queue_susp_ready;
 extern t_queue* queue_exit;
-extern t_dictionary* diccionario_dispositivos_io;
+extern t_dictionary* diccionario_esperando_io;
+extern t_dictionary* diccionario_ejecutando_io;
 
 typedef struct{
     t_estado estado;
@@ -50,8 +51,6 @@ typedef struct{
     bool esta_libre;
 } t_cpu;
 
-t_cpu* buscar_cpu_libre(t_list* lista_cpus);
-void mostrar_cpu(t_cpu* cpu);
 
 
 // Control Block de un proceso
@@ -69,12 +68,25 @@ typedef struct {
     // Más campos opcionales: tamaño de memoria, registros, métricas, etc.
 } t_pcb;
 
+typedef struct{
+    char* nombre;
+    int id;
+    int socket;
+    bool esta_libre;
+} t_dispositivo_io;
+typedef struct{
+    t_pcb *pcb;
+    int tiempo;
+} tiempo_en_io;
 typedef struct {
     t_pcb* proceso;
     t_cpu* cpu;
     t_temporal* tiempo_ejecutando;
     t_estado_ejecucion interrumpido;
 } t_unidad_ejecucion;
+
+t_cpu* buscar_cpu_libre(t_list* lista_cpus);
+void mostrar_cpu(t_cpu* cpu);
 
 t_pcb* buscar_proceso_pid(uint32_t pid);
 t_unidad_ejecucion* buscar_por_cpu(t_cpu* cpu_encargada);
@@ -111,21 +123,14 @@ t_pcb* pcb_create();
  */
 void pcb_destroy(void* pcb_void);
 
-typedef struct{
-    char* nombre;
-    int id;
-    int socket;
-} t_dispositivo_io;
 
 t_dispositivo_io* buscar_io(char* nombre_io);
 t_dispositivo_io* buscar_io_libre(char* nombre_io);
-t_dispositivo_io* buscar_io_menos_ocupada(char* nombre_io);
-t_queue* obtener_cola_io(int io_id);
+//t_dispositivo_io* buscar_io_menos_ocupada(char* nombre_io);
+t_queue* obtener_esperando_io(char* nombre_dispositivo);
+t_list* obtener_ejecutando_io(char* nombre_dispositivo);
+tiempo_en_io* buscar_proceso_en_io(char* nombre_dispositivo, int pid);
 void mostrar_cola_io(t_queue** cola);
 
-typedef struct{
-    t_pcb *pcb;
-    int tiempo;
-} tiempo_en_io;
 
 #endif // PCB_H_

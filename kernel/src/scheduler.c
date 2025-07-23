@@ -62,11 +62,13 @@ void* planificar_corto_plazo_SJF_desalojo(void* arg){
     while(1){
         int esperar_cpu = false;
         wait_sem(&planificacion_principal);
+        wait_sem(&cpu_libre);
         wait_mutex(&mutex_queue_ready);
         wait_mutex(&mutex_lista_cpus); 
         wait_mutex(&mutex_procesos_ejecutando);
         wait_mutex(&mutex_pcb);
         actualizar_estimaciones();
+        log_debug(logger_kernel, "entro a revisar planificacion principal");
         if(!list_is_empty(queue_ready)){
             list_sort(queue_ready, shortest_job_first);
             //signal_mutex(&mutex_queue_ready);
@@ -103,6 +105,9 @@ void* planificar_corto_plazo_SJF_desalojo(void* arg){
             } else {
                 esperar_cpu = true; //// cambio de posicion
             }
+        }
+        else{
+            signal_sem(&cpu_libre);
         }
         signal_mutex(&mutex_pcb);
         signal_mutex(&mutex_queue_ready);
@@ -176,7 +181,7 @@ void *comprobar_desalojo(void *arg){
         // int valorPP = 0;
 		// sem_getvalue(&desalojo_revisado, &valorPP);
         // if(valorPP < 0){
-            signal_sem(&desalojo_revisado);
+        signal_sem(&desalojo_revisado);
         //}
         signal_mutex(&mutex_pcb);
         signal_mutex(&mutex_procesos_ejecutando);
@@ -715,6 +720,11 @@ void poner_en_ready(t_pcb* proceso, bool interrumpido){
             // }
             signal_sem(&planificacion_principal);
         }
+        int valor = -1;
+        sem_getvalue(&check_desalojo, &valor);
+        if(valor <= 0){
+            signal_sem(&check_desalojo);
+        }
     }
 }
 
@@ -798,21 +808,23 @@ void comprobar_suspendido(t_pcb* proceso){
 void comprobar_cola_bloqueados(t_dispositivo_io* dispositivo){
     //wait_mutex(&mutex_queue_block);
     //wait_mutex(&mutex_lista_dispositivos_io);
-    //t_queue* cola_io = obtener_cola_io(dispositivo->id);
-    char id_dispositivo[12];
-    sprintf(id_dispositivo, "%d", dispositivo->id);
-    wait_mutex(&mutex_diccionario_io);
-    t_queue* cola_io = dictionary_get(diccionario_dispositivos_io, id_dispositivo);
+    //t_queue* cola_io = obtener_esperando_io(dispositivo->id);
+    //char id_dispositivo[12];
+    //sprintf(id_dispositivo, "%d", dispositivo->id);
+    wait_mutex(&mutex_diccionario_esperando_io);
+    wait_mutex(&mutex_diccionario_ejecutando_io);
+    t_queue* cola_io = obtener_esperando_io(dispositivo->nombre);
     if(!queue_is_empty(cola_io)){
-        tiempo_en_io *proceso = queue_peek(cola_io);
-
-
+        tiempo_en_io* proceso = queue_pop(cola_io);
         enviar_proceso_a_io(proceso->pcb, dispositivo, proceso->tiempo);
+        list_add(obtener_ejecutando_io(dispositivo->nombre), proceso);
     }
     else{
         //signal_mutex(&mutex_queue_block);
-        log_info(logger_kernel, "## No hay procesos bloqueados en el dispositivo (%s, %d)", dispositivo->nombre, dispositivo->id);
+        log_debug(logger_kernel, "## No hay procesos bloqueados en el dispositivo (%s, %d)", dispositivo->nombre, dispositivo->id);
+        dispositivo->esta_libre = true;
     }
     //signal_mutex(&mutex_queue_block);
-    signal_mutex(&mutex_diccionario_io);
+    signal_mutex(&mutex_diccionario_esperando_io);
+    signal_mutex(&mutex_diccionario_ejecutando_io);
 }

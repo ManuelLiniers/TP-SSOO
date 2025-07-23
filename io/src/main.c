@@ -99,8 +99,9 @@ void procesar_io(int socket_kernel, t_log* logger) {
             log_info(logger, "## PID: %d - Fin de IO", peticion->pid);
 
             // Enviar confirmación de fin al Kernel (opcional: podría ser un código o el PID)
-            int respuesta = FINALIZACION_IO;
-            send(socket_kernel, &respuesta, sizeof(int), 0);
+            t_paquete* paquete_vuelta = crear_paquete(FINALIZACION_IO);
+            agregar_a_paquete(paquete_vuelta, &(peticion->pid), sizeof(int));
+            enviar_paquete(paquete_vuelta, socket_kernel);
 
             free(peticion);
             eliminar_buffer(paquete);

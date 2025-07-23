@@ -13,7 +13,8 @@ pthread_mutex_t mutex_lista_dispositivos_io;
 
 pthread_mutex_t mutex_creacion_hilos;
 pthread_mutex_t mutex_pcb;
-pthread_mutex_t mutex_diccionario_io;
+pthread_mutex_t mutex_diccionario_esperando_io;
+pthread_mutex_t mutex_diccionario_ejecutando_io;
 pthread_mutex_t mutex_pid_inc;
 
 pthread_mutex_t desalojando;
@@ -73,7 +74,8 @@ void iniciar_semaforos(){
     pthread_mutex_init(&mutex_creacion_hilos, NULL);
     pthread_mutex_init(&mutex_pcb, NULL);
     pthread_mutex_init(&mutex_pid_inc, NULL);
-    pthread_mutex_init(&mutex_diccionario_io, NULL);
+    pthread_mutex_init(&mutex_diccionario_esperando_io, NULL);
+    pthread_mutex_init(&mutex_diccionario_ejecutando_io, NULL);
     pthread_mutex_init(&desalojando, NULL);
     pthread_mutex_init(&mutex_sem_espacio_memoria, NULL);
     pthread_mutex_init(&mutex_susp_o_memoria, NULL);
@@ -108,7 +110,8 @@ void destruir_semaforos() {
     pthread_mutex_destroy(&mutex_memoria_swap);
     pthread_mutex_destroy(&mutex_creacion_hilos);
     pthread_mutex_destroy(&mutex_pcb);
-    pthread_mutex_destroy(&mutex_diccionario_io);
+    pthread_mutex_destroy(&mutex_diccionario_esperando_io);
+    pthread_mutex_destroy(&mutex_diccionario_ejecutando_io);
     pthread_mutex_destroy(&desalojando);
     pthread_mutex_destroy(&mutex_sem_espacio_memoria);
     pthread_mutex_destroy(&mutex_susp_o_memoria);

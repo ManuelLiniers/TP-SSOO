@@ -70,42 +70,42 @@ void inicializar_planificacion(){
 	pthread_t planificador_largo_plazo;
 	if(strcmp(algoritmo_corto_plazo,"FIFO") == 0){
 		log_debug(logger_kernel, "Planificacion corto plazo con FIFO");
-		pthread_mutex_lock(&mutex_creacion_hilos);
+		wait_mutex(&mutex_creacion_hilos);
 		pthread_create(&planificador_corto_plazo, NULL, (void*) planificar_corto_plazo_FIFO, NULL);
-		pthread_mutex_unlock(&mutex_creacion_hilos);
+		signal_mutex(&mutex_creacion_hilos);
 		pthread_detach(planificador_corto_plazo);
 	}
 	if(strcmp(algoritmo_corto_plazo,"SJF") == 0){
 
 		log_debug(logger_kernel, "Planificacion corto plazo con SJF");
-		pthread_mutex_lock(&mutex_creacion_hilos);
+		wait_mutex(&mutex_creacion_hilos);
 		pthread_create(&planificador_corto_plazo, NULL, (void*) planificar_corto_plazo_SJF, NULL);
-		pthread_mutex_unlock(&mutex_creacion_hilos);
+		signal_mutex(&mutex_creacion_hilos);
 		pthread_detach(planificador_corto_plazo);
 	}
 	if(strcmp(algoritmo_corto_plazo,"SRT") == 0){
 
 		log_debug(logger_kernel, "Planificacion corto plazo con SRT");
-		pthread_mutex_lock(&mutex_creacion_hilos);
+		wait_mutex(&mutex_creacion_hilos);
 		pthread_create(&planificador_corto_plazo, NULL, (void*) planificar_corto_plazo_SJF_desalojo, NULL);
-		pthread_mutex_unlock(&mutex_creacion_hilos);
+		signal_mutex(&mutex_creacion_hilos);
 		pthread_detach(planificador_corto_plazo);
 	}
 
 	if(strcmp(algoritmo_largo_plazo,"FIFO") == 0){
 
 		log_debug(logger_kernel, "Planificacion largo plazo con FIFO");
-		pthread_mutex_lock(&mutex_creacion_hilos);
+		wait_mutex(&mutex_creacion_hilos);
 		pthread_create(&planificador_largo_plazo, NULL, (void *) planificar_largo_plazo_FIFO, NULL);
-		pthread_mutex_unlock(&mutex_creacion_hilos);
+		signal_mutex(&mutex_creacion_hilos);
 		pthread_detach(planificador_largo_plazo);
 	}
 	if(strcmp(algoritmo_largo_plazo,"PMCP") == 0){
 
 		log_debug(logger_kernel, "Planificacion largo plazo con PMCP");
-		pthread_mutex_lock(&mutex_creacion_hilos);
+		wait_mutex(&mutex_creacion_hilos);
 		pthread_create(&planificador_largo_plazo, NULL, (void *) planificar_largo_plazo_PMCP, NULL);
-		pthread_mutex_unlock(&mutex_creacion_hilos);
+		signal_mutex(&mutex_creacion_hilos);
 		pthread_detach(planificador_largo_plazo);
 	}
 
@@ -306,6 +306,10 @@ void* esperar_dispatch(void* arg){
                 char* nombre_io = recibir_informacion_del_buffer(paquete, tamanio);
                 int io_tiempo = recibir_int_del_buffer(paquete);
 
+				if(proceso == NULL){
+					log_debug(logger_kernel, "Proceso nulo al enviar a IO");
+				}
+				else{}
                 tiempo_en_io* proceso_bloqueado = malloc(sizeof(tiempo_en_io));
                 proceso_bloqueado->pcb = proceso;
                 proceso_bloqueado->tiempo = io_tiempo;
@@ -317,6 +321,8 @@ void* esperar_dispatch(void* arg){
 				wait_mutex(&mutex_procesos_ejecutando);
 				wait_mutex(&mutex_lista_dispositivos_io);
 				wait_mutex(&mutex_pcb);
+				wait_mutex(&mutex_diccionario_esperando_io);
+				wait_mutex(&mutex_diccionario_ejecutando_io);
 
  				if(strcmp(algoritmo_corto_plazo,"SRT") == 0){
 					for(int i = 0; i<list_size(lista_procesos_ejecutando); i++){
@@ -337,39 +343,33 @@ void* esperar_dispatch(void* arg){
 				cambiar_estado(proceso, BLOCKED);
 				send(cpu_encargada->socket_dispatch, &respuesta, sizeof(int), 0);
 
-				//log_info(logger_kernel, "Compruebo BLOCKED 1");
 
                 sacar_proceso_ejecucion(proceso);
 
-				//log_info(logger_kernel, "Compruebo BLOCKED 2");
 				
                 t_dispositivo_io* dispositivo = buscar_io_libre(nombre_io);
-				bool libre_encontrada = true;
 
-				//log_info(logger_kernel, "Compruebo BLOCKED 3");
-                if(dispositivo == NULL){
-					libre_encontrada = false;
-                    dispositivo = buscar_io_menos_ocupada(nombre_io);
-                }
-
-				//log_info(logger_kernel, "Compruebo BLOCKED 4");
+				if(dispositivo != NULL){
+					t_list* lista = obtener_ejecutando_io(dispositivo->nombre);
+					int pos = list_add(lista, proceso_bloqueado);
+					log_debug(logger_kernel, "Proceso <%d> bloqueado agregado en posicion %d", proceso_bloqueado->pcb->pid, pos);
+					enviar_proceso_a_io(proceso, dispositivo, io_tiempo);
+					dispositivo->esta_libre = false;
+				} else {
+					dispositivo = buscar_io(nombre_io);
+				}
+				
                 if(dispositivo == NULL){
                     log_info(logger_kernel, "No se encontro la IO: %s", nombre_io);
 					finalizar_proceso(proceso);
                     break;
-                }
-
-				//log_info(logger_kernel, "Compruebo BLOCKED 5");
-                
-                // queue_push(obtener_cola_io(dispositivo->id), proceso_bloqueado);
-                queue_push(obtener_cola_io(dispositivo->id), proceso_bloqueado);
-				
-				//log_info(logger_kernel, "Compruebo BLOCKED 6");
-				if(libre_encontrada == true){
-                	enviar_proceso_a_io(proceso, dispositivo, io_tiempo);
+                } else {
+					t_queue* cola_io = obtener_esperando_io(nombre_io);
+					queue_push(cola_io, proceso_bloqueado);
 				}
+
 				//log_info(logger_kernel, "Cola de IO: (%s, %d) - Cantidad de procesos en cola: %d",
-					 //dispositivo->nombre, dispositivo->id, queue_size(obtener_cola_io(dispositivo->id)));
+				//dispositivo->nombre, dispositivo->id, queue_size(obtener_esperando_io(dispositivo->id)));
 
                 log_debug(logger_kernel, "Proceso <%d> en dispositivo %s: ",proceso->pid ,dispositivo->nombre);
                 
@@ -380,11 +380,13 @@ void* esperar_dispatch(void* arg){
 				signal_mutex(&mutex_procesos_ejecutando);
 				signal_mutex(&mutex_lista_dispositivos_io);
 				signal_mutex(&mutex_queue_block);
+				signal_mutex(&mutex_diccionario_esperando_io);
+				signal_mutex(&mutex_diccionario_ejecutando_io);
 
 				pthread_t comprobacion_suspendido;
-				pthread_mutex_lock(&mutex_creacion_hilos);
+				wait_mutex(&mutex_creacion_hilos);
                 pthread_create(&comprobacion_suspendido, NULL, (void*) comprobar_suspendido, proceso);
-				pthread_mutex_unlock(&mutex_creacion_hilos);
+				signal_mutex(&mutex_creacion_hilos);
                 pthread_detach(comprobacion_suspendido);
 
                 break;
@@ -514,7 +516,7 @@ t_cpu* identificar_cpu(t_buffer* buffer, int socket_fd, void (*funcion)(t_cpu*, 
 		funcion(cpu_nueva, socket_fd);
 		list_add(lista_cpus, cpu_nueva);
 		signal_sem(&cpu_libre);
-		signal_sem(&planificacion_principal);
+		//signal_sem(&planificacion_principal);
 		int valor = -1;
 		sem_getvalue(&cpu_libre, &valor);
 		log_debug(logger_kernel, "Semaforo cpu_libre: %d", valor);
@@ -615,17 +617,23 @@ void* identificar_io(t_buffer* unBuffer, int socket_fd){
 	//memcpy(dispositivo->nombre, nombre_raw, tamanio_nombre);
 	dispositivo->id = id_io_incremental;
 	dispositivo->socket = socket_fd;
+	dispositivo->esta_libre = true;
 
 	list_add(lista_dispositivos_io, dispositivo);
 
+	wait_mutex(&mutex_diccionario_esperando_io);
+	wait_mutex(&mutex_diccionario_ejecutando_io);
+	if(!dictionary_has_key(diccionario_esperando_io, nombre_disp)){
+		t_queue* cola_io = queue_create();
+		dictionary_put(diccionario_esperando_io, nombre_disp, cola_io);
+	}
+	if(!dictionary_has_key(diccionario_ejecutando_io, nombre_disp)){
+		t_list* ejecutando_io = list_create();
+		dictionary_put(diccionario_ejecutando_io, nombre_disp, ejecutando_io);
+	}
+	signal_mutex(&mutex_diccionario_esperando_io);
+	signal_mutex(&mutex_diccionario_ejecutando_io);
 
-	t_queue* cola_io = queue_create();
-	char id_dispositivo[12];
-	sprintf(id_dispositivo, "%d", dispositivo->id);
-	dictionary_put(diccionario_dispositivos_io, id_dispositivo, cola_io);
-
-	// list_add_in_index(queue_block, dispositivo->id, cola_io);
-	
 	id_io_incremental++;
 	signal_sem(&dispositivo_libre);
 
@@ -643,6 +651,8 @@ void* escuchar_socket_io(void* arg){
 	t_dispositivo_io* dispositivo = (t_dispositivo_io*) arg;
 	while(1){
 		int codigo = recibir_operacion(dispositivo->socket);
+		t_buffer* paquete = recibir_paquete(dispositivo->socket);
+		int pid = recibir_int_del_buffer(paquete);
 		log_debug(logger_kernel, "Recibi codigo: %d de dispositivo: %s", codigo, dispositivo->nombre);
 		switch (codigo){
 			case FINALIZACION_IO:
@@ -653,13 +663,12 @@ void* escuchar_socket_io(void* arg){
 				wait_mutex(&mutex_lista_dispositivos_io);
 				wait_mutex(&mutex_pcb);
 
-				t_queue* cola = obtener_cola_io(dispositivo->id);
-				if(cola == NULL){
-					log_error(logger_kernel, "No se encontro cola de IO para el dispositivo %s", dispositivo->nombre);
+				//log_debug(logger_kernel, "Cantidad de procesos en IO (%s, %d): %d",dispositivo->nombre, dispositivo->id, queue_size(cola));
+				tiempo_en_io* proceso = buscar_proceso_en_io(dispositivo->nombre, pid); // necesitamos el pid del proceso para poder buscarlo en la lista
+				
+				if(proceso == NULL){
+					log_debug(logger_kernel, "No se encontro el proceso en io pid <%d>", pid);
 				}
-				log_debug(logger_kernel, "Cantidad de procesos en IO (%s, %d): %d",dispositivo->nombre, dispositivo->id, queue_size(cola));
-				tiempo_en_io* proceso = queue_pop(cola); // posible memory leak
-
 				// poner un mutex que verifique io de cada proceso?
 				if(proceso->pcb->estado == SUSP_BLOCKED){
 					cambiar_estado(proceso->pcb, SUSP_READY);
@@ -719,11 +728,15 @@ void* escuchar_socket_io(void* arg){
 				wait_mutex(&mutex_queue_block);
 				wait_mutex(&mutex_lista_dispositivos_io);
 				wait_mutex(&mutex_pcb);
-				queue_clean_and_destroy_elements(obtener_cola_io(dispositivo->id), finalizar_proceso_io);
 				list_remove_element(lista_dispositivos_io, dispositivo);
+				t_dispositivo_io* io_existente = buscar_io(dispositivo->nombre);
+				if(io_existente == 	NULL){
+					queue_clean_and_destroy_elements(obtener_esperando_io(dispositivo->nombre), finalizar_proceso_io);
+				}
 				signal_mutex(&mutex_pcb);
 				signal_mutex(&mutex_lista_dispositivos_io);
 				signal_mutex(&mutex_queue_block);
+				free(dispositivo);
 				pthread_exit(NULL);
 				break;
 			default:
