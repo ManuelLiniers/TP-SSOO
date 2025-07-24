@@ -62,6 +62,7 @@ void* planificar_corto_plazo_SJF_desalojo(void* arg){
     while(1){
         int esperar_cpu = false;
         wait_sem(&planificacion_principal);
+        wait_sem(&proceso_ready);
         wait_sem(&cpu_libre);
         wait_mutex(&mutex_queue_ready);
         wait_mutex(&mutex_lista_cpus); 
@@ -323,21 +324,21 @@ void *planificar_largo_plazo_FIFO(void* arg){
         wait_mutex(&mutex_queue_ready);
         wait_mutex(&mutex_lista_cpus);
         wait_mutex(&mutex_pcb);
-        if(!queue_is_empty(queue_susp_ready)){
+        if(!list_is_empty(queue_susp_ready)){
             log_debug(logger_kernel, "entro a revisar suspendido_ready");
             //tiempo_en_io* proceso_a_desuspender = queue_peek(queue_susp_ready);
             //t_pcb* proceso = proceso_a_desuspender->pcb;
-            t_pcb* proceso = queue_peek(queue_susp_ready);
+            t_pcb* proceso = list_get(queue_susp_ready, 0);
             signal_mutex(&mutex_queue_susp_ready);
             if(vuelta_swap(proceso)){
 
                 //wait_mutex(&mutex_queue_susp_ready);
-				queue_pop(queue_susp_ready);
+				list_remove_element(queue_susp_ready, proceso);
                 //signal_mutex(&mutex_queue_susp_ready);
 
                 // PONER EN READY
                 poner_en_ready(proceso, false);
-                log_debug(logger_kernel, "Cola de ready:");
+                //log_debug(logger_kernel, "Cola de ready:");
                 //mostrar_lista(queue_ready);
 			}
             else{
@@ -414,26 +415,29 @@ void *planificar_largo_plazo_PMCP(void* arg){
         wait_sem(&largo_plazo); //// agrego
         wait_mutex(&mutex_queue_susp_ready);
         log_debug(logger_kernel, "Compruebo suspendidos ready por espacio memoria");
-        if(!queue_is_empty(queue_susp_ready)){
-            t_pcb* proceso = queue_peek(queue_susp_ready);
+        if(!list_is_empty(queue_susp_ready)){
+            wait_mutex(&mutex_queue_ready);
+            wait_mutex(&mutex_lista_cpus);
+            wait_mutex(&mutex_pcb);
+            list_sort(queue_susp_ready, proceso_es_mas_chico);
+            t_pcb* proceso = list_get(queue_susp_ready, 0);
             if(vuelta_swap(proceso)){
-                queue_pop(queue_susp_ready);
-                wait_mutex(&mutex_queue_ready);
-                wait_mutex(&mutex_lista_cpus);
-                wait_mutex(&mutex_pcb);
+                list_remove_element(queue_susp_ready, proceso);
                 poner_en_ready(proceso, false);
                 signal_mutex(&mutex_pcb);
                 signal_mutex(&mutex_lista_cpus);
                 signal_mutex(&mutex_queue_ready);
                 signal_mutex(&mutex_queue_susp_ready);
             } else {
+                signal_mutex(&mutex_pcb);
+                signal_mutex(&mutex_lista_cpus);
+                signal_mutex(&mutex_queue_ready);
                 signal_mutex(&mutex_queue_susp_ready);
                 signal_sem(&largo_plazo);
                 wait_mutex(&mutex_sem_espacio_memoria);
                 wait_sem(&espacio_memoria);
                 signal_mutex(&mutex_sem_espacio_memoria);
             }
-            
         }
         else{
             signal_mutex(&mutex_queue_susp_ready);
@@ -460,6 +464,7 @@ void *planificar_largo_plazo_PMCP(void* arg){
             signal_mutex(&mutex_queue_new);
             if(esperar){
                 signal_mutex(&comprobar_memoria);
+                signal_sem(&check_susp_ready);
                 signal_sem(&largo_plazo);
                 wait_mutex(&mutex_susp_o_memoria);
             }
@@ -594,6 +599,7 @@ void* comprobar_espacio(void* arg){
 
 void comprobar_procesos_suspendidos(void* arg){
     while(1){
+        wait_sem(&check_susp_ready);
         log_debug(logger_kernel, "Espero semaforo suspendido ready");
         wait_sem(&proceso_suspendido_ready);
         log_debug(logger_kernel, "Consumo semaforo suspendido ready: %ld", proceso_suspendido_ready.__align);
@@ -629,7 +635,7 @@ void *comprobar_procesos_nuevos(void* arg){
         if(!list_is_empty(queue_new)){
             list_sort(queue_new, proceso_es_mas_chico);
             t_pcb* proceso = list_get(queue_new, 0);
-            if(queue_is_empty(queue_susp_ready)){
+            if(list_is_empty(queue_susp_ready)){
                 if(espacio_en_memoria(proceso)){
                     list_remove_element(queue_new, proceso);
                     poner_en_ready(proceso, false);

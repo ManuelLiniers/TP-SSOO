@@ -12,7 +12,7 @@
       "type": "cppdbg",
       "request": "launch",
       "program": "${workspaceFolder}/bin/${workspaceFolderBasename}",
-      "args": ["MEMORIA_IO","90","memoria_swap.config"],
+      "args": ["PLANI_CORTO_PLAZO","0","corto_plazo.config"],
       "stopAtEntry": false,
       "cwd": "${workspaceFolder}",
       "environment": [],
