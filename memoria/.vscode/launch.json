@@ -2,13 +2,14 @@
   "version": "0.2.0",
   "configurations": [
 
+
   
     {
       "name": "run",
       "type": "cppdbg",
       "request": "launch",
       "program": "${workspaceFolder}/bin/${workspaceFolderBasename}",
-      "args": ["memoria_swap.config"],
+      "args": ["estabilidad_general.config"],
       "stopAtEntry": false,
       "cwd": "${workspaceFolder}",
       "environment": [],

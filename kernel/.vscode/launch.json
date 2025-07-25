@@ -1,6 +1,7 @@
 {
   "version": "0.2.0",
   "configurations": [
+
   
 
     
@@ -12,7 +13,7 @@
       "type": "cppdbg",
       "request": "launch",
       "program": "${workspaceFolder}/bin/${workspaceFolderBasename}",
-      "args": ["MEMORIA_IO","90","memoria_swap.config"],
+      "args": ["ESTABILIDAD_GENERAL","0","estabilidad_general.config"],
       "stopAtEntry": false,
       "cwd": "${workspaceFolder}",
       "environment": [],

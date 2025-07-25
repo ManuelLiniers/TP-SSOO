@@ -287,7 +287,14 @@ void* esperar_dispatch(void* arg){
 							}
 						}
 					}
+					int valorDesalojo = pthread_mutex_trylock(&desalojando);
+					if(!ignorar_interrupcion && valorDesalojo != 0){
+						signal_mutex(&desalojando);
+					} else if(valorDesalojo == 0){
+						signal_mutex(&desalojando);
+					}
 				}
+
 
 				log_info(logger_kernel, "## (<%d>) - Solicito syscall: <%s>", proceso->pid, "EXIT");
 
@@ -336,6 +343,12 @@ void* esperar_dispatch(void* arg){
 								log_debug(logger_kernel, "Seteo ignorar interrupcion por IO al PID <%d>", unidad->proceso->pid);
 							}
 						}
+					}
+					int valorDesalojo = pthread_mutex_trylock(&desalojando);
+					if(!ignorar_interrupcion && valorDesalojo != 0){
+						signal_mutex(&desalojando);
+					} else if(valorDesalojo == 0){
+						signal_mutex(&desalojando);
 					}
 				}
 
@@ -454,8 +467,13 @@ void* esperar_dispatch(void* arg){
 							}
 						}
 					}
+					int valorDesalojo = pthread_mutex_trylock(&desalojando);
+					if(!ignorar_interrupcion && valorDesalojo != 0){
+						signal_mutex(&desalojando);
+					} else if(valorDesalojo == 0){
+						signal_mutex(&desalojando);
+					}
 				}
-
 
                 sacar_proceso_ejecucion(proceso);
 				send(cpu_encargada->socket_dispatch, &respuesta, sizeof(int), 0);
