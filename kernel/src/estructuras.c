@@ -150,11 +150,11 @@ t_dispositivo_io* buscar_io_libre(char* nombre_io){
     for(int i = 0; i<list_size(lista_dispositivos_io); i++){
         t_dispositivo_io* actual = list_get(lista_dispositivos_io, i);
         if(strcmp(nombre_io, actual->nombre) == 0 && actual->esta_libre){
-            log_debug(logger_kernel, "IO Encontrada");
+            //log_debug(logger_kernel, "IO Encontrada");
             return actual;
         }
     }
-    log_debug(logger_kernel, "No se encontro IO libre");
+    //log_debug(logger_kernel, "No se encontro IO libre");
     return NULL;
 }
 
@@ -170,15 +170,18 @@ t_dispositivo_io* buscar_io_libre(char* nombre_io){
 } */
 
 t_cpu* buscar_cpu_libre(t_list* lista_cpus){
+    t_cpu* cpu_libre = NULL;
     for(int i = 0; i<list_size(lista_cpus); i++){
         t_cpu* actual = list_get(lista_cpus, i);
         mostrar_cpu(actual);
         if(actual->esta_libre){
-            return actual;
+            cpu_libre = actual;
         }
     }
-    log_error(logger_kernel, "No hay CPUs libres");
-    return NULL;
+    if(cpu_libre == NULL){
+        log_error(logger_kernel, "No hay CPUs libres");
+    }
+    return cpu_libre;
 }
 
 void liberar_cpu(t_cpu* cpu_encargada){
@@ -232,14 +235,16 @@ void sacar_proceso_ejecucion(t_pcb* proceso){
         t_unidad_ejecucion* actual = list_get(lista_procesos_ejecutando, i);
         if(actual->proceso->pid == proceso->pid){
             list_remove_element(lista_procesos_ejecutando, actual);
-            liberar_cpu(actual->cpu);
-            log_debug(logger_kernel, "Libero cpu <%d> de proceso pid <%d>", actual->cpu->cpu_id, proceso->pid);
+            if(actual->interrumpido == EJECUTANDO){
+                liberar_cpu(actual->cpu);
+                signal_sem(&cpu_libre);
+                log_debug(logger_kernel, "Libero cpu <%d> de proceso pid <%d>", actual->cpu->cpu_id, proceso->pid);
+            }
         }
     }
     //signal_mutex(&mutex_lista_cpus);
     //signal_mutex(&mutex_procesos_ejecutando);
     //log_debug(logger_kernel, "----------Espero mutex cpu ");
-    signal_sem(&cpu_libre);
     //log_debug(logger_kernel, "Semaforo cpu_libre: %ld", cpu_libre.__align);
     //signal_mutex(&mutex_cpu);
     //log_debug(logger_kernel, "-------- libero mutex cpu");

@@ -60,12 +60,12 @@ void* planificar_corto_plazo_SJF_desalojo(void* arg){
     pthread_detach(hilo_comprobar_desalojo);
     
     while(1){
-        int esperar_cpu = false;
+        //int esperar_cpu = false;
         wait_sem(&planificacion_principal);
         wait_sem(&proceso_ready);
         wait_sem(&cpu_libre);
         wait_mutex(&mutex_queue_ready);
-        wait_mutex(&mutex_lista_cpus); 
+        wait_mutex(&mutex_lista_cpus);
         wait_mutex(&mutex_procesos_ejecutando);
         wait_mutex(&mutex_pcb);
         actualizar_estimaciones();
@@ -81,7 +81,7 @@ void* planificar_corto_plazo_SJF_desalojo(void* arg){
                 //wait_sem(&desalojando);
                 bool seguir = true;
                 
-				for(int i = 0; i<list_size(lista_procesos_ejecutando); i++){
+				/* for(int i = 0; i<list_size(lista_procesos_ejecutando); i++){
 					t_unidad_ejecucion* unidad = (t_unidad_ejecucion*) list_get(lista_procesos_ejecutando, i);
 					if(unidad->cpu->cpu_id == cpu_encargada->cpu_id){
 						if(unidad->interrumpido == AEJECUTAR){
@@ -89,7 +89,7 @@ void* planificar_corto_plazo_SJF_desalojo(void* arg){
                             break;
 						}
 					}
-				}
+				} */
                 if(seguir){
                    // wait_mutex(&mutex_queue_ready);
                     t_pcb* proceso = list_remove(queue_ready, 0);
@@ -104,24 +104,25 @@ void* planificar_corto_plazo_SJF_desalojo(void* arg){
                     //signal_sem(&planificacion_principal); Revisar esto
                 }
             } else {
-                esperar_cpu = true; //// cambio de posicion
+                signal_sem(&proceso_ready);
+                //esperar_cpu = true; //// cambio de posicion
             }
         }
         else{
-            signal_sem(&cpu_libre);
+            //signal_sem(&cpu_libre);
         }
         signal_mutex(&mutex_pcb);
         signal_mutex(&mutex_queue_ready);
         signal_mutex(&mutex_lista_cpus);
         signal_mutex(&mutex_procesos_ejecutando);
-        if(esperar_cpu){
+        /*if(esperar_cpu){
             // int valorPP = 0;
 		    // sem_getvalue(&check_desalojo, &valorPP);
             // if(valorPP > 0){
-                signal_sem(&check_desalojo);
+            signal_sem(&check_desalojo);
             //}
             wait_sem(&desalojo_revisado);
-        }
+        }*/
     }
 }
 
@@ -173,16 +174,16 @@ void *comprobar_desalojo(void *arg){
                 //}
                 log_debug(logger_kernel, "No hubo desalojo y signal del proceso ready");
                 signal_mutex(&desalojando);
-                signal_sem(&planificacion_principal);
+                //signal_sem(&planificacion_principal);
             }
         } else {
-            signal_sem(&planificacion_principal);
+            //signal_sem(&planificacion_principal);
             signal_mutex(&desalojando);
         }
         // int valorPP = 0;
 		// sem_getvalue(&desalojo_revisado, &valorPP);
         // if(valorPP < 0){
-        signal_sem(&desalojo_revisado);
+        //signal_sem(&desalojo_revisado);
         //}
         signal_mutex(&mutex_pcb);
         signal_mutex(&mutex_procesos_ejecutando);
@@ -345,7 +346,7 @@ void *planificar_largo_plazo_FIFO(void* arg){
                 log_debug(logger_kernel, "No hay espacio en memoria para la vuelta de swap del proceso <%d>", proceso->pid);
                 signal_sem(&nuevo_proceso); // el proceso nuevo sigue en NEW, hago signal de vuelta
                 wait_sem(&espacio_memoria); // espero que algun proceso finalice 
-                log_debug(logger_kernel, "Consumo semaforo espacio_memoria, semaforo: %ld", espacio_memoria.__align);
+                //log_debug(logger_kernel, "Consumo semaforo espacio_memoria, semaforo: %ld", espacio_memoria.__align);
             }
         }
         else{
@@ -366,7 +367,7 @@ void *planificar_largo_plazo_FIFO(void* arg){
                     poner_en_ready(proceso, false);
                     //signal_mutex(&mutex_queue_ready);
                     //signal_mutex(&mutex_lista_cpus);
-                    log_debug(logger_kernel, "Cola de ready:");
+                    //log_debug(logger_kernel, "Cola de ready:");
                     //mostrar_lista(queue_ready);
                 }
                 else{
@@ -381,7 +382,7 @@ void *planificar_largo_plazo_FIFO(void* arg){
                         pthread_detach(hilo_espera_suspendido);
                     }
                     wait_sem(&espacio_memoria); // espero que algun proceso finalice 
-                    log_debug(logger_kernel, "Consumo semaforo espacio_memoria, semaforo: %ld", espacio_memoria.__align);
+                    //log_debug(logger_kernel, "Consumo semaforo espacio_memoria, semaforo: %ld", espacio_memoria.__align);
                 }
 		    // } else {
             //     signal_mutex(&mutex_queue_new);
@@ -600,11 +601,11 @@ void* comprobar_espacio(void* arg){
 void comprobar_procesos_suspendidos(void* arg){
     while(1){
         wait_sem(&check_susp_ready);
-        log_debug(logger_kernel, "Espero semaforo suspendido ready");
+        //log_debug(logger_kernel, "Espero semaforo suspendido ready");
         wait_sem(&proceso_suspendido_ready);
-        log_debug(logger_kernel, "Consumo semaforo suspendido ready: %ld", proceso_suspendido_ready.__align);
+        //log_debug(logger_kernel, "Consumo semaforo suspendido ready: %ld", proceso_suspendido_ready.__align);
         signal_mutex(&mutex_susp_o_memoria);
-        log_debug(logger_kernel, "Aviso que hay proceso en suspendido ready");
+        //log_debug(logger_kernel, "Aviso que hay proceso en suspendido ready");
         /*wait_mutex(&mutex_queue_susp_ready);
         log_debug(logger_kernel, "Compruebo suspendidos ready por semaforo de suspendido");
         if(!queue_is_empty(queue_susp_ready)){
@@ -680,6 +681,8 @@ bool espacio_en_memoria(t_pcb* proceso){
     else{
         return false;
     }
+
+    liberar_conexion(conexion);
     //return 1;
 }
 
@@ -697,13 +700,14 @@ bool vuelta_swap(t_pcb* proceso){
     int resultado;
     recv(conexion, &resultado, sizeof(int), 0);
     //signal_mutex(&mutex_memoria_swap);
-    log_debug(logger_kernel, "Libero semaforo memoria swap");
+    //log_debug(logger_kernel, "Libero semaforo memoria swap");
     if(resultado == OK){
         log_debug(logger_kernel, "Vuelta swap exitoso para PID: %d", proceso->pid);
     }
     else{
         log_debug(logger_kernel, "Vuelta swap erroneo para PID: %d", proceso->pid);
     }
+    liberar_conexion(conexion);
     return resultado == OK;
 }
 
@@ -714,7 +718,7 @@ void poner_en_ready(t_pcb* proceso, bool interrumpido){
     mostrar_lista(queue_ready);
     signal_sem(&proceso_ready);
     
-    //t_cpu* cpu;
+    t_cpu* cpu = NULL;
     if(strcmp(algoritmo_corto_plazo, "SRT") == 0){
         if(!interrumpido){
             // if(hay_cpu_libre(&cpu)){
@@ -726,9 +730,9 @@ void poner_en_ready(t_pcb* proceso, bool interrumpido){
             // }
             signal_sem(&planificacion_principal);
         }
-        int valor = -1;
-        sem_getvalue(&check_desalojo, &valor);
-        if(valor <= 0){
+        /* int valor = -1;
+        sem_getvalue(&check_desalojo, &valor); */
+        if(!hay_cpu_libre(&cpu)){
             signal_sem(&check_desalojo);
         }
     }
@@ -786,7 +790,7 @@ void enviar_proceso_a_io(t_pcb* proceso, t_dispositivo_io* dispositivo, int io_t
 
 void comprobar_suspendido(t_pcb* proceso){
     usleep(tiempo_suspension * 1000); // tiempo_suspension en ms / 1000 = tiempo_suspension en us
-    log_debug(logger_kernel, "Suspendido espero semaforo memoria swap");
+    //log_debug(logger_kernel, "Suspendido espero semaforo memoria swap");
     //wait_mutex(&mutex_memoria_swap);
     wait_mutex(&mutex_queue_block);
     wait_mutex(&mutex_pcb);
@@ -801,12 +805,12 @@ void comprobar_suspendido(t_pcb* proceso){
         /* signal_sem(&planificador_largo_plazo);
         log_debug(logger_kernel, "Signal del planificador_largo_plazo (%ld) por proceso suspendido pid <%d>", 
             planificador_largo_plazo.__align, proceso->pid); */
-        log_debug(logger_kernel, "HAY ESPACIO EN MEMORIA");
+        //log_debug(logger_kernel, "HAY ESPACIO EN MEMORIA");
     }
 
     signal_mutex(&mutex_pcb);
     signal_mutex(&mutex_queue_block);
-    log_debug(logger_kernel, "Suspendido libero semaforo memoria swap");
+    //log_debug(logger_kernel, "Suspendido libero semaforo memoria swap");
     //signal_mutex(&mutex_memoria_swap);
     
 }

@@ -163,8 +163,6 @@ void* identificar_cpu_distpatch(t_buffer* buffer, int socket){
 void* esperar_dispatch(void* arg){
     t_cpu* cpu_encargada = (t_cpu*) arg;
 	int respuesta = OK;
-	bool ignorar_interrupcion = false;
-	int motivo_interrupcion = -1;
 
     while(1){
 		log_debug(logger_kernel, "Me quedo esperando dispatch de CPU ID: %d", cpu_encargada->cpu_id);
@@ -181,12 +179,13 @@ void* esperar_dispatch(void* arg){
         uint32_t pc = recibir_uint32_del_buffer(paquete);
         int motivo = recibir_int_del_buffer(paquete);
 		t_pcb* proceso = NULL;
-		log_debug(logger_kernel, "Estado antes de buscar proceso<%d>: ignorar_interrupcion = %d, motivo_interrupcion = %d", cpu_encargada->cpu_id, ignorar_interrupcion, motivo_interrupcion);
-		if(motivo_interrupcion != 1 && motivo_interrupcion != 2 && motivo_interrupcion != 3){
-			wait_mutex(&mutex_procesos_ejecutando);
-			proceso = buscar_proceso_pid(pid);
-			signal_mutex(&mutex_procesos_ejecutando);
-			log_debug(logger_kernel, "Proceso recibido por cpu PID <%d>", proceso->pid);
+		//log_debug(logger_kernel, "Estado antes de buscar proceso<%d>: ignorar_interrupcion = %d, motivo_interrupcion = %d", cpu_encargada->cpu_id, ignorar_interrupcion, motivo_interrupcion);
+		//if(motivo_interrupcion != 1 && motivo_interrupcion != 2 && motivo_interrupcion != 3){
+		wait_mutex(&mutex_procesos_ejecutando);
+		proceso = buscar_proceso_pid(pid);
+		signal_mutex(&mutex_procesos_ejecutando);
+		//log_debug(logger_kernel, "Proceso recibido por cpu PID <%d>", proceso->pid);
+		if(proceso != NULL){
 			proceso->program_counter = pc;
 		}
 
@@ -200,72 +199,49 @@ void* esperar_dispatch(void* arg){
 				wait_mutex(&mutex_lista_cpus);
 				wait_mutex(&mutex_procesos_ejecutando);
 				wait_mutex(&mutex_pcb);
-				log_debug(logger_kernel, "Estado durante el checkeo<%d>: ignorar_interrupcion = %d, motivo_interrupcion = %d",cpu_encargada->cpu_id, ignorar_interrupcion, motivo_interrupcion);
-				if(!ignorar_interrupcion || motivo_interrupcion == 1 || motivo_interrupcion == 2 || motivo_interrupcion == 3){
-					for(int i = 0; i<list_size(lista_procesos_ejecutando); i++){
-						t_unidad_ejecucion* unidad = (t_unidad_ejecucion*) list_get(lista_procesos_ejecutando, i);
-						if(unidad->cpu->cpu_id == cpu_encargada->cpu_id){
-							if(unidad->interrumpido == INTERRUMPIDO){
-								if(proceso == NULL){
-									proceso_ejecutando = NULL;
-								} else {
-									proceso_ejecutando = unidad;
-								}
+				//log_debug(logger_kernel, "Estado durante el checkeo<%d>: ignorar_interrupcion = %d, motivo_interrupcion = %d",cpu_encargada->cpu_id, ignorar_interrupcion, motivo_interrupcion);
+				for(int i = 0; i<list_size(lista_procesos_ejecutando); i++){
+					t_unidad_ejecucion* unidad = (t_unidad_ejecucion*) list_get(lista_procesos_ejecutando, i);
+					if(unidad->cpu->cpu_id == cpu_encargada->cpu_id){
+						if(unidad->interrumpido == INTERRUMPIDO){
+							if(proceso == NULL){
+								proceso_ejecutando = NULL;
 							} else {
-								if(unidad->interrumpido == AEJECUTAR){
-									proceso_a_ejecutar = unidad;
-								}
+								proceso_ejecutando = unidad;
 							}
-						}
-					}
-					if(motivo_interrupcion != 1 && motivo_interrupcion != 2 && motivo_interrupcion != 3){
-						if(proceso_ejecutando != NULL){
-		
-							poner_en_ready(proceso_ejecutando->proceso, true);
-							log_info(logger_kernel, "## (<%d>) - Desalojado por algoritmo SJF/SRT", proceso_ejecutando->proceso->pid); 
-							log_debug(logger_kernel, " -----------------------------");
-							temporal_destroy(proceso_ejecutando->tiempo_ejecutando);
-							
-							list_remove_element(lista_procesos_ejecutando, proceso_ejecutando);
-						}
-						if(proceso_a_ejecutar == NULL){
-							log_error(logger_kernel, "ERROR: la unidad de ejecucion es NULL");
-						}
-						if(proceso_a_ejecutar->proceso == NULL){
-				 			log_error(logger_kernel, "ERROR: el proceso a ejecutar es NULL");
-						}
-					}
-					send(cpu_encargada->socket_dispatch, &respuesta, sizeof(int), 0);
-				} else {
-					t_unidad_ejecucion* unidadASacar = NULL;
-					for(int i = 0; i<list_size(lista_procesos_ejecutando); i++){
-						t_unidad_ejecucion* unidad = (t_unidad_ejecucion*) list_get(lista_procesos_ejecutando, i);
-						if(unidad->cpu->cpu_id == cpu_encargada->cpu_id){
-							if(unidad->interrumpido == INTERRUMPIDO){
-								unidad->interrumpido = EJECUTANDO;
+						} else {
+							if(unidad->interrumpido == AEJECUTAR){
 								proceso_a_ejecutar = unidad;
 							}
-							else if(unidad->interrumpido == AEJECUTAR){
-								unidadASacar = unidad;
-							}
 						}
 					}
-					send(cpu_encargada->socket_dispatch, &respuesta, sizeof(int), 0);
-					poner_en_ready(unidadASacar->proceso, false);
-					list_remove_element(lista_procesos_ejecutando, unidadASacar);
 				}
+				if(proceso_ejecutando != NULL){
+					poner_en_ready(proceso_ejecutando->proceso, true);
+					log_info(logger_kernel, "## (<%d>) - Desalojado por algoritmo SJF/SRT", proceso_ejecutando->proceso->pid); 
+					log_debug(logger_kernel, " -----------------------------");
+					temporal_destroy(proceso_ejecutando->tiempo_ejecutando);
+					
+					list_remove_element(lista_procesos_ejecutando, proceso_ejecutando);
+				}
+				if(proceso_a_ejecutar == NULL){
+					log_error(logger_kernel, "ERROR: la unidad de ejecucion es NULL");
+				}
+				if(proceso_a_ejecutar->proceso == NULL){
+					log_error(logger_kernel, "ERROR: el proceso a ejecutar es NULL");
+				}
+				send(cpu_encargada->socket_dispatch, &respuesta, sizeof(int), 0);
 				//send(cpu_encargada->socket_dispatch, &respuesta, sizeof(int), 0);
 				//cpu_encargada->esta_libre = 0;
                 poner_en_ejecucion(proceso_a_ejecutar->proceso, cpu_encargada);
 				proceso_a_ejecutar->tiempo_ejecutando = temporal_create();
 				cambiar_estado(proceso_a_ejecutar->proceso, EXEC);
+				proceso_a_ejecutar->interrumpido = EJECUTANDO;
 				signal_mutex(&mutex_pcb);
 				signal_mutex(&mutex_queue_ready);
 				signal_mutex(&mutex_lista_cpus);
 				signal_mutex(&mutex_procesos_ejecutando);
 				signal_mutex(&desalojando);
-				ignorar_interrupcion = false;
-				motivo_interrupcion = -1;
 				//log_debug(logger_kernel, "Proceso removido por hilo principal pid <%d>", proceso->pid);
                 break;
             case FINALIZADO:
@@ -277,7 +253,7 @@ void* esperar_dispatch(void* arg){
 				wait_mutex(&mutex_procesos_ejecutando);
 				wait_mutex(&mutex_pcb);
 			
-				if(strcmp(algoritmo_corto_plazo,"SRT") == 0){
+				/* if(strcmp(algoritmo_corto_plazo,"SRT") == 0){
 					for(int i = 0; i<list_size(lista_procesos_ejecutando); i++){
 						t_unidad_ejecucion* unidad = (t_unidad_ejecucion*) list_get(lista_procesos_ejecutando, i);
 						if(unidad->cpu->cpu_id == cpu_encargada->cpu_id){
@@ -293,7 +269,7 @@ void* esperar_dispatch(void* arg){
 					} else if(valorDesalojo == 0){
 						signal_mutex(&desalojando);
 					}
-				}
+				} */
 
 
 				log_info(logger_kernel, "## (<%d>) - Solicito syscall: <%s>", proceso->pid, "EXIT");
@@ -323,7 +299,7 @@ void* esperar_dispatch(void* arg){
                 proceso_bloqueado->pcb = proceso;
                 proceso_bloqueado->tiempo = io_tiempo;
 
-				log_debug(logger_kernel, "Estado antes de CAUSA_IO<%d>: ignorar_interrupcion = %d, motivo_interrupcion = %d",cpu_encargada->cpu_id, ignorar_interrupcion, motivo_interrupcion);
+				//log_debug(logger_kernel, "Estado antes de CAUSA_IO<%d>: ignorar_interrupcion = %d, motivo_interrupcion = %d",cpu_encargada->cpu_id, ignorar_interrupcion, motivo_interrupcion);
 
 				wait_mutex(&mutex_queue_block);
 				wait_mutex(&mutex_lista_cpus);
@@ -333,14 +309,14 @@ void* esperar_dispatch(void* arg){
 				wait_mutex(&mutex_diccionario_esperando_io);
 				wait_mutex(&mutex_diccionario_ejecutando_io);
 
- 				if(strcmp(algoritmo_corto_plazo,"SRT") == 0){
+ 				/* if(strcmp(algoritmo_corto_plazo,"SRT") == 0){
 					for(int i = 0; i<list_size(lista_procesos_ejecutando); i++){
 						t_unidad_ejecucion* unidad = (t_unidad_ejecucion*) list_get(lista_procesos_ejecutando, i);
 						if(unidad->cpu->cpu_id == cpu_encargada->cpu_id){
 							if(unidad->interrumpido == INTERRUMPIDO){
 								ignorar_interrupcion = true;
 								motivo_interrupcion = 2;
-								log_debug(logger_kernel, "Seteo ignorar interrupcion por IO al PID <%d>", unidad->proceso->pid);
+								//log_debug(logger_kernel, "Seteo ignorar interrupcion por IO al PID <%d>", unidad->proceso->pid);
 							}
 						}
 					}
@@ -350,24 +326,22 @@ void* esperar_dispatch(void* arg){
 					} else if(valorDesalojo == 0){
 						signal_mutex(&desalojando);
 					}
-				}
+				} */
 
-				log_debug(logger_kernel, "Estado despues de CAUSA_IO<%d>: ignorar_interrupcion = %d, motivo_interrupcion = %d",cpu_encargada->cpu_id, ignorar_interrupcion, motivo_interrupcion);
+				//log_debug(logger_kernel, "Estado despues de CAUSA_IO<%d>: ignorar_interrupcion = %d, motivo_interrupcion = %d",cpu_encargada->cpu_id, ignorar_interrupcion, motivo_interrupcion);
 
 
 				cambiar_estado(proceso, BLOCKED);
 				send(cpu_encargada->socket_dispatch, &respuesta, sizeof(int), 0);
 
-
                 sacar_proceso_ejecucion(proceso);
-
 				
                 t_dispositivo_io* dispositivo = buscar_io_libre(nombre_io);
 
 				if(dispositivo != NULL){
 					t_list* lista = obtener_ejecutando_io(dispositivo->nombre);
-					int pos = list_add(lista, proceso_bloqueado);
-					log_debug(logger_kernel, "Proceso <%d> bloqueado agregado en posicion %d", proceso_bloqueado->pcb->pid, pos);
+					list_add(lista, proceso_bloqueado);
+					//log_debug(logger_kernel, "Proceso <%d> bloqueado agregado en posicion %d", proceso_bloqueado->pcb->pid, pos);
 					enviar_proceso_a_io(proceso, dispositivo, io_tiempo);
 					dispositivo->esta_libre = false;
 				} else {
@@ -389,14 +363,14 @@ void* esperar_dispatch(void* arg){
                 log_debug(logger_kernel, "Proceso <%d> en dispositivo %s: ",proceso->pid ,dispositivo->nombre);
                 
 
-				log_debug(logger_kernel, "Creo hilo para comprobar suspendido");
+				//log_debug(logger_kernel, "Creo hilo para comprobar suspendido");
 				signal_mutex(&mutex_pcb);
 				signal_mutex(&mutex_lista_cpus);
 				signal_mutex(&mutex_procesos_ejecutando);
 				signal_mutex(&mutex_lista_dispositivos_io);
 				signal_mutex(&mutex_queue_block);
-				signal_mutex(&mutex_diccionario_esperando_io);
 				signal_mutex(&mutex_diccionario_ejecutando_io);
+				signal_mutex(&mutex_diccionario_esperando_io);
 
 				pthread_t comprobacion_suspendido;
 				wait_mutex(&mutex_creacion_hilos);
@@ -418,7 +392,7 @@ void* esperar_dispatch(void* arg){
 				wait_mutex(&mutex_procesos_ejecutando);
 				wait_mutex(&mutex_pcb);
 
-				if(strcmp(algoritmo_corto_plazo,"SRT") == 0){
+				/* if(strcmp(algoritmo_corto_plazo,"SRT") == 0){
 					for(int i = 0; i<list_size(lista_procesos_ejecutando); i++){
 						t_unidad_ejecucion* unidad = (t_unidad_ejecucion*) list_get(lista_procesos_ejecutando, i);
 						if(unidad->cpu->cpu_id == cpu_encargada->cpu_id){
@@ -430,7 +404,7 @@ void* esperar_dispatch(void* arg){
 					}
 					// signal_mutex(&mutex_lista_cpus);
 					// signal_mutex(&mutex_procesos_ejecutando);
-				}
+				} */
 
 				send(cpu_encargada->socket_dispatch, &respuesta, sizeof(int), 0);
 
@@ -447,8 +421,6 @@ void* esperar_dispatch(void* arg){
 				signal_mutex(&mutex_queue_new);
 				signal_mutex(&mutex_lista_cpus);
 				signal_mutex(&mutex_procesos_ejecutando);
-				
-
                 break;
             case MEMORY_DUMP:
 				wait_mutex(&mutex_queue_ready);
@@ -457,7 +429,7 @@ void* esperar_dispatch(void* arg){
 				wait_mutex(&mutex_procesos_ejecutando);
 				wait_mutex(&mutex_pcb);
 
-				if(strcmp(algoritmo_corto_plazo,"SRT") == 0){
+				/* if(strcmp(algoritmo_corto_plazo,"SRT") == 0){
 					for(int i = 0; i<list_size(lista_procesos_ejecutando); i++){
 						t_unidad_ejecucion* unidad = (t_unidad_ejecucion*) list_get(lista_procesos_ejecutando, i);
 						if(unidad->cpu->cpu_id == cpu_encargada->cpu_id){
@@ -473,7 +445,7 @@ void* esperar_dispatch(void* arg){
 					} else if(valorDesalojo == 0){
 						signal_mutex(&desalojando);
 					}
-				}
+				} */
 
                 sacar_proceso_ejecucion(proceso);
 				send(cpu_encargada->socket_dispatch, &respuesta, sizeof(int), 0);
@@ -542,7 +514,7 @@ t_cpu* identificar_cpu(t_buffer* buffer, int socket_fd, void (*funcion)(t_cpu*, 
 		//signal_sem(&planificacion_principal);
 		int valor = -1;
 		sem_getvalue(&cpu_libre, &valor);
-		log_debug(logger_kernel, "Semaforo cpu_libre: %d", valor);
+		//log_debug(logger_kernel, "Semaforo cpu_libre: %d", valor);
 		//log_debug(logger_kernel, "Tamanio del nombre: %d", tamanio_nombre);
 		log_debug(logger_kernel, "Se identifico la CPU: %d", cpu_nueva->cpu_id);
 		mostrar_cpus();
@@ -583,7 +555,7 @@ void* iniciar_cpu_interrupt(void* arg){
 			pthread_mutex_lock(&mutex_creacion_hilos);
 			pthread_create(&hilo_cliente, NULL, (void*) atender_interrupt, args);
 			pthread_mutex_unlock(&mutex_creacion_hilos);
-			log_debug(logger_kernel, "[THREAD] Creo hilo para atender interrupt");
+			//log_debug(logger_kernel, "[THREAD] Creo hilo para atender interrupt");
 			pthread_detach(hilo_cliente);
 		}
 	}
@@ -618,7 +590,7 @@ void* iniciar_servidor_io(void* arg){
 			pthread_mutex_lock(&mutex_creacion_hilos);
 			pthread_create(&hilo_cliente, NULL, (void*) atender_io, args);
 			pthread_mutex_unlock(&mutex_creacion_hilos);
-			log_debug(logger_kernel, "[THREAD] Creo hilo para atender io");
+			//log_debug(logger_kernel, "[THREAD] Creo hilo para atender io");
 			pthread_detach(hilo_cliente);
 		}
 		
@@ -654,8 +626,8 @@ void* identificar_io(t_buffer* unBuffer, int socket_fd){
 		t_list* ejecutando_io = list_create();
 		dictionary_put(diccionario_ejecutando_io, nombre_disp, ejecutando_io);
 	}
-	signal_mutex(&mutex_diccionario_esperando_io);
 	signal_mutex(&mutex_diccionario_ejecutando_io);
+	signal_mutex(&mutex_diccionario_esperando_io);
 
 	id_io_incremental++;
 	signal_sem(&dispositivo_libre);
@@ -685,8 +657,8 @@ void* escuchar_socket_io(void* arg){
 				wait_mutex(&mutex_lista_cpus);
 				wait_mutex(&mutex_lista_dispositivos_io);
 				wait_mutex(&mutex_pcb);
-				wait_mutex(&mutex_diccionario_ejecutando_io);
 				wait_mutex(&mutex_diccionario_esperando_io);
+				wait_mutex(&mutex_diccionario_ejecutando_io);
 
 				//log_debug(logger_kernel, "Cantidad de procesos en IO (%s, %d): %d",dispositivo->nombre, dispositivo->id, queue_size(cola));
 				tiempo_en_io* proceso = buscar_proceso_en_io(dispositivo->nombre, pid); // necesitamos el pid del proceso para poder buscarlo en la lista
@@ -698,7 +670,7 @@ void* escuchar_socket_io(void* arg){
 					if(proceso->pcb->estado == SUSP_BLOCKED){
 						cambiar_estado(proceso->pcb, SUSP_READY);
 						list_add(queue_susp_ready, proceso->pcb);
-						log_debug(logger_kernel, "Cantidad de procesos en susp ready: %d", list_size(queue_susp_ready));
+						//log_debug(logger_kernel, "Cantidad de procesos en susp ready: %d", list_size(queue_susp_ready));
 						signal_sem(&proceso_suspendido_ready);
 						int valor = -1;
 						sem_getvalue(&proceso_suspendido_ready, &valor);
@@ -723,8 +695,8 @@ void* escuchar_socket_io(void* arg){
 				}
 
 				
-				signal_mutex(&mutex_diccionario_esperando_io);
 				signal_mutex(&mutex_diccionario_ejecutando_io);
+				signal_mutex(&mutex_diccionario_esperando_io);
 				signal_mutex(&mutex_pcb);
 				signal_mutex(&mutex_queue_ready);
 				signal_mutex(&mutex_lista_cpus);
@@ -792,7 +764,7 @@ void finalizar_proceso(t_pcb* proceso){
 		//signal_sem(&planificador_largo_plazo);
 		/* log_debug(logger_kernel, "Signal del planificador_largo_plazo (%ld) por finalizar proceso pid <%d>", 
 			planificador_largo_plazo.__align, proceso->pid); */
-		log_debug(logger_kernel, "HAY ESPACIO FINALIZACION EN MEMORIA");
+		//log_debug(logger_kernel, "HAY ESPACIO FINALIZACION EN MEMORIA");
 	}
 	else{
 		log_error(logger_kernel, "Error en memoria al finalizar proceso PID: <%d>", proceso->pid);

@@ -173,9 +173,9 @@ void atender_proceso_del_kernel(t_contexto* contexto, t_log* logger) {
             break;
         }
 
-        pthread_mutex_lock(&mutex_interrupt);
         ciclo_de_instruccion_execute(instruccion, contexto, logger, conexion_memoria);
 
+        pthread_mutex_lock(&mutex_interrupt);
         if (hay_interrupcion()) {
             //if(!string_equals_ignore_case(instruccion->opcode, "DUMP_MEMORY") && !string_equals_ignore_case(instruccion->opcode, "EXIT") && !string_equals_ignore_case(instruccion->opcode, "IO")){
                 log_debug(logger, "Se detectó una interrupción luego de ejecutar la instrucción");
