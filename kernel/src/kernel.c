@@ -675,10 +675,10 @@ void* escuchar_socket_io(void* arg){
 	while(1){
 		int codigo = recibir_operacion(dispositivo->socket);
 		t_buffer* paquete = recibir_paquete(dispositivo->socket);
-		int pid = recibir_int_del_buffer(paquete);
 		log_debug(logger_kernel, "Recibi codigo: %d de dispositivo: %s", codigo, dispositivo->nombre);
 		switch (codigo){
 			case FINALIZACION_IO:
+				int pid = recibir_int_del_buffer(paquete);
 				wait_mutex(&mutex_queue_susp_ready);
 				wait_mutex(&mutex_queue_ready);
 				wait_mutex(&mutex_queue_block);
@@ -697,10 +697,12 @@ void* escuchar_socket_io(void* arg){
 					// poner un mutex que verifique io de cada proceso?
 					if(proceso->pcb->estado == SUSP_BLOCKED){
 						cambiar_estado(proceso->pcb, SUSP_READY);
-						queue_push(queue_susp_ready, proceso->pcb);
-						log_debug(logger_kernel, "Cantidad de procesos en susp ready: %d", queue_size(queue_susp_ready));
+						list_add(queue_susp_ready, proceso->pcb);
+						log_debug(logger_kernel, "Cantidad de procesos en susp ready: %d", list_size(queue_susp_ready));
 						signal_sem(&proceso_suspendido_ready);
-						log_debug(logger_kernel, "Signal semaforo proceso susp ready: %ld", proceso_suspendido_ready.__align);
+						int valor = -1;
+						sem_getvalue(&proceso_suspendido_ready, &valor);
+						log_debug(logger_kernel, "Signal semaforo proceso susp ready: %d", valor);
 						signal_sem(&nuevo_proceso);
 						signal_sem(&nuevo_proceso_suspendido_ready);
 						signal_sem(&espacio_memoria);

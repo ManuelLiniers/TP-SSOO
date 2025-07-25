@@ -42,6 +42,7 @@ sem_t ver_desalojo;
 
 sem_t planificar;
 sem_t largo_plazo;
+sem_t check_susp_ready;
 
 // wait y signal para semaforos
 void wait_mutex(pthread_mutex_t *mutex){
@@ -95,6 +96,7 @@ void iniciar_semaforos(){
     sem_init(&proceso_suspendido_ready, 0, 0);
     sem_init(&planificar, 0, 0);
     sem_init(&largo_plazo, 0, 0);
+    sem_init(&check_susp_ready, 0, 0);
 };
 
 void destruir_semaforos() {
@@ -124,4 +126,6 @@ void destruir_semaforos() {
     sem_destroy(&planificar);
     sem_destroy(&desalojo_revisado);
     sem_destroy(&check_desalojo);
+    sem_destroy(&proceso_suspendido_ready);
+    sem_destroy(&nuevo_proceso_suspendido_ready);
 };

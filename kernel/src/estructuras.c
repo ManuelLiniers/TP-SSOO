@@ -16,7 +16,7 @@ t_list* queue_new;
 t_list* queue_ready;
 t_list* queue_ready_SJF;
 t_list* queue_block;
-t_queue* queue_susp_ready;
+t_list* queue_susp_ready;
 t_queue* queue_exit;
 
 t_dictionary* diccionario_esperando_io;
@@ -34,7 +34,7 @@ void scheduler_init(void) {
     queue_new = list_create();
     queue_ready = list_create();
     queue_block = list_create();
-    queue_susp_ready = queue_create();
+    queue_susp_ready = list_create();
     queue_exit = queue_create();
     lista_procesos_ejecutando = list_create();
 }

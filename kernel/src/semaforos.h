@@ -44,6 +44,7 @@ extern sem_t proceso_suspendido_ready;
 
 extern sem_t planificar;
 extern sem_t largo_plazo;
+extern sem_t check_susp_ready;
 
 void iniciar_semaforos();
 void signal_sem(sem_t *sem);
