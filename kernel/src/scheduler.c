@@ -676,13 +676,14 @@ bool espacio_en_memoria(t_pcb* proceso){
     if(resultado == OK){
         int avisoCreado;
         recv(conexion, &avisoCreado, sizeof(int), 0);
+        liberar_conexion(conexion);
         return true;
     }
     else{
+        liberar_conexion(conexion);
         return false;
     }
 
-    liberar_conexion(conexion);
     //return 1;
 }
 

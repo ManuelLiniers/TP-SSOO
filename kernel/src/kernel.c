@@ -175,6 +175,7 @@ void* esperar_dispatch(void* arg){
 			log_debug(logger_kernel, "Recibi CONTEXTO_PROCESO de CPU ID: %d", cpu_encargada->cpu_id);
 		}
         t_buffer* paquete = recibir_paquete(cpu_encargada->socket_dispatch);
+		log_debug(logger_kernel, "Recibi el paquete de la cpu ID: %d", cpu_encargada->cpu_id);
         uint32_t pid = recibir_uint32_del_buffer(paquete);
         uint32_t pc = recibir_uint32_del_buffer(paquete);
         int motivo = recibir_int_del_buffer(paquete);
@@ -340,6 +341,7 @@ void* esperar_dispatch(void* arg){
 
 				if(dispositivo != NULL){
 					t_list* lista = obtener_ejecutando_io(dispositivo->nombre);
+					proceso_bloqueado->dispositivo = dispositivo;
 					list_add(lista, proceso_bloqueado);
 					//log_debug(logger_kernel, "Proceso <%d> bloqueado agregado en posicion %d", proceso_bloqueado->pcb->pid, pos);
 					enviar_proceso_a_io(proceso, dispositivo, io_tiempo);
@@ -349,9 +351,17 @@ void* esperar_dispatch(void* arg){
                 	if(dispositivo == NULL){
                     	log_info(logger_kernel, "No se encontro la IO: %s", nombre_io);
 						finalizar_proceso(proceso);
+						signal_mutex(&mutex_pcb);
+						signal_mutex(&mutex_lista_cpus);
+						signal_mutex(&mutex_procesos_ejecutando);
+						signal_mutex(&mutex_lista_dispositivos_io);
+						signal_mutex(&mutex_queue_block);
+						signal_mutex(&mutex_diccionario_ejecutando_io);
+						signal_mutex(&mutex_diccionario_esperando_io);
                     	break;
                 	} else {
 						t_queue* cola_io = obtener_esperando_io(nombre_io);
+						proceso_bloqueado->dispositivo = dispositivo;
 						queue_push(cola_io, proceso_bloqueado);
 					}
 				}
@@ -714,6 +724,13 @@ void* escuchar_socket_io(void* arg){
 				t_dispositivo_io* io_existente = buscar_io(dispositivo->nombre);
 				if(io_existente == 	NULL){
 					queue_clean_and_destroy_elements(obtener_esperando_io(dispositivo->nombre), finalizar_proceso_io);
+				}
+				t_list* lista = obtener_ejecutando_io(dispositivo->nombre);
+				for(int i=0; i<list_size(lista);i++){
+					tiempo_en_io* actual = list_get(lista, i);
+					if(actual->dispositivo->id == dispositivo->id){
+						finalizar_proceso_io(actual);
+					}
 				}
 				signal_mutex(&mutex_pcb);
 				signal_mutex(&mutex_lista_dispositivos_io);

@@ -77,6 +77,7 @@ typedef struct{
 typedef struct{
     t_pcb *pcb;
     int tiempo;
+    t_dispositivo_io* dispositivo;
 } tiempo_en_io;
 typedef struct {
     t_pcb* proceso;

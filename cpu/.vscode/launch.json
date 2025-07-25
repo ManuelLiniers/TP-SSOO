@@ -11,7 +11,7 @@
       "type": "cppdbg",
       "request": "launch",
       "program": "${workspaceFolder}/bin/${workspaceFolderBasename}",
-      "args": ["3", "_estabilidad.config"],
+      "args": ["1", "_corto_plazo.config"],
       "stopAtEntry": false,
       "cwd": "${workspaceFolder}",
       "environment": [],
