@@ -179,6 +179,7 @@ void* esperar_dispatch(void* arg){
         uint32_t pid = recibir_uint32_del_buffer(paquete);
         uint32_t pc = recibir_uint32_del_buffer(paquete);
         int motivo = recibir_int_del_buffer(paquete);
+		log_debug(logger_kernel, "Recibo motivo: %d", motivo);
 		t_pcb* proceso = NULL;
 		//log_debug(logger_kernel, "Estado antes de buscar proceso<%d>: ignorar_interrupcion = %d, motivo_interrupcion = %d", cpu_encargada->cpu_id, ignorar_interrupcion, motivo_interrupcion);
 		//if(motivo_interrupcion != 1 && motivo_interrupcion != 2 && motivo_interrupcion != 3){
@@ -402,6 +403,7 @@ void* esperar_dispatch(void* arg){
 				wait_mutex(&mutex_procesos_ejecutando);
 				wait_mutex(&mutex_pcb);
 
+				log_debug(logger_kernel, "Pase los mutex");
 				/* if(strcmp(algoritmo_corto_plazo,"SRT") == 0){
 					for(int i = 0; i<list_size(lista_procesos_ejecutando); i++){
 						t_unidad_ejecucion* unidad = (t_unidad_ejecucion*) list_get(lista_procesos_ejecutando, i);
@@ -431,6 +433,7 @@ void* esperar_dispatch(void* arg){
 				signal_mutex(&mutex_queue_new);
 				signal_mutex(&mutex_lista_cpus);
 				signal_mutex(&mutex_procesos_ejecutando);
+				log_debug(logger_kernel, "Libere los mutex");
                 break;
             case MEMORY_DUMP:
 				wait_mutex(&mutex_queue_ready);

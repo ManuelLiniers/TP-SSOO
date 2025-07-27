@@ -341,10 +341,20 @@ void *planificar_largo_plazo_FIFO(void* arg){
                 poner_en_ready(proceso, false);
                 //log_debug(logger_kernel, "Cola de ready:");
                 //mostrar_lista(queue_ready);
+                signal_mutex(&mutex_pcb);
+                signal_mutex(&mutex_queue_susp_ready);
+                signal_mutex(&mutex_queue_new);
+                signal_mutex(&mutex_queue_ready);
+                signal_mutex(&mutex_lista_cpus);
 			}
             else{
                 log_debug(logger_kernel, "No hay espacio en memoria para la vuelta de swap del proceso <%d>", proceso->pid);
                 signal_sem(&nuevo_proceso); // el proceso nuevo sigue en NEW, hago signal de vuelta
+                signal_mutex(&mutex_pcb);
+                signal_mutex(&mutex_queue_susp_ready);
+                signal_mutex(&mutex_queue_new);
+                signal_mutex(&mutex_queue_ready);
+                signal_mutex(&mutex_lista_cpus);
                 wait_sem(&espacio_memoria); // espero que algun proceso finalice 
                 //log_debug(logger_kernel, "Consumo semaforo espacio_memoria, semaforo: %ld", espacio_memoria.__align);
             }
@@ -369,6 +379,11 @@ void *planificar_largo_plazo_FIFO(void* arg){
                     //signal_mutex(&mutex_lista_cpus);
                     //log_debug(logger_kernel, "Cola de ready:");
                     //mostrar_lista(queue_ready);
+                    signal_mutex(&mutex_pcb);
+                    signal_mutex(&mutex_queue_susp_ready);
+                    signal_mutex(&mutex_queue_new);
+                    signal_mutex(&mutex_queue_ready);
+                    signal_mutex(&mutex_lista_cpus);
                 }
                 else{
                     log_debug(logger_kernel, "No hay espacio en memoria para el proceso <%d>", proceso->pid);
@@ -381,6 +396,11 @@ void *planificar_largo_plazo_FIFO(void* arg){
                         pthread_create(&hilo_espera_suspendido, NULL, (void*) comprobar_suspendido_ready, NULL);
                         pthread_detach(hilo_espera_suspendido);
                     }
+                    signal_mutex(&mutex_pcb);
+                    signal_mutex(&mutex_queue_susp_ready);
+                    signal_mutex(&mutex_queue_new);
+                    signal_mutex(&mutex_queue_ready);
+                    signal_mutex(&mutex_lista_cpus);
                     wait_sem(&espacio_memoria); // espero que algun proceso finalice 
                     //log_debug(logger_kernel, "Consumo semaforo espacio_memoria, semaforo: %ld", espacio_memoria.__align);
                 }
@@ -388,11 +408,7 @@ void *planificar_largo_plazo_FIFO(void* arg){
             //     signal_mutex(&mutex_queue_new);
             }
         }
-        signal_mutex(&mutex_pcb);
-        signal_mutex(&mutex_queue_susp_ready);
-        signal_mutex(&mutex_queue_new);
-        signal_mutex(&mutex_queue_ready);
-        signal_mutex(&mutex_lista_cpus);
+        
 	}
 }
 
