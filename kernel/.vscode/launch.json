@@ -8,7 +8,7 @@
       "type": "cppdbg",
       "request": "launch",
       "program": "${workspaceFolder}/bin/${workspaceFolderBasename}",
-      "args": ["PLANI_LYM_PLAZO","0","largo_plazo_FIFO.config"],
+      "args": ["PLANI_CORTO_PLAZO","0","corto_plazo_SRT.config"],
       "stopAtEntry": false,
       "cwd": "${workspaceFolder}",
       "environment": [],

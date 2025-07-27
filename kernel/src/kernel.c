@@ -720,13 +720,21 @@ void* escuchar_socket_io(void* arg){
 				break;
 			case -1:
 				log_debug(logger_kernel, "[Dispositivo %s IO Desconectado]", dispositivo->nombre);
+				wait_mutex(&mutex_queue_ready);
 				wait_mutex(&mutex_queue_block);
+				wait_mutex(&mutex_procesos_ejecutando);
 				wait_mutex(&mutex_lista_dispositivos_io);
 				wait_mutex(&mutex_pcb);
 				list_remove_element(lista_dispositivos_io, dispositivo);
 				t_dispositivo_io* io_existente = buscar_io(dispositivo->nombre);
 				if(io_existente == 	NULL){
 					queue_clean_and_destroy_elements(obtener_esperando_io(dispositivo->nombre), finalizar_proceso_io);
+					if(!list_is_empty(queue_ready)){
+						list_destroy_and_destroy_elements(queue_ready, matar_proceso);
+					}
+					if(!list_is_empty(lista_procesos_ejecutando)){
+						list_destroy_and_destroy_elements(lista_procesos_ejecutando, finalizar_unidad_ejecucion);
+					}
 				}
 				t_list* lista = obtener_ejecutando_io(dispositivo->nombre);
 				for(int i=0; i<list_size(lista);i++){
@@ -735,9 +743,11 @@ void* escuchar_socket_io(void* arg){
 						finalizar_proceso_io(actual);
 					}
 				}
-				signal_mutex(&mutex_pcb);
-				signal_mutex(&mutex_lista_dispositivos_io);
+				signal_mutex(&mutex_queue_ready);
 				signal_mutex(&mutex_queue_block);
+				signal_mutex(&mutex_procesos_ejecutando);
+				signal_mutex(&mutex_lista_dispositivos_io);
+				signal_mutex(&mutex_pcb);
 				free(dispositivo);
 				pthread_exit(NULL);
 				break;
@@ -795,4 +805,15 @@ void finalizar_proceso_io(void* arg){
 	tiempo_en_io* proceso_io = (tiempo_en_io*) arg;
 	finalizar_proceso(proceso_io->pcb);
 	free(proceso_io);
+}
+
+void finalizar_unidad_ejecucion(void* arg){
+	t_unidad_ejecucion* unidad = arg;
+	finalizar_proceso(unidad->proceso);
+	free(unidad);
+}
+
+void matar_proceso(void* arg){
+	t_pcb* proceso = arg;
+	finalizar_proceso(proceso);
 }

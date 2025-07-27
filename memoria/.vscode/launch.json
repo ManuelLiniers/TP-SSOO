@@ -9,7 +9,7 @@
       "type": "cppdbg",
       "request": "launch",
       "program": "${workspaceFolder}/bin/${workspaceFolderBasename}",
-      "args": ["largo_plazo.config"],
+      "args": ["corto_plazo.config"],
       "stopAtEntry": false,
       "cwd": "${workspaceFolder}",
       "environment": [],

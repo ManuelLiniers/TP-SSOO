@@ -38,6 +38,8 @@ void* esperar_dispatch(void* arg);
 void crear_proceso(char* instrucciones, int tamanio_proceso);
 void finalizar_proceso(t_pcb* proceso);
 void finalizar_proceso_io(void* arg);
+void finalizar_unidad_ejecucion(void* arg);
+void matar_proceso(void* arg);
 
 // SEMAFOROS
 

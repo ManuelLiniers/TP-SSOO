@@ -179,7 +179,7 @@ t_cpu* buscar_cpu_libre(t_list* lista_cpus){
         }
     }
     if(cpu_libre == NULL){
-        log_error(logger_kernel, "No hay CPUs libres");
+        log_debug(logger_kernel, "No hay CPUs libres");
     }
     return cpu_libre;
 }
