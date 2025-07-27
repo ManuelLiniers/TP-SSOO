@@ -14,12 +14,6 @@ int main(int argc, char* argv[]) {
 
     char* nombre_dispositivo = argv[1];
 
-    t_log* crear_log();
-
-    t_log* logger = log_create("io.log", "[IO]", 1, LOG_LEVEL_DEBUG);
-
-
-
     char* ip;
     char* puerto;
     char* log_level;
@@ -29,6 +23,8 @@ int main(int argc, char* argv[]) {
     ip = config_get_string_value(config, "IP_KERNEL");
     puerto = config_get_string_value(config, "PUERTO_KERNEL");
     log_level = config_get_string_value(config, "LOG_LEVEL");
+
+    t_log* logger = log_create("io.log", "[IO]", 1, log_level_from_string(log_level));
 
     log_debug(logger, "El valor de la ip es: %s", ip);
     log_debug(logger, "El valor del puerto es: %s", puerto);
@@ -63,7 +59,7 @@ t_config* iniciar_config(void) {
         perror("Error al intentar cargar el config");
         exit(EXIT_FAILURE);
 	}
-    printf("Se creo exitosamente la config del io\n");
+    //printf("Se creo exitosamente la config del io\n");
 	return nuevo_config;
 }
 

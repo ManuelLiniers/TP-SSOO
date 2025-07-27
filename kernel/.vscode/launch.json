@@ -2,18 +2,13 @@
   "version": "0.2.0",
   "configurations": [
 
-  
-
-    
-
-
 
     {
       "name": "run",
       "type": "cppdbg",
       "request": "launch",
       "program": "${workspaceFolder}/bin/${workspaceFolderBasename}",
-      "args": ["PLANI_CORTO_PLAZO","0","corto_plazo.config"],
+      "args": ["ESTABILIDAD_GENERAL","0","estabilidad_general.config"],
       "stopAtEntry": false,
       "cwd": "${workspaceFolder}",
       "environment": [],
