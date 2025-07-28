@@ -30,57 +30,6 @@ t_tabla_nivel* crear_tabla_multinivel(int nivel_actual, int* paginas_restantes, 
     return tabla;
 }
 
-
-t_list* calcular_indices_por_nivel(uint32_t nro_pagina_logica) {
-    t_list* indices = list_create();
-    int bits_por_nivel = log2(ENTRADAS_POR_TABLA);
-
-    for (int i = 0; i < CANTIDAD_NIVELES; i++) {
-        int shift = bits_por_nivel * (CANTIDAD_NIVELES - 1 - i);
-        uint32_t index = (nro_pagina_logica >> shift) & ((1 << bits_por_nivel) - 1);
-        list_add(indices, (void*)(intptr_t)index);
-    }
-
-    return indices;
-}
-
-t_pagina* buscar_pagina_en_tabla(t_tabla_nivel* raiz, uint32_t nro_pagina_logica, t_metricas_proceso* metricas) {
-    t_list* indices = calcular_indices_por_nivel(nro_pagina_logica);
-    t_tabla_nivel* actual = raiz;
-
-    int niveles = list_size(indices);
-
-    for (int i = 0; i < niveles; i++) {
-        int idx = (int)(intptr_t)list_get(indices, i);
-
-        usleep(RETARDO_MEMORIA);
-        metricas->accesos_tablas_paginas++;
-
-        if (idx >= list_size(actual->entradas)) {
-            log_error(memoria_logger, "Error: Índice %d fuera de rango en nivel %d (tamaño: %d)",
-              idx, i, list_size(actual->entradas));
-            list_destroy(indices);
-            return NULL;
-        }
-
-        if (i == CANTIDAD_NIVELES - 1) {
-            t_pagina* pag = (t_pagina*) list_get(actual->entradas, idx);
-            list_destroy(indices);
-            return pag;
-        } else {
-            actual = (t_tabla_nivel*) list_get(actual->entradas, idx);
-            if (!actual) {
-                log_error(memoria_logger, "Error: Subtabla nula al intentar acceder al nivel %d", i);
-                list_destroy(indices);
-                return NULL;
-            }
-        }
-    }
-
-    list_destroy(indices);
-    return NULL;
-}
-
 t_pagina* buscar_pagina(t_tabla_nivel* raiz, int* indices, t_metricas_proceso* metricas) {
     t_tabla_nivel* actual = raiz;
 

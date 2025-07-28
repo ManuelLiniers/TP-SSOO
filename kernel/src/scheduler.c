@@ -234,10 +234,10 @@ void actualizar_estimaciones(){
         t_unidad_ejecucion* ejecucion = list_get(lista_procesos_ejecutando, i);
         t_pcb* proceso = ejecucion->proceso;
         if(ejecucion == NULL){
-            log_error(logger_kernel, "ERROR: ejecucion es NULL");
+            log_debug(logger_kernel, "ERROR: ejecucion es NULL");
         }
         if(ejecucion->tiempo_ejecutando == NULL){
-            log_error(logger_kernel, "ERROR: tiempo_ejecutando es NULL");
+            log_debug(logger_kernel, "ERROR: tiempo_ejecutando es NULL");
         }
         if(ejecucion->interrumpido == EJECUTANDO){
             proceso->estimacion_actual -= temporal_gettime(ejecucion->tiempo_ejecutando);

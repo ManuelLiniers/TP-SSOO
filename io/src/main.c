@@ -5,7 +5,7 @@
 
 
 int main(int argc, char* argv[]) {
-    saludar("io");
+    //saludar("io");
 
     if (argc < 2) {
         printf("Debe indicarse el nombre del dispositivo IO como argumento\n");

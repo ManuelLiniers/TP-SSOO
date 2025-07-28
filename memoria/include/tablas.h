@@ -4,8 +4,6 @@
 #include "memoria.h"
 
 t_tabla_nivel* crear_tabla_multinivel(int nivel_actual, int* paginas_restantes, int* contador_paginas);
-t_list* calcular_indices_por_nivel(uint32_t nro_pagina_logica);
-t_pagina* buscar_pagina_en_tabla(t_tabla_nivel* raiz, uint32_t nro_pagina_logica, t_metricas_proceso* metricas);
 t_pagina* buscar_pagina(t_tabla_nivel* raiz, int* indices, t_metricas_proceso* metricas);
 void liberar_tablas(void* puntero);
 void liberar_pagina_y_marcos(void* puntero);
