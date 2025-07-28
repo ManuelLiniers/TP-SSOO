@@ -402,21 +402,18 @@ void* esperar_dispatch(void* arg){
 				wait_mutex(&mutex_lista_cpus);
 				wait_mutex(&mutex_procesos_ejecutando);
 				wait_mutex(&mutex_pcb);
-
+				bool hay_interrupcion = false;
 				log_debug(logger_kernel, "Pase los mutex");
-				/* if(strcmp(algoritmo_corto_plazo,"SRT") == 0){
+				if(strcmp(algoritmo_corto_plazo,"SRT") == 0){
 					for(int i = 0; i<list_size(lista_procesos_ejecutando); i++){
 						t_unidad_ejecucion* unidad = (t_unidad_ejecucion*) list_get(lista_procesos_ejecutando, i);
 						if(unidad->cpu->cpu_id == cpu_encargada->cpu_id){
 							if(unidad->interrumpido == INTERRUMPIDO){
-								ignorar_interrupcion = true;
-								motivo_interrupcion = 4;
+								hay_interrupcion = true;
 							}
 						}
 					}
-					// signal_mutex(&mutex_lista_cpus);
-					// signal_mutex(&mutex_procesos_ejecutando);
-				} */
+				}
 
 				send(cpu_encargada->socket_dispatch, &respuesta, sizeof(int), 0);
 
@@ -424,8 +421,9 @@ void* esperar_dispatch(void* arg){
                 
 				// wait_mutex(&mutex_lista_cpus);
 				// wait_mutex(&mutex_procesos_ejecutando);
-				poner_en_ejecucion(proceso, cpu_encargada);
-                
+				if(!hay_interrupcion){
+					poner_en_ejecucion(proceso, cpu_encargada);
+				}
 				
 				crear_proceso(archivo, tamanio_proceso);
 
