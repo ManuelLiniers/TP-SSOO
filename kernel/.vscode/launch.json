@@ -9,7 +9,7 @@
       "type": "cppdbg",
       "request": "launch",
       "program": "${workspaceFolder}/bin/${workspaceFolderBasename}",
-      "args": ["PLANI_CORTO_PLAZO","0","corto_plazo_FIFO.config"],
+      "args": ["PLANI_LYM_PLAZO","0","largo_PMCP.config"],
       "stopAtEntry": false,
       "cwd": "${workspaceFolder}",
       "environment": [],

@@ -109,7 +109,7 @@ void* planificar_corto_plazo_SJF_desalojo(void* arg){
             }
         }
         else{
-            //signal_sem(&cpu_libre);
+            signal_sem(&cpu_libre);
         }
         signal_mutex(&mutex_pcb);
         signal_mutex(&mutex_queue_ready);
@@ -738,6 +738,7 @@ void poner_en_ready(t_pcb* proceso, bool interrumpido){
     t_cpu* cpu = NULL;
     if(strcmp(algoritmo_corto_plazo, "SRT") == 0){
         if(!interrumpido){
+            signal_sem(&planificacion_principal);
             // if(hay_cpu_libre(&cpu)){
             //     log_debug(logger_kernel, "Signal del planificacion principal por proceso (<%d>)", proceso->pid);
             //     //signal_sem(&planificacion_principal);
@@ -745,7 +746,6 @@ void poner_en_ready(t_pcb* proceso, bool interrumpido){
             //     log_debug(logger_kernel, "Signal del check desalojo, por proceso (<%d>)", proceso->pid);
             //     //signal_sem(&check_desalojo);
             // }
-            signal_sem(&planificacion_principal);
         }
         /* int valor = -1;
         sem_getvalue(&check_desalojo, &valor); */
