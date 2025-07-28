@@ -81,6 +81,39 @@ t_pagina* buscar_pagina_en_tabla(t_tabla_nivel* raiz, uint32_t nro_pagina_logica
     return NULL;
 }
 
+t_pagina* buscar_pagina(t_tabla_nivel* raiz, int* indices, t_metricas_proceso* metricas) {
+    t_tabla_nivel* actual = raiz;
+
+    for (int i = 0; i < CANTIDAD_NIVELES; i++) {
+        int idx = indices[i];
+        
+        usleep(RETARDO_MEMORIA);
+        metricas->accesos_tablas_paginas++;
+
+        if (idx >= list_size(actual->entradas)) {
+            log_error(memoria_logger, "Error: Índice %d fuera de rango en nivel %d (tamaño: %d)", idx, i, list_size(actual->entradas));
+            free(indices);
+            return NULL;
+        }
+
+        if (i == CANTIDAD_NIVELES - 1) {
+            t_pagina* pag = (t_pagina*) list_get(actual->entradas, idx);
+            free(indices);
+            return pag;
+        } else {
+            actual = (t_tabla_nivel*) list_get(actual->entradas, idx);
+            if (!actual) {
+                log_error(memoria_logger, "Error: Subtabla nula al intentar acceder al nivel %d", i);
+                free(indices);
+                return NULL;
+            }
+        }
+    }
+
+    free(indices);
+    return NULL;
+}
+
 void liberar_tablas(void* puntero) {
     t_tabla_nivel* tabla = (t_tabla_nivel*) puntero;
     if (tabla->nivel == CANTIDAD_NIVELES) {

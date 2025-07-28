@@ -98,10 +98,11 @@ void enviar_instruccion_a_cpu(char* instruccion, int cpu_fd){
 
 void atender_peticion_marco(t_buffer* unBuffer, int cpu_fd){
 	uint32_t pid;
-	uint32_t nro_pagina_logica;
-
+	//uint32_t nro_pagina_logica;
+	
 	pid = recibir_uint32_del_buffer(unBuffer);
-	nro_pagina_logica = recibir_uint32_del_buffer(unBuffer);
+	//nro_pagina_logica = recibir_uint32_del_buffer(unBuffer);
+	int* accesos = recibir_informacion_del_buffer(unBuffer, CANTIDAD_NIVELES * sizeof(int));
 
 	pthread_mutex_lock(&mutex_procesos_memoria);
 	t_proceso* proceso = obtener_proceso_por_id(pid, procesos_memoria);
@@ -115,7 +116,8 @@ void atender_peticion_marco(t_buffer* unBuffer, int cpu_fd){
         return;
     }
 
-	t_pagina* pagina = buscar_pagina_en_tabla(tabla, nro_pagina_logica, proceso->metricas);
+	//t_pagina* pagina = buscar_pagina_en_tabla(tabla, nro_pagina_logica, proceso->metricas);
+	t_pagina* pagina = buscar_pagina(tabla, accesos, proceso->metricas);
 
 	int marco = pagina->marco_asignado; 
 	log_debug(memoria_logger, "Marco obtenido: %d", marco);

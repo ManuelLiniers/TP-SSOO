@@ -5,6 +5,8 @@ int conexion_kernel_dispatch;
 int conexion_kernel_interrupt;
 bool flag_interrupcion = false;
 int TAMANIO_PAGINA;
+int CANTIDAD_NIVELES;
+int ENTRADAS_POR_TABLA;
 int ENTRADAS_CACHE;
 int retardo_cache;
 char* log_level;
@@ -30,6 +32,8 @@ int main(int argc, char* argv[]) {
 
 
     TAMANIO_PAGINA = config_get_int_value(pruebas_config, "TAMANIO_PAGINA");
+    CANTIDAD_NIVELES = config_get_int_value(pruebas_config, "CANTIDAD_NIVELES");
+    ENTRADAS_POR_TABLA = config_get_int_value(pruebas_config, "ENTRADAS_POR_TABLA");
     retardo_cache = config_get_int_value(pruebas_config, "RETARDO_CACHE");
     log_level = config_get_string_value(cpu_config, "LOG_LEVEL");
 
@@ -360,19 +364,20 @@ void ciclo_de_instruccion_execute(t_instruccion_decodificada* instruccion, t_con
     uint32_t nro_pagina = direccion_logica / TAMANIO_PAGINA;
     uint32_t desplazamiento = direccion_logica % TAMANIO_PAGINA;
     uint32_t direccion_fisica = 0;
+    int* lista_accesos = obtener_lista_accesos(nro_pagina);
 
-    char* lectura = malloc(TAMANIO_PAGINA); 
-    char* contenido_leido = NULL;
+    char* contenido_leido = malloc(tamanio);
+    char* contenido_cache = NULL;
 
 
     // Primero busco en cache
     if(entradas_cache > 0){
         usleep(retardo_cache * 1000);    //acceso a cache
-        contenido_leido = buscar_contenido_cache(pid, floor(direccion_logica/TAMANIO_PAGINA), false); // leo desde el desplazamiento hasta el tam de la pagina
+        contenido_cache = buscar_contenido_cache(pid, floor(direccion_logica/TAMANIO_PAGINA), false); // leo desde el desplazamiento hasta el tam de la pagina
     }
-    if(contenido_leido != NULL){
-        memcpy(lectura, contenido_leido + desplazamiento, tamanio);
-        log_info(logger, "PID: %d - Acción: LEER - Valor: %s", pid, lectura);
+    if(contenido_cache != NULL){
+        memcpy(contenido_leido, contenido_cache + desplazamiento, tamanio);
+        log_info(logger, "PID: %d - Acción: LEER - Valor: %s", pid, contenido_leido);
         contexto->program_counter++;
         return;
     }
@@ -392,42 +397,57 @@ void ciclo_de_instruccion_execute(t_instruccion_decodificada* instruccion, t_con
 
         t_paquete* paquete = crear_paquete(PEDIR_MARCO); //segun el issue 4702: "Pueden enviar un solo mensaje desde CPU con PID y nro de página, y eso representa los N accesos a memoria
         agregar_a_paquete(paquete, &(contexto->pid), sizeof(uint32_t));  
-        agregar_a_paquete(paquete, &nro_pagina, sizeof(uint32_t));
+        //agregar_a_paquete(paquete, &nro_pagina, sizeof(uint32_t));
+        agregar_a_paquete(paquete, lista_accesos, CANTIDAD_NIVELES * sizeof(int));
         enviar_paquete(paquete, conexion_memoria);
         eliminar_paquete(paquete);
+        free(lista_accesos);
 
         recv(conexion_memoria, &marco, sizeof(uint32_t), 0);  //recibo marco de la memoria
         log_info(logger, "PID: %d - OBTENER MARCO - Página: %d - Marco recibido: %d", contexto->pid, nro_pagina, marco);
         direccion_fisica = marco * TAMANIO_PAGINA + desplazamiento;
     }
 
-    t_paquete* paquete_contenido = crear_paquete(LEER_MEMORIA);   //pido contenido a memoria 
-    agregar_a_paquete(paquete_contenido, &(contexto->pid), sizeof(uint32_t));
-    uint32_t dir_fisica = marco * TAMANIO_PAGINA;
-    agregar_a_paquete(paquete_contenido, &dir_fisica, sizeof(uint32_t)); // le paso el marco asociado a la pagina que tiene el contenido q pido
-    agregar_a_paquete(paquete_contenido, &TAMANIO_PAGINA, sizeof(int));
-    enviar_paquete(paquete_contenido, conexion_memoria);
-    eliminar_paquete(paquete_contenido);
+    if(en_TLB && entradas_cache == 0){
+        t_paquete* paquete_contenido = crear_paquete(LEER_MEMORIA);   //pido contenido a memoria 
+        agregar_a_paquete(paquete_contenido, &(contexto->pid), sizeof(uint32_t));
+        agregar_a_paquete(paquete_contenido, &direccion_fisica, sizeof(uint32_t)); // le paso el marco asociado a la pagina que tiene el contenido q pido
+        agregar_a_paquete(paquete_contenido, &tamanio, sizeof(int));
+        enviar_paquete(paquete_contenido, conexion_memoria);
+        eliminar_paquete(paquete_contenido);
 
-    //uint32_t tamanio_contenido;  //creo variable del tamaño del contenido
-    //recv(conexion_memoria, &tamanio_contenido, sizeof(uint32_t), 0);
-    char* contenido_real = malloc(TAMANIO_PAGINA);
-    recv(conexion_memoria, contenido_real, TAMANIO_PAGINA, 0);
+        //uint32_t tamanio_contenido;  //creo variable del tamaño del contenido
+        //recv(conexion_memoria, &tamanio_contenido, sizeof(uint32_t), 0);
+        recv(conexion_memoria, contenido_leido, tamanio, 0);
+    } else {
+        t_paquete* paquete_contenido = crear_paquete(LEER_MEMORIA);   //pido contenido a memoria 
+        agregar_a_paquete(paquete_contenido, &(contexto->pid), sizeof(uint32_t));
+        uint32_t dir_fisica = marco * TAMANIO_PAGINA;
+        agregar_a_paquete(paquete_contenido, &dir_fisica, sizeof(uint32_t)); // le paso el marco asociado a la pagina que tiene el contenido q pido
+        agregar_a_paquete(paquete_contenido, &TAMANIO_PAGINA, sizeof(int));
+        enviar_paquete(paquete_contenido, conexion_memoria);
+        eliminar_paquete(paquete_contenido);
 
-    if (entradas_cache > 0) {
-        agregar_a_cache(contexto->pid, nro_pagina, contenido_real, marco, logger, conexion_memoria, false); 
-    }
-    if (entradas_tlb > 0 && !en_TLB) {
-        agregar_a_tlb(contexto->pid, nro_pagina, marco, logger);
+        //uint32_t tamanio_contenido;  //creo variable del tamaño del contenido
+        //recv(conexion_memoria, &tamanio_contenido, sizeof(uint32_t), 0);
+        char* contenido_real = malloc(TAMANIO_PAGINA);
+        recv(conexion_memoria, contenido_real, TAMANIO_PAGINA, 0);
+
+        memcpy(contenido_leido, contenido_real + desplazamiento, tamanio);
+        if (entradas_cache > 0) {
+            agregar_a_cache(contexto->pid, nro_pagina, contenido_real, marco, logger, conexion_memoria, false); 
+        }
+        if (entradas_tlb > 0 && !en_TLB) {
+            agregar_a_tlb(contexto->pid, nro_pagina, marco, logger);
+        }
     }
 
     contexto->program_counter++;
 
-    memcpy(lectura, contenido_real + desplazamiento, tamanio);
-    log_info(logger, "PID: %d - Acción: LEER - Dirección Física: %d - Valor: %s", pid, direccion_fisica, lectura);
-    log_debug(logger, "Valor leído: %.*s", tamanio, contenido_real);
+    log_info(logger, "PID: %d - Acción: LEER - Dirección Física: %d - Valor: %.*s", pid, direccion_fisica, tamanio, contenido_leido);
+    log_debug(logger, "Valor leído: %.*s", tamanio, contenido_leido);
 
-    free(lectura);
+    free(contenido_leido);
 }
 
    else if (string_equals_ignore_case(opcode, "WRITE")) {
@@ -438,6 +458,7 @@ void ciclo_de_instruccion_execute(t_instruccion_decodificada* instruccion, t_con
     uint32_t nro_pagina = direccion_logica / TAMANIO_PAGINA;
     uint32_t desplazamiento = direccion_logica % TAMANIO_PAGINA;
     uint32_t direccion_fisica = 0;
+    int* lista_accesos = obtener_lista_accesos(nro_pagina);
 
     char* contenido_cache = NULL;
     // Primero busco en cache
@@ -467,9 +488,11 @@ void ciclo_de_instruccion_execute(t_instruccion_decodificada* instruccion, t_con
 
         t_paquete* paquete = crear_paquete(PEDIR_MARCO); //segun el issue 4702: "Pueden enviar un solo mensaje desde CPU con PID y nro de página, y eso representa los N accesos a memoria
         agregar_a_paquete(paquete, &(contexto->pid), sizeof(uint32_t));  
-        agregar_a_paquete(paquete, &nro_pagina, sizeof(uint32_t));
+        //agregar_a_paquete(paquete, &nro_pagina, sizeof(uint32_t));
+        agregar_a_paquete(paquete, lista_accesos, CANTIDAD_NIVELES * sizeof(int));
         enviar_paquete(paquete, conexion_memoria);
         eliminar_paquete(paquete);
+        free(lista_accesos);
 
         recv(conexion_memoria, &marco, sizeof(uint32_t), 0);  //recibo marco de la memoria
         log_info(logger, "PID: %d - OBTENER MARCO - Página: %d - Marco recibido: %d", contexto->pid, nro_pagina, marco);
@@ -651,4 +674,17 @@ void abrir_conexion_kernel(int conexion){
     agregar_a_paquete(paqueteID, &id, sizeof(int));
     enviar_paquete(paqueteID, conexion);
     eliminar_paquete(paqueteID);
+}
+
+int* obtener_lista_accesos(uint32_t nro_pagina) {
+    int* accesos = malloc(sizeof(int) * CANTIDAD_NIVELES);
+    int divisor;
+
+    for (int i = 0; i < CANTIDAD_NIVELES; i++) {
+        int nivel = CANTIDAD_NIVELES - 1 - i;
+        divisor = pow(ENTRADAS_POR_TABLA, nivel);
+        accesos[i] = (nro_pagina / divisor) % ENTRADAS_POR_TABLA;
+    }
+
+    return accesos;
 }

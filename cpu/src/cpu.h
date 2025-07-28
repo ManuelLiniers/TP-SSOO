@@ -47,5 +47,6 @@ t_buffer* recibir_buffer_contexto(int socket);
 t_contexto* deserializar_contexto(t_buffer* buffer);
 void abrir_conexion_memoria(int conexion);
 void abrir_conexion_kernel(int conexion);
+int* obtener_lista_accesos(uint32_t nro_pagina);
 
 #endif /* CPU_H_ */

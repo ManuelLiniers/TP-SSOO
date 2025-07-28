@@ -3,13 +3,14 @@
   "configurations": [
 
 
+
   
     {
       "name": "run",
       "type": "cppdbg",
       "request": "launch",
       "program": "${workspaceFolder}/bin/${workspaceFolderBasename}",
-      "args": ["corto_plazo.config"],
+      "args": ["memoria_cache.config"],
       "stopAtEntry": false,
       "cwd": "${workspaceFolder}",
       "environment": [],
