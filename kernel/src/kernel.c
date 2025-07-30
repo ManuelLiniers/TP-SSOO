@@ -703,9 +703,10 @@ void* escuchar_socket_io(void* arg){
         				signal_sem(&planificacion_principal);
     					//}
 					}
+					log_info(logger_kernel, "## %d finalizó IO", proceso->pcb->pid);
+					
 					comprobar_cola_bloqueados(dispositivo);
 					
-					log_info(logger_kernel, "## %d finalizó IO", proceso->pcb->pid);
 					
 					free(proceso);
 				}
