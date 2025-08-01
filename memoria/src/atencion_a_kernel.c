@@ -123,9 +123,24 @@ void fin_proceso(t_buffer* unBuffer, int kernel_fd){
 	pthread_mutex_lock(&mutex_procesos_memoria);
 	t_proceso* proceso = obtener_proceso_por_id(pid, procesos_memoria);
 
-	exponer_metricas(proceso->metricas, pid);
+	if(proceso == NULL){
+		pthread_mutex_lock(&mutex_procesos_swap);
+		proceso = obtener_proceso_por_id(pid, procesos_swap);
 
-	list_remove_element(procesos_memoria, proceso);
+		exponer_metricas(proceso->metricas, pid);
+
+		list_remove_element(procesos_swap, proceso);
+
+		t_list* lista = obtener_desplazamientos_swap(proceso->pid, proceso->paginas);
+		pthread_mutex_lock(&mutex_lista_swap);
+		list_destroy_and_destroy_elements(lista,free);
+		pthread_mutex_unlock(&mutex_lista_swap);
+		pthread_mutex_unlock(&mutex_procesos_swap);
+	} else {
+		exponer_metricas(proceso->metricas, pid);
+
+		list_remove_element(procesos_memoria, proceso);
+	}
 	pthread_mutex_unlock(&mutex_procesos_memoria);
 	
 	int resultado = finalizar_proceso(proceso);

@@ -751,6 +751,7 @@ void* escuchar_socket_io(void* arg){
 				log_warning(logger_kernel, "Operación desconocida de IO");
 				break;
 		}
+		eliminar_buffer(paquete);
 	}
 	return NULL;
 }

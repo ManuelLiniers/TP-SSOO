@@ -8,7 +8,9 @@ int enviar_a_swap(int pid) {
 
     int paginas = proceso->paginas;
     bool paginas_extra = false;
+    pthread_mutex_lock(&mutex_lista_swap);
     t_list* lista_desplazamiento = obtener_espacios_swap(pid,  paginas, &paginas_extra);
+    pthread_mutex_unlock(&mutex_lista_swap);
 
     if(paginas > 0){
         FILE* archivo = fopen(PATH_SWAPFILE, "r+b");
@@ -48,7 +50,6 @@ int enviar_a_swap(int pid) {
 }
 
 t_list* obtener_espacios_swap(int pid, int cantidad_paginas, bool* paginas_extra){
-    pthread_mutex_lock(&mutex_lista_swap);
     t_list* lista_desplazamiento = list_create();
     for(int i = 0; i < cantidad_paginas; i++){
         int espacio_libre = primer_hueco_libre();
@@ -68,7 +69,6 @@ t_list* obtener_espacios_swap(int pid, int cantidad_paginas, bool* paginas_extra
         }
             list_add(lista_desplazamiento, desplazamiento);
     }
-    pthread_mutex_unlock(&mutex_lista_swap);
     return lista_desplazamiento;
 }
 
@@ -133,7 +133,9 @@ int sacar_de_swap(int pid){
 
     int paginas = proceso->paginas;
 
+    pthread_mutex_lock(&mutex_lista_swap);
     t_list* lista_desplazamiento = obtener_desplazamientos_swap(pid,  paginas);
+    pthread_mutex_unlock(&mutex_lista_swap);
 
     FILE* archivo = fopen(PATH_SWAPFILE, "r+b");
     if(!archivo){
@@ -149,6 +151,8 @@ int sacar_de_swap(int pid){
     list_destroy_and_destroy_elements(lista_desplazamiento, free);
     fclose(archivo);
 
+    proceso->metricas->subidas_memoria++;
+
     pthread_mutex_lock(&mutex_procesos_memoria);
     list_add(procesos_memoria, proceso);
     pthread_mutex_unlock(&mutex_procesos_memoria);
@@ -161,12 +165,11 @@ int sacar_de_swap(int pid){
 
 t_list* obtener_desplazamientos_swap(int pid, int cantidad_paginas){
     t_list* lista_desplazamiento = list_create();
-    pthread_mutex_lock(&mutex_lista_swap);
     for(int i = 0; i < cantidad_paginas; i++){
         int pag_archivo = primer_pag_archivo(pid);
 
         if(pag_archivo == -1){
-            log_error(memoria_logger, "No se encontró página en swap para PID %d", pid);
+            log_debug(memoria_logger, "No se encontró página en swap para PID %d", pid);
             list_destroy_and_destroy_elements(lista_desplazamiento, free);
             return NULL;
         }
@@ -181,7 +184,6 @@ t_list* obtener_desplazamientos_swap(int pid, int cantidad_paginas){
         
         list_add(lista_desplazamiento, desplazamiento);
     }
-    pthread_mutex_unlock(&mutex_lista_swap);
     return lista_desplazamiento;
 }
 

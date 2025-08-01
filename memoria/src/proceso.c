@@ -70,7 +70,7 @@ t_proceso* obtener_proceso_por_id(int pid, t_list* lista_procesos){
 	};
 	t_proceso* un_proceso = list_find(lista_procesos, (void*)buscar_el_pid);
 	if(un_proceso == NULL){
-		log_error(memoria_logger, "PID<%d> No encontrado en la lista de procesos", pid);
+		log_debug(memoria_logger, "PID<%d> No encontrado en la lista de procesos", pid);
 		return NULL;
 	}
 	return un_proceso;
@@ -87,7 +87,7 @@ char* obtener_instruccion_por_indice(t_proceso* un_proceso, int indice_instrucci
 		return list_get(un_proceso->instrucciones, indice_instruccion);
 	}
 	else{
-		log_error(memoria_logger, "PID<%d> - Nro de Instruccion <%d> NO VALIDA", un_proceso->pid, indice_instruccion);
+		log_debug(memoria_logger, "PID<%d> - Nro de Instruccion <%d> NO VALIDA", un_proceso->pid, indice_instruccion);
 		return NULL;
 	}
 }
