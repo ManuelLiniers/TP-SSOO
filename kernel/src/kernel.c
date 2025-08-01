@@ -682,6 +682,7 @@ void* escuchar_socket_io(void* arg){
 				if(proceso == NULL){
 					log_debug(logger_kernel, "No se encontro el proceso en io pid <%d>", pid);
 				} else {
+					log_info(logger_kernel, "## %d finalizó IO", proceso->pcb->pid);
 					// poner un mutex que verifique io de cada proceso?
 					if(proceso->pcb->estado == SUSP_BLOCKED){
 						cambiar_estado(proceso->pcb, SUSP_READY);
@@ -703,7 +704,6 @@ void* escuchar_socket_io(void* arg){
         				signal_sem(&planificacion_principal);
     					//}
 					}
-					log_info(logger_kernel, "## %d finalizó IO", proceso->pcb->pid);
 					
 					comprobar_cola_bloqueados(dispositivo);
 					

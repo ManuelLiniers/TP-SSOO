@@ -735,8 +735,8 @@ void comprobar_suspendido(t_pcb* proceso){
     wait_mutex(&mutex_queue_block);
     wait_mutex(&mutex_pcb);
     if(proceso->estado == BLOCKED){
-        cambiar_estado(proceso, SUSP_BLOCKED);
         paquete_memoria_pid(proceso, SWAP);
+        cambiar_estado(proceso, SUSP_BLOCKED);
         //log_debug(logger_kernel, "Suspendido libero semaforo memoria swap");
         //signal_mutex(&mutex_memoria_swap);
         log_debug(logger_kernel, "Proceso en suspendido, swap exitoso para PID: %d", proceso->pid);

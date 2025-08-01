@@ -112,4 +112,6 @@ void poner_marco_en_archivo(FILE* archivo, int marco){
     pthread_mutex_unlock(&mutex_espacio_usuario);
 
     fwrite(buffer_para_escritura, 1, TAM_PAGINA, archivo);
+
+    free(buffer_para_escritura);
 }

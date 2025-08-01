@@ -8,7 +8,7 @@
       "type": "cppdbg",
       "request": "launch",
       "program": "${workspaceFolder}/bin/${workspaceFolderBasename}",
-      "args": ["4", "_estabilidad.config"],
+      "args": ["1", "_estabilidad.config"],
       "stopAtEntry": false,
       "cwd": "${workspaceFolder}",
       "environment": [],
