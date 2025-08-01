@@ -488,78 +488,7 @@ void *planificar_largo_plazo_PMCP(void* arg){
         }
     }
 }
-
-    /* while(1){
-        wait_sem(&planificador_largo_plazo);
-        log_debug(logger_kernel, "Consumo semaforo planificador_largo_plazo: %ld", planificador_largo_plazo.__align);
-        wait_mutex(&mutex_queue_susp_ready);
-        if(!queue_is_empty(queue_susp_ready)){
-            log_debug(logger_kernel, "Entro a revisar suspendido_ready");
-            t_pcb* proceso = queue_peek(queue_susp_ready);
-            if(vuelta_swap(proceso)){
-
-				queue_pop(queue_susp_ready);
-                signal_mutex(&mutex_queue_susp_ready);
-                // PONER EN READY
-                poner_en_ready(proceso, false);
-                // log_debug(logger_kernel, "Cola de ready:");
-                // mostrar_lista(queue_ready);
-			} else {
-                signal_sem(&planificador_largo_plazo);
-                signal_mutex(&mutex_queue_susp_ready);
-                log_error(logger_kernel, "Me quedo esperando espacio en memoria para la vuelta de swap del proceso <%d>", proceso->pid);
-                wait_sem(&espacio_memoria); ////////////////
-            }
-        }
-        else{
-            signal_mutex(&mutex_queue_susp_ready);
-            wait_mutex(&mutex_queue_new);
-            log_debug(logger_kernel, "Entro a revisar new");
-            if(!list_is_empty(queue_new)){
-                list_sort(queue_new, proceso_es_mas_chico);
-                t_pcb *proceso = list_get(queue_new, 0);
-                signal_mutex(&mutex_queue_new);
-                if(espacio_en_memoria(proceso)){
-                    wait_mutex(&mutex_queue_new);
-                    list_remove_element(queue_new, proceso);
-                    signal_mutex(&mutex_queue_new);
-
-                    // PONER EN READY
-                    // log_debug(logger_kernel, "Cola de ready:");
-                    // mostrar_lista(queue_ready);
-                    poner_en_ready(proceso, false);
-                }
-                else{
-                    //log_debug(logger_kernel, "No hay espacio en memoria para el proceso <%d>", proceso->pid);
-                    //signal_sem(&nuevo_proceso); // el proceso nuevo sigue en NEW, hago signal de vuelta
-                    if(espacio_memoria.__align <= 0){
-                        pthread_t hilo_espera_suspendido;
-                        pthread_create(&hilo_espera_suspendido, NULL, (void*) comprobar_suspendido_ready, NULL);
-                        pthread_detach(hilo_espera_suspendido);
-                    }
-                    signal_sem(&planificador_largo_plazo);
-                    wait_sem(&espacio_memoria); // espero que algun proceso finalice 
-                    log_debug(logger_kernel, "Consumo semaforo espacio_memoria, semaforo: %ld", espacio_memoria.__align);
-                    log_debug(logger_kernel, "se gasta un planif_largo");
-                     // signal_sem(&espacio_memoria); ////////////////
-                }
-            }
-            else{
-                signal_sem(&planificador_largo_plazo);
-                // wait_sem(&espacio_memoria);
-                log_debug(logger_kernel, "Lista new vacia, se gasta un planif_largo");
-                // signal_sem(&espacio_memoria);
-                if(proceso_ready.__align <= 0){
-                    pthread_t hilo_espera_ready;
-                    pthread_create(&hilo_espera_ready, NULL, (void*) comprobar_ready, NULL);
-                    pthread_detach(hilo_espera_ready);
-                }
-                signal_mutex(&mutex_queue_new);
-                wait_sem(&proceso_ready);
-            }
-        }
-    } */
-
+   
 void* comprobar_ready(void* arg){
     wait_sem(&planificar);
     int valor = 0;
@@ -604,13 +533,7 @@ void* comprobar_espacio(void* arg){
 
         signal_mutex(&mutex_susp_o_memoria);
     }
-    /*wait_sem(&espacio_memoria);
-    int valor = 0;
-    sem_getvalue(&proceso_ready, &valor);
-    //if(proceso_ready.__align < 0){
-    if(valor <= 0){
-        signal_sem(&proceso_ready);
-    }*/
+    
     return NULL;
 }
 
