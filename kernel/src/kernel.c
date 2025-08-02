@@ -311,24 +311,6 @@ void* esperar_dispatch(void* arg){
 				wait_mutex(&mutex_diccionario_esperando_io);
 				wait_mutex(&mutex_diccionario_ejecutando_io);
 
- 				/* if(strcmp(algoritmo_corto_plazo,"SRT") == 0){
-					for(int i = 0; i<list_size(lista_procesos_ejecutando); i++){
-						t_unidad_ejecucion* unidad = (t_unidad_ejecucion*) list_get(lista_procesos_ejecutando, i);
-						if(unidad->cpu->cpu_id == cpu_encargada->cpu_id){
-							if(unidad->interrumpido == INTERRUMPIDO){
-								ignorar_interrupcion = true;
-								motivo_interrupcion = 2;
-								//log_debug(logger_kernel, "Seteo ignorar interrupcion por IO al PID <%d>", unidad->proceso->pid);
-							}
-						}
-					}
-					int valorDesalojo = pthread_mutex_trylock(&desalojando);
-					if(!ignorar_interrupcion && valorDesalojo != 0){
-						signal_mutex(&desalojando);
-					} else if(valorDesalojo == 0){
-						signal_mutex(&desalojando);
-					}
-				} */
 
 				//log_debug(logger_kernel, "Estado despues de CAUSA_IO<%d>: ignorar_interrupcion = %d, motivo_interrupcion = %d",cpu_encargada->cpu_id, ignorar_interrupcion, motivo_interrupcion);
 
@@ -350,7 +332,7 @@ void* esperar_dispatch(void* arg){
 				} else {
 					dispositivo = buscar_io(nombre_io);
                 	if(dispositivo == NULL){
-                    	log_info(logger_kernel, "No se encontro la IO: %s", nombre_io);
+                    	log_debug(logger_kernel, "No se encontro la IO: %s", nombre_io);
 						finalizar_proceso(proceso);
 						signal_mutex(&mutex_pcb);
 						signal_mutex(&mutex_lista_cpus);
@@ -362,7 +344,6 @@ void* esperar_dispatch(void* arg){
                     	break;
                 	} else {
 						t_queue* cola_io = obtener_esperando_io(nombre_io);
-						proceso_bloqueado->dispositivo = dispositivo;
 						queue_push(cola_io, proceso_bloqueado);
 					}
 				}
@@ -440,23 +421,6 @@ void* esperar_dispatch(void* arg){
 				wait_mutex(&mutex_procesos_ejecutando);
 				wait_mutex(&mutex_pcb);
 
-				/* if(strcmp(algoritmo_corto_plazo,"SRT") == 0){
-					for(int i = 0; i<list_size(lista_procesos_ejecutando); i++){
-						t_unidad_ejecucion* unidad = (t_unidad_ejecucion*) list_get(lista_procesos_ejecutando, i);
-						if(unidad->cpu->cpu_id == cpu_encargada->cpu_id){
-							if(unidad->interrumpido == INTERRUMPIDO){
-								ignorar_interrupcion = true;
-								motivo_interrupcion = 3;
-							}
-						}
-					}
-					int valorDesalojo = pthread_mutex_trylock(&desalojando);
-					if(!ignorar_interrupcion && valorDesalojo != 0){
-						signal_mutex(&desalojando);
-					} else if(valorDesalojo == 0){
-						signal_mutex(&desalojando);
-					}
-				} */
 
                 sacar_proceso_ejecucion(proceso);
 				send(cpu_encargada->socket_dispatch, &respuesta, sizeof(int), 0);
@@ -671,6 +635,7 @@ void* escuchar_socket_io(void* arg){
 				wait_mutex(&mutex_queue_ready);
 				wait_mutex(&mutex_queue_block);
 				wait_mutex(&mutex_lista_cpus);
+				wait_mutex(&mutex_procesos_ejecutando);
 				wait_mutex(&mutex_lista_dispositivos_io);
 				wait_mutex(&mutex_pcb);
 				wait_mutex(&mutex_diccionario_esperando_io);
@@ -717,6 +682,7 @@ void* escuchar_socket_io(void* arg){
 				signal_mutex(&mutex_pcb);
 				signal_mutex(&mutex_queue_ready);
 				signal_mutex(&mutex_lista_cpus);
+				signal_mutex(&mutex_procesos_ejecutando);
 				signal_mutex(&mutex_queue_susp_ready);
 				signal_mutex(&mutex_lista_dispositivos_io);
 				signal_mutex(&mutex_queue_block);
@@ -732,12 +698,15 @@ void* escuchar_socket_io(void* arg){
 				t_dispositivo_io* io_existente = buscar_io(dispositivo->nombre);
 				if(io_existente == 	NULL){
 					queue_clean_and_destroy_elements(obtener_esperando_io(dispositivo->nombre), finalizar_proceso_io);
-				}
-				t_list* lista = obtener_ejecutando_io(dispositivo->nombre);
-				for(int i=0; i<list_size(lista);i++){
-					tiempo_en_io* actual = list_get(lista, i);
-					if(actual->dispositivo->id == dispositivo->id){
-						finalizar_proceso_io(actual);
+					list_clean_and_destroy_elements(obtener_ejecutando_io(dispositivo->nombre), finalizar_proceso_io);
+				} else {
+					t_list* lista = obtener_ejecutando_io(dispositivo->nombre);
+					for(int i=0; i<list_size(lista);i++){
+						tiempo_en_io* actual = list_get(lista, i);
+						if(actual->dispositivo->id == dispositivo->id){
+							list_remove_element(lista, actual);
+							finalizar_proceso_io(actual);
+						}
 					}
 				}
 				signal_mutex(&mutex_queue_block);
